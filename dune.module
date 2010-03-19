@@ -1,0 +1,10 @@
+################################
+# Dune module information file #
+################################
+
+#Name of the module
+Module: dune-multidomain
+Version: 0.1
+Maintainer: steffen.muething@ipvs.uni-stuttgart.de
+#depending on 
+Depends: dune-common dune-grid dune-istl dune-localfunctions dune-pdelab dune-multidomaingrid

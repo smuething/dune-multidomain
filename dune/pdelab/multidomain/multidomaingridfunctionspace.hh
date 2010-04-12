@@ -16,6 +16,28 @@ namespace PDELab {
 
 namespace MultiDomain {
 
+template<typename G, typename B, typename M, int k>
+struct MultiDomainGridFunctionSpaceTraits
+{
+  enum{
+    //! \brief True if this grid function space is composed of others.
+    isComposite = 1,
+    //! \brief number of child spaces
+    noChilds = k
+  };
+
+  //! \brief the grid view where grid function is defined upon
+  typedef G GridType;
+
+  //! \brief vector backend
+  typedef B BackendType;
+
+  //! \brief mapper
+  typedef M MapperType;
+
+  //! \brief short cut for size type exported by Backend
+  typedef typename B::size_type SizeType;
+};
 
 template<typename T, int n, int i>
 struct MultiDomainGridFunctionSpaceVisitChildMetaProgram // visit child of inner node
@@ -63,7 +85,7 @@ struct MultiDomainGridFunctionSpaceVisitChildMetaProgram // visit child of inner
   }
   static void verifyChild(const T& t)
   {
-    typedef typename T::Traits::GridViewType::Grid MultiDomainGrid;
+    typedef typename T::Traits::GridType MultiDomainGrid;
     typedef typename MultiDomainGrid::SubDomainGrid SubDomainGrid;
     typedef typename T::template Child<i>::Type::Traits::GridViewType::Grid ChildGrid;
     dune_static_assert((std::is_same<MultiDomainGrid,ChildGrid>::value || std::is_same<SubDomainGrid,ChildGrid>::value)
@@ -72,18 +94,18 @@ struct MultiDomainGridFunctionSpaceVisitChildMetaProgram // visit child of inner
     NextChild::verifyChild(t);
   }
 
-  static void doVerify(const typename T::Traits::GridViewType::Grid& g, const typename T::Traits::GridViewType::Grid& cg)
+  static void doVerify(const typename T::Traits::GridType& g, const typename T::Traits::GridType& cg)
   {
     assert(&g == &cg);
   }
 
-  static void doVerify(const typename T::Traits::GridViewType::Grid& g, const typename T::Traits::GridViewType::Grid::SubDomainGrid& cg)
+  static void doVerify(const typename T::Traits::GridType& g, const typename T::Traits::GridType::SubDomainGrid& cg)
   {
     assert(&g == &cg.multiDomainGrid());
   }
 
   template<typename ST>
-  static void doVerify(const typename T::Traits::GridViewType::Grid& g, const ST& cg)
+  static void doVerify(const typename T::Traits::GridType& g, const ST& cg)
   {
     // this is only here to keep the compiler from complaining about a missing function
     // if ST is not a Multi-/SubDomainGrid
@@ -132,10 +154,10 @@ class MultiDomainGridFunctionSpace : public Countable, public VariadicCompositeN
 
 public:
   //! export traits class
-  typedef PowerCompositeGridFunctionSpaceTraits<typename BaseT::template Child<0>::Type::Traits::GridViewType,
-                                                typename BaseT::template Child<0>::Type::Traits::BackendType,
-                                                CopyStoragePolicy,
-                                                sizeof...(Children)>
+  typedef MultiDomainGridFunctionSpaceTraits<G,
+                                             typename BaseT::template Child<0>::Type::Traits::BackendType,
+                                             CopyStoragePolicy,
+                                             sizeof...(Children)>
   Traits;
 
   //! extract type of container storing Es
@@ -145,7 +167,7 @@ public:
     //! \brief define Type as the Type of a container of E's
     typedef typename Traits::BackendType::template VectorContainer<MultiDomainGridFunctionSpace,E> Type;
   private:
-    VectorContainer () {}
+    VectorContainer ();
   };
 
   //! extract type for storing constraints
@@ -155,11 +177,11 @@ public:
     //! \brief define Type as the Type of a container of E's
     typedef ConstraintsTransformation<typename Traits::SizeType,E> Type;
   private:
-    ConstraintsContainer () {}
+    ConstraintsContainer ();
   };
 
   // define local function space parametrized by self
-  //typedef Dune::PDELab::CompositeLocalFunctionSpace<CompositeGridFunctionSpace> LocalFunctionSpace;
+  typedef MultiDomainLocalFunctionSpace<MultiDomainGridFunctionSpace,Children...> LocalFunctionSpace;
 
 
   MultiDomainGridFunctionSpace (G& g, Children&... children) : BaseT(children...), _g(g)
@@ -167,12 +189,6 @@ public:
     dune_static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
                        "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
     VisitChildTMP::verifyChild(*this);
-  }
-
-  // get grid view
-  const typename Traits::GridViewType& gridview () const
-  {
-    return this->template getChild<0>().gridview();
   }
 
   //! get dimension of root finite element space

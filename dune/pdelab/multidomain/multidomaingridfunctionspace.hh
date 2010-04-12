@@ -4,9 +4,9 @@
 #include <tuple>
 #include <type_traits>
 #include <dune/pdelab/common/multitypetree.hh>
-#include <dune/pdelab/common/countingptr.hh>
 #include <dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
 #include <dune/pdelab/multidomain/variadiccompositenode.hh>
+#include <dune/pdelab/multidomain/multidomainlocalfunctionspace.hh>
 #include <dune/grid/multidomaingrid.hh>
 #include <utility>
 

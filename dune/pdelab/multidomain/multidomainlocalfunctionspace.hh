@@ -155,10 +155,12 @@ template<typename... Children>
 struct BuildMultiDomainLocalFunctionSpaceNodeBase
 {
 
-  template<typename GFS>
   struct ExtractLocalFunctionSpaceNode
   {
-    typedef typename GFS::LocalFunctionSpace::Traits::NodeType type;
+    template<typename GFS>
+    struct transform {
+      typedef typename GFS::LocalFunctionSpace::Traits::NodeType type;
+    };
 
     template<typename... Args>
     struct container

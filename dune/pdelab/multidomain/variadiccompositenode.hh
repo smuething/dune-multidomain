@@ -17,9 +17,9 @@ struct replace;
 
 template<typename OHead, typename... OTail>
 struct replace<OHead,OTail...> {
-  template<template<typename T> class Transform, typename... SArgs>
+  template<typename Transform, typename... SArgs>
   struct with {
-    typedef typename replace<OTail...>::template with<Transform,SArgs...,typename Transform<OHead>::type>::type type;
+    typedef typename replace<OTail...>::template with<Transform,SArgs...,typename Transform::template transform<OHead>::type>::type type;
   };
 };
 
@@ -28,16 +28,16 @@ struct replace<OHead,OTail...> {
  */
 template<>
 struct replace<> {
-  template<template<typename T> class Transform, typename... SArgs>
+  template<typename Transform, typename... SArgs>
   struct with {
-    typedef typename Transform<void>::template container<SArgs...>::type type;
+    typedef typename Transform::template container<SArgs...>::type type;
   };
 };
 
 /**
  * wrapper to simplify calling the TMP
  */
-template<template<typename T> class Transform, typename... Args>
+template<typename Transform, typename... Args>
 struct transform {
   typedef typename replace<Args...>::template with<Transform>::type type;
 };
@@ -51,9 +51,12 @@ template<typename P, typename... Children>
 class VariadicCompositeNode
 {
 
-  template<typename T>
   struct forwarder {
-    typedef typename P::template Storage<T>::Type type;
+
+    template<typename T>
+    struct transform {
+      typedef typename P::template Storage<T>::Type type;
+    };
 
     template<typename... Args>
     struct container {
@@ -72,6 +75,8 @@ public:
   enum { CHILDREN = sizeof...(Children) };
 
   VariadicCompositeNode (Children&&... c_) : c(P::convert(c_)...) {}
+
+  VariadicCompositeNode () {}
 
   template<int i>
   struct Child

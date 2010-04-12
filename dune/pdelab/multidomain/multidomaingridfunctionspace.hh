@@ -37,7 +37,7 @@ template<>
 struct replace<> {
   template<template<typename T> class Transform, typename... SArgs>
   struct with {
-    typedef std::tuple<SArgs...> type;
+    typedef typename Transform<void>::template container<SArgs...>::type type;
   };
 };
 
@@ -60,7 +60,12 @@ class VariadicCompositeNode
 
   template<typename T>
   struct forwarder {
-      typedef typename P::template Storage<T>::Type type;
+    typedef typename P::template Storage<T>::Type type;
+
+    template<typename... Args>
+    struct container {
+      typedef std::tuple<Args...> type;
+    };
   };
 
   typedef std::tuple<Children...> OT;

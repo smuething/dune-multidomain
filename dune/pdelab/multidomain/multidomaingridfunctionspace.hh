@@ -189,6 +189,7 @@ public:
     dune_static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
                        "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
     VisitChildTMP::verifyChild(*this);
+    update();
   }
 
   //! get dimension of root finite element space

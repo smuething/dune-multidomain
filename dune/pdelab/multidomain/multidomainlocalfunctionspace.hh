@@ -51,7 +51,7 @@ struct GuardedVisit<T,isLeaf,E,It,Int,Dune::mdgrid::subDomainGrid>
 
   static void fill_indices(T& t, const E& e, It begin, Int& offset)
   {
-    typedef typename T::Traits::GridView::template Codim<0>::EntityPointer SDEP;
+    typedef typename T::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
     typedef typename SDEP::Entity SDE;
     const SDEP ep = t.gridview().grid().subDomainEntityPointer(e);
     if (t.gridview().indexSet().contains(*ep))
@@ -60,7 +60,7 @@ struct GuardedVisit<T,isLeaf,E,It,Int,Dune::mdgrid::subDomainGrid>
 
   static void reserve(T& t, const E& e, Int& offset)
   {
-    typedef typename T::Traits::GridView::template Codim<0>::EntityPointer SDEP;
+    typedef typename T::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
     typedef typename SDEP::Entity SDE;
     const SDEP ep = t.gridview().grid().subDomainEntityPointer(e);
     if (t.gridview().indexSet().contains(*ep))
@@ -182,10 +182,10 @@ class MultiDomainLocalFunctionSpaceNode
   template<typename T, bool b, typename E, typename It, typename Int>
   friend struct LocalFunctionSpaceBaseVisitNodeMetaProgram;
   template<typename T, typename E, typename It, typename Int, int n, int i>
-  friend struct MultiDomainFunctionSpaceVisitChildMetaProgram;
+  friend struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram;
 
   typedef typename GFS::Traits::BackendType B;
-  typedef typename GFS::Traits::GridViewType::Traits::template Codim<0>::Entity Element;
+  typedef typename GFS::Traits::GridType::Traits::template Codim<0>::Entity Element;
 
   typedef typename BuildMultiDomainLocalFunctionSpaceNodeBase<Children...>::type BaseT;
 

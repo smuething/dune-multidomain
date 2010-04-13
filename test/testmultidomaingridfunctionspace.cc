@@ -8,7 +8,9 @@
 int main(int argc, char** argv) {
   const int dim = 2;
   typedef Dune::SGrid<dim,dim> BaseGrid;
-  BaseGrid baseGrid;
+  const int s[2] = {4,4};
+  const double h[2] = {1.0,1.0};
+  BaseGrid baseGrid(s,h);
   typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,2> > Grid;
   Grid grid(baseGrid,false);
   typedef Grid::SubDomainGrid SubDomainGrid;

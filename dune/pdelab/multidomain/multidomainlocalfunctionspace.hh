@@ -208,7 +208,7 @@ public:
   }
 
   //! \brief initialize with grid function space
-  MultiDomainLocalFunctionSpaceNode (const GFS& gfs)  : pgfs(&gfs)
+  MultiDomainLocalFunctionSpaceNode (const GFS& gfs) : pgfs(&gfs)
   {
     setup(gfs);
   }

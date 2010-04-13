@@ -22,48 +22,48 @@ namespace MultiDomain {
     //=======================================
 
 
-template<typename T, bool isLeaf, typename E, typename It, typename Int, Dune::mdgrid::MultiDomainGridType t>
+template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int, Dune::mdgrid::MultiDomainGridType t>
 struct GuardedVisit
 {
 };
 
-template<typename T, bool isLeaf, typename E, typename It, typename Int>
-struct GuardedVisit<T,isLeaf,E,It,Int,Dune::mdgrid::multiDomainGrid>
+template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int>
+struct GuardedVisit<T,isLeaf,GV,E,It,Int,Dune::mdgrid::multiDomainGrid>
 {
 
-  static void fill_indices(T& t, const E& e, It begin, Int& offset)
+  static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset)
   {
-    if (t.gridview().indexSet().contains(e))
+    if (gv.indexSet().contains(e))
       LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,E,It,Int>::fill_indices(t,e,begin,offset);
   }
 
-  static void reserve(T& t, const E& e, Int& offset)
+  static void reserve(T& t, GV gv, const E& e, Int& offset)
   {
-    if (t.gridview().indexSet().contains(e))
+    if (gv.indexSet().contains(e))
       LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,E,It,Int>::reserve(t,e,offset);
   }
 
 };
 
-template<typename T, bool isLeaf, typename E, typename It, typename Int>
-struct GuardedVisit<T,isLeaf,E,It,Int,Dune::mdgrid::subDomainGrid>
+template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int>
+struct GuardedVisit<T,isLeaf,GV,E,It,Int,Dune::mdgrid::subDomainGrid>
 {
 
-  static void fill_indices(T& t, const E& e, It begin, Int& offset)
+  static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset)
   {
     typedef typename T::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
     typedef typename SDEP::Entity SDE;
-    const SDEP ep = t.gridview().grid().subDomainEntityPointer(e);
-    if (t.gridview().indexSet().contains(*ep))
+    const SDEP ep = gv.grid().subDomainEntityPointer(e);
+    if (gv.indexSet().contains(*ep))
       LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,SDE,It,Int>::fill_indices(t,*ep,begin,offset);
   }
 
-  static void reserve(T& t, const E& e, Int& offset)
+  static void reserve(T& t, GV gv, const E& e, Int& offset)
   {
     typedef typename T::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
     typedef typename SDEP::Entity SDE;
-    const SDEP ep = t.gridview().grid().subDomainEntityPointer(e);
-    if (t.gridview().indexSet().contains(*ep))
+    const SDEP ep = gv.grid().subDomainEntityPointer(e);
+    if (gv.indexSet().contains(*ep))
       LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,SDE,It,Int>::reserve(t,*ep,offset);
   }
 
@@ -90,8 +90,8 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inne
     typedef typename T::template Child<i>::Type C;
     t.offset = offset;
     Int initial_offset = offset; // remember initial offset to compute size later
-    GuardedVisit<C,C::isLeaf,E,It,Int,Dune::mdgrid::GridType<typename C::Traits::GridViewType::Grid>::v >::
-      fill_indices(t.template getChild<i>(),e,begin,offset);
+    GuardedVisit<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,Dune::mdgrid::GridType<typename C::Traits::GridViewType::Grid>::v >::
+      fill_indices(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,begin,offset);
     for (Int j=initial_offset; j<offset; j++)
       begin[j] = t.pgfs->template subMap<i>(begin[j]);
     NextChild::fill_indices(t,e,begin,offset);
@@ -101,8 +101,8 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inne
   {
     // vist children of node t in order
     typedef typename T::template Child<i>::Type C;
-    GuardedVisit<C,C::isLeaf,E,It,Int,Dune::mdgrid::GridType<typename C::Traits::GridViewType::Grid>::v >::
-      reserve(t.template getChild<i>(),e,offset);
+    GuardedVisit<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,Dune::mdgrid::GridType<typename C::Traits::GridViewType::Grid>::v >::
+      reserve(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,offset);
     NextChild::reserve(t,e,offset);
   }
 };

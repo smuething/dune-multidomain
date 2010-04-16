@@ -145,12 +145,40 @@ struct MultiDomainGridFunctionSpaceVisitChildMetaProgram<T,n,n> // end of child 
   }
 };
 
+struct MultiDomainTag {};
+struct SubDomainTag {};
+
 template<typename G, typename... Children>
 class MultiDomainGridFunctionSpace : public Countable, public VariadicCompositeNode<CopyStoragePolicy,Children...>
 {
 
   typedef VariadicCompositeNode<CopyStoragePolicy,Children...> BaseT;
   typedef MultiDomainGridFunctionSpaceVisitChildMetaProgram<MultiDomainGridFunctionSpace,sizeof...(Children),0> VisitChildTMP;
+
+  template<typename Grid>
+  struct tagger
+  {
+
+    template<typename T>
+    struct transform {
+      typedef Dune::SelectType<std::is_same<Grid,typename std::remove_const<typename T::Traits::GridViewType::Grid>::type>::value,MultiDomainTag,SubDomainTag> type;
+    };
+
+    template<typename... Args>
+    struct container {
+      typedef std::tuple<Args...> type;
+    };
+  };
+
+  template<int i>
+  struct DefinedOnSubDomain
+  {
+    dune_static_assert((0 <= i) && (i < BaseT::CHILDREN),"invalid child index");
+
+    typedef typename transform<tagger<G>,Children...>::type ChildTags;
+
+    static const bool value = std::is_same<typename std::tuple_element<i,ChildTags>::type,SubDomainTag>::value;
+  };
 
 public:
   //! export traits class

@@ -151,6 +151,7 @@ struct MultiDomainGridFunctionSpaceVisitChildMetaProgram<T,n,n> // end of child 
 
 */
 
+namespace {
 
 // *************************************************************************************
 // TMP for constructing the type of the variadic node the SubProblemGridFunctionSpace inherits from
@@ -222,6 +223,8 @@ struct SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,i> :
   {}
 
 };
+
+} // anonymous namespace
 
 // *************************************************************************************
 // A grid function space for subproblems

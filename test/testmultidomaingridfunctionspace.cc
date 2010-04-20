@@ -5,6 +5,7 @@
 #include<dune/pdelab/finiteelementmap/q1fem.hh>
 #include<dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/multidomain/subproblemgridfunctionspace.hh>
+#include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 
 int main(int argc, char** argv) {
   const int dim = 2;
@@ -75,7 +76,7 @@ int main(int argc, char** argv) {
   sds3.add(0);sds3.add(1);
 
   Dune::PDELab::MultiDomain::IncludesSubDomains<SDS> t1(1,2);
-  Dune::PDELab::MultiDomain::EqualsSubDomains<SDS> t2(1);
+  Dune::PDELab::MultiDomain::EqualsSubDomains<SDS> t2(0);
 
   std::cout << "t1(sds1) == " << (t1(sds1) ? "true" : "false") << std::endl;
   std::cout << "t1(sds2) == " << (t1(sds2) ? "true" : "false") << std::endl;
@@ -86,5 +87,7 @@ int main(int argc, char** argv) {
   std::cout << "t2(sds3) == " << (t2(sds3) ? "true" : "false") << std::endl;
 
   Dune::PDELab::MultiDomain::SubProblemGridFunctionSpace<MultiGFS,decltype(t2),0,2> spgfs(multigfs);
+
+Dune::PDELab::MultiDomain::SubProblemLocalFunctionSpace<MultiGFS::LocalFunctionSpace,decltype(t2),0,1> splfs(lfs,t2);
 
 }

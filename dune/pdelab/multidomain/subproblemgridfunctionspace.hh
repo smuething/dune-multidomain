@@ -157,20 +157,20 @@ namespace {
 // TMP for constructing the type of the variadic node the SubProblemGridFunctionSpace inherits from
 
 template<typename MDGFS, typename SetTester, int... ChildIndices>
-struct build_type;
+struct build_spgfs_node;
 
 template<typename MDGFS, typename SetTester, int FirstIndex, int... ChildIndices>
-struct build_type<MDGFS,SetTester,FirstIndex,ChildIndices...>
+struct build_spgfs_node<MDGFS,SetTester,FirstIndex,ChildIndices...>
 {
   template<typename... Types>
   struct result
   {
-    typedef typename build_type<MDGFS,SetTester,ChildIndices...>::template result<Types..., typename MDGFS::template Child<FirstIndex>::Type>::type type;
+    typedef typename build_spgfs_node<MDGFS,SetTester,ChildIndices...>::template result<Types..., typename MDGFS::template Child<FirstIndex>::Type>::type type;
   };
 };
 
 template<typename MDGFS, typename SetTester>
-struct build_type<MDGFS,SetTester>
+struct build_spgfs_node<MDGFS,SetTester>
 {
   template<typename... Types>
   struct result
@@ -231,7 +231,7 @@ struct SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,i> :
 
 template<typename MDGFS, typename SetTester, int... ChildIndices>
 class SubProblemGridFunctionSpace : public SubProblemGridFunctionSpaceBase<MDGFS,
-                                                                           typename build_type<MDGFS,SetTester,ChildIndices...>::template result<>::type,
+                                                                           typename build_spgfs_node<MDGFS,SetTester,ChildIndices...>::template result<>::type,
                                                                            0,
                                                                            ChildIndices...>
 {
@@ -246,7 +246,7 @@ class SubProblemGridFunctionSpace : public SubProblemGridFunctionSpaceBase<MDGFS
   */
 
   typedef SubProblemGridFunctionSpaceBase<MDGFS,
-                                          typename build_type<MDGFS,SetTester,ChildIndices...>::template result<>::type,
+                                          typename build_spgfs_node<MDGFS,SetTester,ChildIndices...>::template result<>::type,
                                           0,
                                           ChildIndices...> BaseT;
 

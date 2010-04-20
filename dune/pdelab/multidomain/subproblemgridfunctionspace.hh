@@ -185,35 +185,23 @@ struct build_spgfs_node<MDGFS,SetTester>
 // selected children from the MultiDomainGridFunctionSpace so they can be passed on to the
 // constructor of the VariadicNode
 
-template<typename MDGFS, typename VariadicNode, int i, int... ChildIndices>
+template<typename MDGFS, typename VariadicNode, int... ChildIndices>
 struct SubProblemGridFunctionSpaceBase;
 
-template<typename MDGFS, typename VariadicNode, int i, int FirstIndex, int... ChildIndices>
-struct SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,i,FirstIndex, ChildIndices...> :
-  public SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,i+1,FirstIndex,ChildIndices...>
-{
-
-  template<typename... Children>
-  SubProblemGridFunctionSpaceBase(MDGFS& mdgfs, Children&&... children) :
-    SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,i+1,FirstIndex,ChildIndices...>(mdgfs, children...)
-  {}
-
-};
-
 template<typename MDGFS, typename VariadicNode, int i, int... ChildIndices>
-struct SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,i,i,ChildIndices...> :
-  public SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,i+1,ChildIndices...>
+struct SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,i,ChildIndices...> :
+  public SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,ChildIndices...>
 {
 
   template<typename... Children>
   SubProblemGridFunctionSpaceBase(MDGFS& mdgfs, Children&&... children) :
-    SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,i+1,ChildIndices...>(mdgfs, children..., mdgfs.template getChild<i>())
+    SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,ChildIndices...>(mdgfs, children..., mdgfs.template getChild<i>())
   {}
 
 };
 
-template<typename MDGFS, typename VariadicNode, int i>
-struct SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,i> :
+template<typename MDGFS, typename VariadicNode>
+struct SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode> :
   public VariadicNode
 {
 
@@ -232,7 +220,6 @@ struct SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,i> :
 template<typename MDGFS, typename SetTester, int... ChildIndices>
 class SubProblemGridFunctionSpace : public SubProblemGridFunctionSpaceBase<MDGFS,
                                                                            typename build_spgfs_node<MDGFS,SetTester,ChildIndices...>::template result<>::type,
-                                                                           0,
                                                                            ChildIndices...>
 {
 
@@ -247,7 +234,6 @@ class SubProblemGridFunctionSpace : public SubProblemGridFunctionSpaceBase<MDGFS
 
   typedef SubProblemGridFunctionSpaceBase<MDGFS,
                                           typename build_spgfs_node<MDGFS,SetTester,ChildIndices...>::template result<>::type,
-                                          0,
                                           ChildIndices...> BaseT;
 
 public:

@@ -186,35 +186,24 @@ struct build_splfs_node<MDLFS>
 // selected children from the MultiDomainGridFunctionSpace so they can be passed on to the
 // constructor of the VariadicNode
 
-template<typename MDLFS, typename VariadicNode, int i, int... ChildIndices>
+template<typename MDLFS, typename VariadicNode, int... ChildIndices>
 struct SubProblemLocalFunctionSpaceBase;
 
-template<typename MDLFS, typename VariadicNode, int i, int FirstIndex, int... ChildIndices>
-struct SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,i,FirstIndex, ChildIndices...> :
-  public SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,i+1,FirstIndex,ChildIndices...>
-{
-
-  template<typename... Children>
-  SubProblemLocalFunctionSpaceBase(MDLFS& mdlfs, Children&&... children) :
-    SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,i+1,FirstIndex,ChildIndices...>(mdlfs, children...)
-  {}
-
-};
 
 template<typename MDLFS, typename VariadicNode, int i, int... ChildIndices>
-struct SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,i,i,ChildIndices...> :
-  public SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,i+1,ChildIndices...>
+struct SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,i,ChildIndices...> :
+  public SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,ChildIndices...>
 {
 
   template<typename... Children>
   SubProblemLocalFunctionSpaceBase(MDLFS& mdlfs, Children&&... children) :
-    SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,i+1,ChildIndices...>(mdlfs, children..., mdlfs.template getChild<i>())
+    SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,ChildIndices...>(mdlfs, children..., mdlfs.template getChild<i>())
   {}
 
 };
 
-template<typename MDLFS, typename VariadicNode, int i>
-struct SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,i> :
+template<typename MDLFS, typename VariadicNode>
+struct SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode> :
   public VariadicNode
 {
 
@@ -235,7 +224,6 @@ template<typename MDLFS, typename Condition, int... ChildIndices>
 class SubProblemLocalFunctionSpace
   : public SubProblemLocalFunctionSpaceBase<MDLFS,
                                             typename build_splfs_node<MDLFS,ChildIndices...>::template result<>::type,
-                                            0,
                                             ChildIndices...>
 {
 
@@ -255,7 +243,6 @@ class SubProblemLocalFunctionSpace
 
   typedef SubProblemLocalFunctionSpaceBase<MDLFS,
                                            typename build_splfs_node<MDLFS,ChildIndices...>::template result<>::type,
-                                           0,
                                            ChildIndices...> BaseT;
 
 public:

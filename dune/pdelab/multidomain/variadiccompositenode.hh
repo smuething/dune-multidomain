@@ -74,7 +74,7 @@ public:
   enum { isComposite = true /**< */ };
   enum { CHILDREN = sizeof...(Children) };
 
-  VariadicCompositeNode (Children&&... c_) : c(P::convert(c_)...) {}
+  VariadicCompositeNode (Children&... c_) : c(P::convert(c_)...) {}
 
   VariadicCompositeNode () {}
 

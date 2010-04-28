@@ -196,7 +196,7 @@ struct SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,i,ChildIndices...> :
 {
 
   template<typename... Children>
-  SubProblemLocalFunctionSpaceBase(MDLFS& mdlfs, Children&&... children) :
+  SubProblemLocalFunctionSpaceBase(MDLFS& mdlfs, Children&... children) :
     SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,ChildIndices...>(mdlfs, children..., mdlfs.template getChild<i>())
   {}
 
@@ -208,7 +208,7 @@ struct SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode> :
 {
 
   template<typename... Children>
-  SubProblemLocalFunctionSpaceBase(MDLFS& mdlfs, Children&&... children) :
+  SubProblemLocalFunctionSpaceBase(MDLFS& mdlfs, Children&... children) :
     VariadicNode(children...)
   {}
 

@@ -194,7 +194,7 @@ struct SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,i,ChildIndices...> :
 {
 
   template<typename... Children>
-  SubProblemGridFunctionSpaceBase(MDGFS& mdgfs, Children&&... children) :
+  SubProblemGridFunctionSpaceBase(MDGFS& mdgfs, Children&... children) :
     SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode,ChildIndices...>(mdgfs, children..., mdgfs.template getChild<i>())
   {}
 
@@ -206,7 +206,7 @@ struct SubProblemGridFunctionSpaceBase<MDGFS,VariadicNode> :
 {
 
   template<typename... Children>
-  SubProblemGridFunctionSpaceBase(MDGFS& mdgfs, Children&&... children) :
+  SubProblemGridFunctionSpaceBase(MDGFS& mdgfs, Children&... children) :
     VariadicNode(children...)
   {}
 

@@ -25,6 +25,8 @@ AC_CONFIG_FILES([
   doc/doxygen/Makefile
   doc/doxygen/Doxyfile
   dune/Makefile
+  dune/pdelab/Makefile
+  dune/pdelab/multidomain/Makefile
   m4/Makefile
   dune-multidomain.pc
 ])

@@ -215,7 +215,7 @@ struct apply_operator_helper
 {
   static void apply(Applier& applier, Operator& op)
   {
-    op(applier,mdgos.template getChild<i>());
+    op(applier,applier.gos().template getChild<i>());
     apply_operator_helper<Applier,Operator,i+1,n>::apply(applier,op);
   }
 };
@@ -230,20 +230,20 @@ struct apply_operator_helper<Applier, Operator, n,n>
 };
 
 
-template<typename Applier, typename Operator, bool do_apply>
+template<typename Applier, typename Operator, std::size_t i, bool do_apply>
 struct conditional_apply;
 
-template<typename Applier, typename Operator>
-struct conditional_apply<Applier,Operator,true>
+template<typename Applier, typename Operator, std::size_t i>
+struct conditional_apply<Applier,Operator,i,true>
 {
   static void apply(Applier& applier, Operator& op)
   {
-    op(applier,mdgos.template getChild<i>());
+    op(applier,applier.gos().template getChild<i>());
   }
 };
 
-template<typename Applier, typename Operator>
-struct conditional_apply<Applier,Operator,false>
+template<typename Applier, typename Operator, std::size_t i>
+struct conditional_apply<Applier,Operator,i,false>
 {
   static void apply(Applier& applier, Operator& op)
   {
@@ -255,7 +255,7 @@ struct conditional_apply_operator_helper
 {
   static void apply(Applier& applier, Operator& op)
   {
-    conditional_apply<Applier,Operator,Condition<typename MDGOS::template Child<i>::Type>::value>::apply(applier,op);
+    conditional_apply<Applier,Operator,i,Condition<typename Applier::MDGOS::template Child<i>::Type>::value>::apply(applier,op);
     apply_operator_helper<Applier,Operator,i+1,n>::apply(applier,op);
   }
 };
@@ -275,9 +275,10 @@ class operator_applier
 {
 
   typedef typename MDGOS::Traits::TrialGridFunctionSpace::Traits::Grid Grid;
-  typedef typename Grid::template Codim<0>::SubDomainSet ElementSubDomainSet;
 
 public:
+
+  typedef typename Grid::template Codim<0>::SubDomainSet ElementSubDomainSet;
 
   operator_applier(MDGOS& mdgos) :
     _mdgos(mdgos),
@@ -290,7 +291,7 @@ public:
     apply_operator_helper<MDGOS,Operator,0,MDGOS::CHILDREN>::apply(_mdgos,op);
   }
 
-  template<template<typename> class Condition, typename Operator)
+  template<template<typename> class Condition, typename Operator>
   void conditional_apply(Operator op)
   {
     conditional_apply_operator_helper<MDGOS,Condition,Operator,0,MDGOS::CHILDREN>::apply(_mdgos,op);
@@ -344,7 +345,7 @@ public:
     return _neighborSet;
   }
 
-  void setNeighborSubDomains(const NeighborSubDomainSet& intersectionSet) {
+  void setNeighborSubDomains(const ElementSubDomainSet& neighborSet) {
     _neighborSet = neighborSet;
   }
 
@@ -368,7 +369,7 @@ private:
   LFSV* _plfsv;
   LFSU* _plfsun;
   LFSV* _plfsvn;
-  ElementSubdomainSet _elementSet;
+  ElementSubDomainSet _elementSet;
   ElementSubDomainSet _neighborSet;
   bool _alphaSkeletonInvoked;
 

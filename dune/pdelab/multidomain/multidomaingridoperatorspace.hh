@@ -403,6 +403,11 @@ struct do_alpha_boundary
 {
   static const bool value = T::Traits::LocalOperator::doAlphaBoundary;
 };
+
+template<typename T>
+struct do_alpha_skeleton_or_boundary
+{
+  static const bool value = T::Traits::LocalOperator::doAlphaSkeleton || T::Traits::LocalOperator::doAlphaBoundary;
 };
 
 template<typename T>

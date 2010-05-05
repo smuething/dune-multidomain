@@ -740,6 +740,270 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<SubProblemsAnd
     RL& r;
   };
 
+  template<typename XL, typename YL>
+  struct InvokeJacobianApplyVolume
+  {
+
+    InvokeJacobianApplyVolume(const XL& xl, YL& yl) :
+      x(xl),
+      y(yl)
+    {}
+
+    template<typename Data, typename Child>
+    void operator()(Data& data, const Child& child)
+    {
+      if (!child.appliesTo(data.elementSubDomains()))
+        return;
+      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
+      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
+      LFSU lfsu(data.lfsu());
+      LFSV lfsv(data.lfsv());
+      child.localOperator().jacobian_apply_volume(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,y);
+    }
+
+    const XL& x;
+    YL& y;
+  };
+
+  template<typename XL, typename YL>
+  struct InvokeJacobianApplySkeletonOrBoundary
+  {
+
+    InvokeJacobianApplySkeletonOrBoundary(const XL& xl, const XL& xn, YL& yl, YL& yn, bool applyOneSided) :
+      _xl(xl),
+      _xn(xn),
+      _yl(yl),
+      _yn(yn),
+      _applyOneSided(applyOneSided)
+    {}
+
+    template<typename Data, typename Child>
+    void operator()(Data& data, const Child& child)
+    {
+      if (!child.appliesTo(data.elementSubDomains()))
+        return;
+      typedef typename Child::Traits::LocalOperator LOP;
+      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
+      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
+      LFSU lfsu(data.lfsu());
+      LFSV lfsv(data.lfsv());
+      if (child.appliesTo(data.neighborSubDomains()))
+        {
+          if (applyOneSided || LOP::doSkeletonTwoSided)
+            {
+              LFSU lfsun(data.lfsun());
+              LFSV lfsvn(data.lfsvn());
+              LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
+                jacobian_apply_skeleton(child.localOperator(),
+                                        IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                          data.intersection_index),
+                                        lfsu,_xl,lfsv,lfsun,_xn,lfsvn,_yl,_yn);
+              if(LOP::doAlphaSkeleton)
+                data.setAlphaSkeletonInvoked();
+            }
+        }
+      else
+        {
+          LocalAssemblerCallSwitch<LOP,LOP::doAlphaBoundary>::
+            jacobian_apply_boundary(child.localOperator(),
+                                    IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                      data.intersection_index),
+                                    lfsu,_xl,lfsv,_yl);
+        }
+    }
+
+    const XL& _xl;
+    const XL& _xn;
+    YL& _yl;
+    YL& _yn;
+    const bool _applyOneSided;
+  };
+
+  template<typename XL, typename YL>
+  struct InvokeJacobianApplyBoundary
+  {
+
+    InvokeJacobianApplyBoundary(const XL& xl, YL& yl) :
+      x(xl),
+      y(yl)
+    {}
+
+    template<typename Data, typename Child>
+    void operator()(Data& data, const Child& child)
+    {
+      if (!child.appliesTo(data.elementSubDomains()))
+        return;
+      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
+      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
+      LFSU lfsu(data.lfsu());
+      LFSV lfsv(data.lfsv());
+      child.localOperator().jacobian_apply_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,y);
+    }
+
+    const XL& x;
+    YL& y;
+  };
+
+  template<typename XL, typename YL>
+  struct InvokeJacobianApplyVolumePostSkeleton
+  {
+
+    InvokeJacobianApplyVolumePostSkeleton(const XL& xl, YL& yl) :
+      x(xl),
+      y(yl)
+    {}
+
+    template<typename Data, typename Child>
+    void operator()(Data& data, const Child& child)
+    {
+      if (!child.appliesTo(data.elementSubDomains()))
+        return;
+      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
+      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
+      LFSU lfsu(data.lfsu());
+      LFSV lfsv(data.lfsv());
+      child.localOperator().jacobian_apply_volume_post_skeleton(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,y);
+    }
+
+    const XL& x;
+    YL& y;
+  };
+
+
+  template<typename XL, typename AL>
+  struct InvokeJacobianVolume
+  {
+
+    InvokeJacobianVolume(const XL& xl, AL& al) :
+      x(xl),
+      a(al)
+    {}
+
+    template<typename Data, typename Child>
+    void operator()(Data& data, const Child& child)
+    {
+      if (!child.appliesTo(data.elementSubDomains()))
+        return;
+      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
+      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
+      LFSU lfsu(data.lfsu());
+      LFSV lfsv(data.lfsv());
+      child.localOperator().jacobian_volume(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,a);
+    }
+
+    const XL& x;
+    AL& a;
+  };
+
+  template<typename XL, typename AL>
+  struct InvokeJacobianSkeletonOrBoundary
+  {
+
+    InvokeJacobianSkeletonOrBoundary(const XL& xl, const XL& xn, AL& al, AL& al_sn, AL& al_ns, AL& al_nn, bool applyOneSided) :
+      _xl(xl),
+      _xn(xn),
+      _al(al),
+      _al_sn(al_sn),
+      _al_ns(al_ns),
+      _al_nn(al_nn),
+      _applyOneSided(applyOneSided)
+    {}
+
+    template<typename Data, typename Child>
+    void operator()(Data& data, const Child& child)
+    {
+      if (!child.appliesTo(data.elementSubDomains()))
+        return;
+      typedef typename Child::Traits::LocalOperator LOP;
+      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
+      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
+      LFSU lfsu(data.lfsu());
+      LFSV lfsv(data.lfsv());
+      if (child.appliesTo(data.neighborSubDomains()))
+        {
+          if (applyOneSided || LOP::doSkeletonTwoSided)
+            {
+              LFSU lfsun(data.lfsun());
+              LFSV lfsvn(data.lfsvn());
+              LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
+                jacobian_skeleton(child.localOperator(),
+                                  IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                    data.intersection_index),
+                                  lfsu,_xl,lfsv,lfsun,_xn,lfsvn,_al,_al_sn,_al_ns,_al_nn);
+              if(LOP::doAlphaSkeleton)
+                data.setAlphaSkeletonInvoked();
+            }
+        }
+      else
+        {
+          LocalAssemblerCallSwitch<LOP,LOP::doAlphaBoundary>::
+            jacobian_boundary(child.localOperator(),
+                              IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                data.intersection_index),
+                              lfsu,_xl,lfsv,_al);
+        }
+    }
+
+    const XL& _xl;
+    const XL& _xn;
+    AL& _al;
+    AL& _al_sn;
+    AL& _al_ns;
+    AL& _al_nn;
+    const bool _applyOneSided;
+  };
+
+  template<typename XL, typename AL>
+  struct InvokeJacobianBoundary
+  {
+
+    InvokeJacobianBoundary(const XL& xl, AL& al) :
+      x(xl),
+      a(al)
+    {}
+
+    template<typename Data, typename Child>
+    void operator()(Data& data, const Child& child)
+    {
+      if (!child.appliesTo(data.elementSubDomains()))
+        return;
+      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
+      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
+      LFSU lfsu(data.lfsu());
+      LFSV lfsv(data.lfsv());
+      child.localOperator().jacobian_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,a);
+    }
+
+    const XL& x;
+    AL& a;
+  };
+
+  template<typename XL, typename AL>
+  struct InvokeJacobianVolumePostSkeleton
+  {
+
+    InvokeJacobianVolumePostSkeleton(const XL& xl, AL& al) :
+      x(xl),
+      a(al)
+    {}
+
+    template<typename Data, typename Child>
+    void operator()(Data& data, const Child& child)
+    {
+      if (!child.appliesTo(data.elementSubDomains()))
+        return;
+      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
+      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
+      LFSU lfsu(data.lfsu());
+      LFSV lfsv(data.lfsv());
+      child.localOperator().jacobian_volume_post_skeleton(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,a);
+    }
+
+    const XL& x;
+    AL& a;
+  };
+
+
 public:
   typedef GridOperatorSpaceTraits<GFSU,GFSV,B,CU,CV> Traits;
 
@@ -1001,6 +1265,10 @@ public:
     typedef typename GFSV::LocalFunctionSpace LFSV;
     LFSV lfsv(gfsv);
 
+    operator_applier<MultiDomainGridOperatorSpace> apply_operator(*this);
+    apply_operator.set(lfsu);
+    apply_operator.set(lfsv);
+
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
          it!=gfsu.gridview().template end<0>(); ++it)
@@ -1023,31 +1291,38 @@ public:
         lfsu.bind(*it);
         lfsv.bind(*it);
 
+        apply_operator.setElementSubDomains(is.subDomains(*it));
+
         // allocate local data container
-        std::vector<typename X::ElementType> xl(lfsu.size());
-        std::vector<typename Y::ElementType> yl(lfsv.size(),0.0);
+        typedef std::vector<typename X::ElementType> XL;
+        XL xl(lfsu.size());
+        typedef std::vector<typename Y::ElementType> YL;
+        YL yl(lfsv.size(),0.0);
 
         // read coefficents
         lfsu.vread(x,xl);
 
         // volume evaluation
-        LocalAssemblerCallSwitch<LA,LA::doAlphaVolume>::
-          jacobian_apply_volume(la,ElementGeometry<Element>(*it),lfsu,xl,lfsv,yl);
+        apply_operator.conditional<do_alpha_volume>(InvokeJacobianApplyVolume<XL,YL>(xl,yl));
 
         // skeleton and boundary evaluation
-        if (LA::doAlphaSkeleton||LA::doAlphaBoundary)
+        if (any_child<MultiDomainGridOperatorSpace,do_alpha_skeleton>::value ||
+            any_child<MultiDomainGridOperatorSpace,do_alpha_boundary>::value)
           {
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
             LFSV lfsvn(gfsv);
+            apply_operator.setn(lfsun);
+            apply_operator.setn(lfsvn);
 
             unsigned int intersection_index = 0;
             IntersectionIterator endit = gfsu.gridview().iend(*it);
             for (IntersectionIterator iit = gfsu.gridview().ibegin(*it);
                  iit!=endit; ++iit, ++intersection_index)
               {
+                apply_operator.setIntersectionIndex(intersection_index);
                 // skeleton term
-                if (iit->neighbor() && LA::doAlphaSkeleton )
+                if (iit->neighbor())
                   {
                     // assign offset for geometry type;
                     Dune::GeometryType gtn = iit->outside()->type();
@@ -1060,41 +1335,38 @@ public:
                     // compute unique id for neighbor
                     int idn = is.index(*(iit->outside()))+gtoffset[gtn];
 
-                    // unique vist of intersection
-                    if (LA::doSkeletonTwoSided || id>idn ||
-                        (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity))
+                    lfsun.bind(*(iit->outside()));
+                    lfsvn.bind(*(iit->outside()));
+
+                    // allocate local data container
+                    XL xn(lfsun.size());
+                    YL yn(lfsvn.size(),0.0);
+
+                    // read coefficents
+                    lfsun.vread(x,xn);
+
+                    apply_operator.conditional<do_alpha_skeleton_or_boundary>
+                      (InvokeJacobianApplySkeletonOrBoundary<XL,YL>(xl,xn,yl,yn,
+                                                                    id > idn ||
+                                                                    (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
+                                                                    )
+                       );
+                    if (data.alphaSkeletonInvoked())
                       {
-                        // bind local function spaces to neighbor element
-                        lfsun.bind(*(iit->outside()));
-                        lfsvn.bind(*(iit->outside()));
-
-                        // allocate local data container
-                        std::vector<typename X::ElementType> xn(lfsun.size());
-                        std::vector<typename Y::ElementType> yn(lfsvn.size(),0.0);
-
-                        // read coefficents
-                        lfsun.vread(x,xn);
-
-                        // skeleton evaluation
-                        LocalAssemblerCallSwitch<LA,LA::doAlphaSkeleton>::
-                          jacobian_apply_skeleton(la,IntersectionGeometry<Intersection>(*iit,intersection_index),lfsu,xl,lfsv,lfsun,xn,lfsvn,yl,yn);
-
-                        // accumulate result (note: r needs to be cleared outside)
                         lfsvn.vadd(yn,y);
+                        data.clearAlphaSkeletonInvoked();
                       }
                   }
 
                 // boundary term
                 if (iit->boundary())
                   {
-                    LocalAssemblerCallSwitch<LA,LA::doAlphaBoundary>::
-                      jacobian_apply_boundary(la,IntersectionGeometry<Intersection>(*iit,intersection_index),lfsu,xl,lfsv,yl);
+                    apply_operator.conditional<do_alpha_boundary>(InvokeJacobianApplyBoundary<XL,YL>(xl,yl));
                   }
               }
           }
 
-        LocalAssemblerCallSwitch<LA,LA::doAlphaVolumePostSkeleton>::
-          jacobian_apply_volume_post_skeleton(la,ElementGeometry<Element>(*it),lfsu,xl,lfsv,yl);
+        apply_operator.conditional<do_alpha_volume_post_skeleton>(InvokeJakobianApplyVolumePostSkeleton<XL,YL>(xl,yl));
 
         // accumulate result (note: r needs to be cleared outside)
         lfsv.vadd(yl,y);
@@ -1124,6 +1396,10 @@ public:
     typedef typename GFSV::LocalFunctionSpace LFSV;
     LFSV lfsv(gfsv);
 
+    operator_applier<MultiDomainGridOperatorSpace> apply_operator(*this);
+    apply_operator.set(lfsu);
+    apply_operator.set(lfsv);
+
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
          it!=gfsu.gridview().template end<0>(); ++it)
@@ -1147,31 +1423,38 @@ public:
         lfsu.bind(*it);
         lfsv.bind(*it);
 
+        apply_operator.setElementSubDomains(is.subDomains(*it));
+
         // allocate local data container
-        std::vector<typename X::ElementType> xl(lfsu.size());
-        LocalMatrix<typename A::ElementType> al(lfsv.size(),lfsu.size(),0.0);
+        typedef std::vector<typename X::ElementType> XL;
+        XL xl(lfsu.size());
+        typedef LocalMatrix<typename A::ElementType> AL;
+        AL al(lfsv.size(),lfsu.size(),0.0);
 
         // read coefficents
         lfsu.vread(x,xl);
 
         // volume evaluation
-        LocalAssemblerCallSwitch<LA,LA::doAlphaVolume>::
-          jacobian_volume(la,ElementGeometry<Element>(*it),lfsu,xl,lfsv,al);
+        apply_operator.conditional<do_alpha_volume>(InvokeJacobianVolume<XL,AL>(xl,al));
 
         // skeleton and boundary evaluation
-        if (LA::doAlphaSkeleton||LA::doAlphaBoundary)
+        if (any_child<MultiDomainGridOperatorSpace,do_alpha_skeleton>::value ||
+            any_child<MultiDomainGridOperatorSpace,do_alpha_boundary>::value)
           {
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
             LFSV lfsvn(gfsv);
+            apply_operator.setn(lfsun);
+            apply_operator.setn(lfsvn);
 
             unsigned int intersection_index = 0;
             IntersectionIterator endit = gfsu.gridview().iend(*it);
             for (IntersectionIterator iit = gfsu.gridview().ibegin(*it);
                  iit!=endit; ++iit, ++intersection_index)
               {
+                apply_operator.setIntersectionIndex(intersection_index);
                 // skeleton term
-                if (iit->neighbor() && LA::doAlphaSkeleton )
+                if (iit->neighbor() &&)
                   {
                     // assign offset for geometry type;
                     Dune::GeometryType gtn = iit->outside()->type();
@@ -1184,46 +1467,44 @@ public:
                     // compute unique id for neighbor
                     const typename GV::IndexSet::IndexType idn = is.index(*(iit->outside()))+gtoffset[gtn];
 
-                    // unique vist of intersection
-                    if (LA::doSkeletonTwoSided || id>idn ||
-                        (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity) )
-                      {
-                        // bind local function spaces to neighbor element
-                        lfsun.bind(*(iit->outside()));
-                        lfsvn.bind(*(iit->outside()));
+                    // bind local function spaces to neighbor element
+                    lfsun.bind(*(iit->outside()));
+                    lfsvn.bind(*(iit->outside()));
+
 
                         // allocate local data container
-                        std::vector<typename X::ElementType> xn(lfsun.size());
-                        LocalMatrix<typename A::ElementType> al_sn(lfsv.size() ,lfsun.size(),0.0);
-                        LocalMatrix<typename A::ElementType> al_ns(lfsvn.size(),lfsu.size() ,0.0);
-                        LocalMatrix<typename A::ElementType> al_nn(lfsvn.size(),lfsun.size(),0.0);
+                    XL xn(lfsun.size());
+                    AL al_sn(lfsv.size() ,lfsun.size(),0.0);
+                    AL al_ns(lfsvn.size(),lfsu.size() ,0.0);
+                    AL al_nn(lfsvn.size(),lfsun.size(),0.0);
 
-                        // read coefficents
-                        lfsun.vread(x,xn);
+                    // read coefficents
+                    lfsun.vread(x,xn);
 
-                        // skeleton evaluation
-                        LocalAssemblerCallSwitch<LA,LA::doAlphaSkeleton>::
-                          jacobian_skeleton(la,IntersectionGeometry<Intersection>(*iit,intersection_index),
-                                            lfsu,xl,lfsv,lfsun,xn,lfsvn,al,al_sn,al_ns,al_nn);
-
-                        // accumulate result
+                    apply_operator.conditional<do_alpha_skeleton_or_boundary>
+                      (InvokeJacobianSkeletonOrBoundary<XL,AL>(xl,xn,al,al_sn,al_ns,al_nn,
+                                                                    id > idn ||
+                                                                    (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
+                                                                    )
+                       );
+                    if (data.alphaSkeletonInvoked())
+                      {
                         etadd(lfsv,lfsun,al_sn,a);
                         etadd(lfsvn,lfsu,al_ns,a);
                         etadd(lfsvn,lfsun,al_nn,a);
+                        data.clearAlphaSkeletonInvoked();
                       }
                   }
 
                 // boundary term
                 if (iit->boundary())
                   {
-                    LocalAssemblerCallSwitch<LA,LA::doAlphaBoundary>::
-                      jacobian_boundary(la,IntersectionGeometry<Intersection>(*iit,intersection_index),lfsu,xl,lfsv,al);
+                    apply_operator.conditional<do_alpha_boundary>(InvokeJacobianBoundary<XL,AL>(xl,al));
                   }
               }
           }
 
-        LocalAssemblerCallSwitch<LA,LA::doAlphaVolumePostSkeleton>::
-          jacobian_volume_post_skeleton(la,ElementGeometry<Element>(*it),lfsu,xl,lfsv,al);
+        apply_operator.conditional<do_alpha_volume_post_skeleton>(InvokeJacobianPostSkeleton<XL,AL>(xl,al));
 
         // accumulate result (note: a needs to be cleared outside)
         etadd(lfsv,lfsu,al,a);

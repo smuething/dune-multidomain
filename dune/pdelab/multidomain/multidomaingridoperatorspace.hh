@@ -490,7 +490,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<SubProblemsAnd
       LFSU lfsu(data.lfsu());
       LFSV lfsv(data.lfsv());
       LocalSparsityPattern localpattern;
-      child.pattern_volume(lfsu,lfsv,localpattern);
+      child.localOperator().pattern_volume(lfsu,lfsv,localpattern);
 
       // translate local to global indices and add to global pattern
       for (size_t k=0; k<localpattern.size(); ++k)
@@ -521,7 +521,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<SubProblemsAnd
       LFSU lfsun(data.lfsun());
       LFSV lfsvn(data.lfsvn());
       LocalSparsityPattern localpattern_sn, localpattern_ns;
-      child.pattern_skeleton(lfsu,lfsv,lfsun,lfsvn,localpattern_sn,localpattern_ns);
+      child.localOperator().pattern_skeleton(lfsu,lfsv,lfsun,lfsvn,localpattern_sn,localpattern_ns);
 
       // translate local to global indices and add to global pattern
       for (size_t k=0; k<localpattern_sn.size(); ++k)
@@ -558,7 +558,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<SubProblemsAnd
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSU lfsu(data.lfsu());
       LFSV lfsv(data.lfsv());
-      child.alpha_volume(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,r);
+      child.localOperator().alpha_volume(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,r);
     }
 
     const XL& x;
@@ -580,7 +580,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<SubProblemsAnd
         return;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSV lfsv(data.lfsv());
-      child.lambda_volume(ElementGeometry<typename Data::Entity>(data.element()),lfsv,r);
+      child.localOperator().lambda_volume(ElementGeometry<typename Data::Entity>(data.element()),lfsv,r);
     }
 
     RL& r;
@@ -604,37 +604,38 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<SubProblemsAnd
     {
       if (!child.appliesTo(data.elementSubDomains()))
         return;
+      typedef typename Child::Traits::LocalOperator LOP;
       typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSU lfsu(data.lfsu());
       LFSV lfsv(data.lfsv());
       if (child.appliesTo(data.neighborSubDomains()))
         {
-          if (applyOneSided || Child::doSkeletonTwoSided)
+          if (applyOneSided || LOP::doSkeletonTwoSided)
             {
               LFSU lfsun(data.lfsun());
               LFSV lfsvn(data.lfsvn());
-              LocalAssemblerCallSwitch<Child,Child::doAlphaSkeleton>::
-                alpha_skeleton(child,
+              LocalAssemblerCallSwitch<Child,LOP::doAlphaSkeleton>::
+                alpha_skeleton(child.localOperator(),
                                IntersectionGeometry<typename Data::Intersection>(data.intersection(),
                                                                                  data.intersection_index),
-                               lfsu,xl,lfsv,lfsun,xn,lfsvn,rl,rn);
-              if(Child::doAlphaSkeleton)
+                               lfsu,_xl,lfsv,lfsun,_xn,lfsvn,_rl,_rn);
+              if(LOP::doAlphaSkeleton)
                 data.setAlphaSkeletonInvoked();
             }
         }
       else
         {
-          LocalAssemblerCallSwitch<Child,Child::doAlphaBoundary>::
-            alpha_boundary(child,
+          LocalAssemblerCallSwitch<LOP,LOP::doAlphaBoundary>::
+            alpha_boundary(child.localOperator(),
                            IntersectionGeometry<typename Data::Intersection>(data.intersection(),
                                                                              data.intersection_index),
-                           lfsu,xl,lfsv,rl);
-          LocalAssemblerCallSwitch<Child,Child::doLambdaBoundary>::
-            lambda_boundary(child,
+                           lfsu,_xl,lfsv,_rl);
+          LocalAssemblerCallSwitch<LOP,LOP::doLambdaBoundary>::
+            lambda_boundary(child.localOperator(),
                             IntersectionGeometry<typename Data::Intersection>(data.intersection(),
                                                                               data.intersection_index),
-                            lfsv,rl);
+                            lfsv,_rl);
         }
     }
 
@@ -664,7 +665,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<SubProblemsAnd
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSU lfsu(data.lfsu());
       LFSV lfsv(data.lfsv());
-      child.alpha_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,r);
+      child.localOperator().alpha_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,r);
     }
 
     const XL& x;
@@ -686,7 +687,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<SubProblemsAnd
         return;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSV lfsv(data.lfsv());
-      child.lambda_volume(IntersctionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsv,r);
+      child.localOperator().lambda_volume(IntersctionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsv,r);
     }
 
     RL& r;
@@ -711,7 +712,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<SubProblemsAnd
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSU lfsu(data.lfsu());
       LFSV lfsv(data.lfsv());
-      child.alpha_volume_post_skeleton(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,r);
+      child.localOperator().alpha_volume_post_skeleton(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,r);
     }
 
     const XL& x;
@@ -733,7 +734,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<SubProblemsAnd
         return;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSV lfsv(data.lfsv());
-      child.lambda_volume_post_skeleton(ElementGeometry<typename Data::Entity>(data.element()),lfsv,r);
+      child.localOperator().lambda_volume_post_skeleton(ElementGeometry<typename Data::Entity>(data.element()),lfsv,r);
     }
 
     RL& r;

@@ -952,11 +952,12 @@ public:
                     lfsun.vread(x,xn);
 
                     // unique vist of intersection
-                    apply_operator(InvokeAlphaSkeletonOrBoundary<XL,RL>(xl,xn,rl,rn,
-                                                                        id > idn ||
-                                                                        (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
-                                                                        )
-                                   );
+                    apply_operator.conditional<do_alpha_skeleton_or_boundary>
+                      (InvokeAlphaSkeletonOrBoundary<XL,RL>(xl,xn,rl,rn,
+                                                            id > idn ||
+                                                            (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
+                                                            )
+                       );
                     if (data.alphaSkeletonInvoked())
                       {
                         lfsvn.vadd(rn,r);

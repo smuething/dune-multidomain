@@ -377,43 +377,44 @@ private:
 template<typename T>
 struct do_pattern_skeleton
 {
-  static const bool value = T::doPatternSkeleton;
+  static const bool value = T::Traits::LocalOperator::doPatternSkeleton;
 };
 
 template<typename T>
 struct do_pattern_volume
 {
-  static const bool value = T::doPatternVolume;
+  static const bool value = T::Traits::LocalOperator::doPatternVolume;
 };
 
 template<typename T>
 struct do_alpha_volume
 {
-  static const bool value = T::doAlphaVolume;
+  static const bool value = T::Traits::LocalOperator::doAlphaVolume;
 };
 
 template<typename T>
 struct do_alpha_skeleton
 {
-  static const bool value = T::doAlphaSkeleton;
+  static const bool value = T::Traits::LocalOperator::doAlphaSkeleton;
 };
 
 template<typename T>
 struct do_alpha_boundary
 {
-  static const bool value = T::doAlphaBoundary;
+  static const bool value = T::Traits::LocalOperator::doAlphaBoundary;
+};
 };
 
 template<typename T>
 struct do_lambda_volume
 {
-  static const bool value = T::doLambdaVolume;
+  static const bool value = T::Traits::LocalOperator::doLambdaVolume;
 };
 
 template<typename T>
 struct do_lambda_boundary
 {
-  static const bool value = T::doLambdaBoundary;
+  static const bool value = T::Traits::LocalOperator::doLambdaBoundary;
 };
 
 #if 0

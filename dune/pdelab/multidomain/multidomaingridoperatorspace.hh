@@ -433,7 +433,7 @@ struct do_lambda_boundary
 template<typename GFSU, typename GFSV,
          typename B,
          typename... SubProblemsAndCouplings>
-class MultiDomainGridOperatorSpace : public VariadicCompositeNode<SubproblemsAndCouplings...>
+class MultiDomainGridOperatorSpace : public VariadicCompositeNode<SubProblemsAndCouplings...>
 {
 
   typedef typename extract_problems<SubProblemsAndCouplings...>::type SubProblemList;

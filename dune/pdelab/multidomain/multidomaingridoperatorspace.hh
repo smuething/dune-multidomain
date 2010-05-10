@@ -1052,8 +1052,8 @@ public:
   };
 
   //! construct GridOperatorSpace
-  GridOperatorSpace (const GFSU& gfsu_, const GFSV& gfsv_, const LA& la_)
-    : gfsu(gfsu_), gfsv(gfsv_), la(la_)
+  MultiDomainGridOperatorSpace (const GFSU& gfsu_, const GFSV& gfsv_, const SubProblemsAndCouplings&... subProblems_)
+    : gfsu(gfsu_), gfsv(gfsv_), BaseT(subProblems_...)
   {
     pconstraintsu = &emptyconstraintsu;
     pconstraintsv = &emptyconstraintsv;

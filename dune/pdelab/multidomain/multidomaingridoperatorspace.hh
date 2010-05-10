@@ -470,7 +470,7 @@ struct do_lambda_volume_post_skeleton
  * \tparam LP   local pattern assembler (provided by user)
  * \tparam LA   local operator assembler (provided by user)
  */
-template<typename GFSU, typename GFSV,
+template<typename GFSU, typename CU, typename GFSV, typename CV,
          typename B,
          typename... SubProblemsAndCouplings>
 class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePolicy,SubProblemsAndCouplings...>
@@ -1060,10 +1060,10 @@ public:
   }
 
   //! construct GridOperatorSpace, with constraints
-  GridOperatorSpace (const GFSU& gfsu_, const CU& cu,
-                     const GFSV& gfsv_, const CV& cv,
-                     const LA& la_)
-    : gfsu(gfsu_), gfsv(gfsv_), la(la_)
+  MultiDomainGridOperatorSpace (const GFSU& gfsu_, const CU& cu,
+                                  const GFSV& gfsv_, const CV& cv,
+                                  const SubProblemsAndCouplings&... subProblems_)
+    : gfsu(gfsu_), gfsv(gfsv_), BaseT(subProblems_...)
   {
     pconstraintsu = &cu;
     pconstraintsv = &cv;
@@ -1828,7 +1828,6 @@ private:
 
   const GFSU& gfsu;
   const GFSV& gfsv;
-  const LA& la;
   const CU* pconstraintsu;
   const CV* pconstraintsv;
   CU emptyconstraintsu;

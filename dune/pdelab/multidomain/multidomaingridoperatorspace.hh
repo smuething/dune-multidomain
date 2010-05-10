@@ -475,6 +475,7 @@ template<typename GFSU, typename CU, typename GFSV, typename CV,
          typename... SubProblemsAndCouplings>
 class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePolicy,SubProblemsAndCouplings...>
 {
+  typedef VariadicCompositeNode<CopyStoragePolicy,SubProblemsAndCouplings...> BaseT;
 
   typedef typename extract_problems<SubProblemsAndCouplings...>::type SubProblemList;
   typedef typename extract_problems<SubProblemsAndCouplings...>::map_type SubProblemMap;

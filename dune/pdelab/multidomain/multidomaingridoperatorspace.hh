@@ -1257,10 +1257,10 @@ public:
                                                             (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
                                                             )
                        );
-                    if (data.alphaSkeletonInvoked())
+                    if (apply_operator.alphaSkeletonInvoked())
                       {
                         lfsvn.vadd(rn,r);
-                        data.clearAlphaSkeletonInvoked();
+                        apply_operator.clearAlphaSkeletonInvoked();
                       }
                   }
 
@@ -1386,10 +1386,10 @@ public:
                                                                     (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
                                                                     )
                        );
-                    if (data.alphaSkeletonInvoked())
+                    if (apply_operator.alphaSkeletonInvoked())
                       {
                         lfsvn.vadd(yn,y);
-                        data.clearAlphaSkeletonInvoked();
+                        apply_operator.clearAlphaSkeletonInvoked();
                       }
                   }
 
@@ -1522,12 +1522,12 @@ public:
                                                                     (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
                                                                     )
                        );
-                    if (data.alphaSkeletonInvoked())
+                    if (apply_operator.alphaSkeletonInvoked())
                       {
                         etadd(lfsv,lfsun,al_sn,a);
                         etadd(lfsvn,lfsu,al_ns,a);
                         etadd(lfsvn,lfsun,al_nn,a);
-                        data.clearAlphaSkeletonInvoked();
+                        apply_operator.clearAlphaSkeletonInvoked();
                       }
                   }
 

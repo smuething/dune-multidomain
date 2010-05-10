@@ -473,7 +473,7 @@ struct do_lambda_volume_post_skeleton
 template<typename GFSU, typename GFSV,
          typename B,
          typename... SubProblemsAndCouplings>
-class MultiDomainGridOperatorSpace : public VariadicCompositeNode<SubProblemsAndCouplings...>
+class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePolicy,SubProblemsAndCouplings...>
 {
 
   typedef typename extract_problems<SubProblemsAndCouplings...>::type SubProblemList;

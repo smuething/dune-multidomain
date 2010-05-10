@@ -178,15 +178,15 @@ struct extract_couplings
 
 //} // anonymous namespace
 
-template<typename MDGOS, template<typename> class Condition, template<bool,bool> class BooleanOp, bool start_value, std::size_t i, std::size_t n>
+template<typename MDGOS, typename Condition, template<bool,bool> class BooleanOp, bool start_value, std::size_t i, std::size_t n>
 struct child_condition
 {
-  static const bool value = BooleanOp<Condition<typename MDGOS::template Child<i>::Type>::value,
+  static const bool value = BooleanOp<Condition::template test<typename MDGOS::template Child<i>::Type>::value,
                                       child_condition<MDGOS,Condition,BooleanOp,start_value,i+1,n>::value
                                      >::value;
 };
 
-template<typename MDGOS, template<typename> class Condition, template<bool,bool> class BooleanOp, bool start_value, std::size_t n>
+template<typename MDGOS, typename Condition, template<bool,bool> class BooleanOp, bool start_value, std::size_t n>
 struct child_condition<MDGOS,Condition,BooleanOp,start_value,n,n>
 {
   static const bool value = start_value;
@@ -204,10 +204,10 @@ struct or_
   static const bool value = a || b;
 };
 
-template<typename MDGOS, template<typename> class Condition>
+template<typename MDGOS, typename Condition>
 struct all_childs : public child_condition<MDGOS,Condition,and_,true,0,MDGOS::CHILDREN> {};
 
-template<typename MDGOS, template<typename> class Condition>
+template<typename MDGOS, typename Condition>
 struct any_child : public child_condition<MDGOS,Condition,or_,false,0,MDGOS::CHILDREN> {};
 
 template<typename Applier, typename Operator, std::size_t i, std::size_t n>
@@ -250,18 +250,18 @@ struct conditional_apply<Applier,Operator,i,false>
   }
 };
 
-template<typename Applier, template<typename> class Condition, typename Operator, std::size_t i, std::size_t n>
+template<typename Applier, typename Condition, typename Operator, std::size_t i, std::size_t n>
 struct conditional_apply_operator_helper
 {
   static void apply(Applier& applier, Operator& op)
   {
-    conditional_apply<Applier,Operator,i,Condition<typename Applier::MDGOS::template Child<i>::Type>::value>::apply(applier,op);
+    conditional_apply<Applier,Operator,i,Condition::template test<typename Applier::MDGOS::template Child<i>::Type>::value>::apply(applier,op);
     apply_operator_helper<Applier,Operator,i+1,n>::apply(applier,op);
   }
 };
 
 // end of recursion
-template<typename Applier, template<typename> class Condition, typename Operator, std::size_t n>
+template<typename Applier, typename Condition, typename Operator, std::size_t n>
 struct conditional_apply_operator_helper<Applier, Condition, Operator, n,n>
 {
   static void apply(Applier& applier, Operator& op)
@@ -375,55 +375,87 @@ private:
 
 };
 
-template<typename T>
+
 struct do_pattern_skeleton
 {
-  static const bool value = T::Traits::LocalOperator::doPatternSkeleton;
+  template<typename T>
+  struct test {
+    static const bool value = T::Traits::LocalOperator::doPatternSkeleton;
+  };
 };
 
-template<typename T>
 struct do_pattern_volume
 {
-  static const bool value = T::Traits::LocalOperator::doPatternVolume;
+  template<typename T>
+  struct test {
+    static const bool value = T::Traits::LocalOperator::doPatternVolume;
+  };
 };
 
-template<typename T>
 struct do_alpha_volume
 {
-  static const bool value = T::Traits::LocalOperator::doAlphaVolume;
+  template<typename T>
+  struct test {
+    static const bool value = T::Traits::LocalOperator::doAlphaVolume;
+  };
 };
 
-template<typename T>
 struct do_alpha_skeleton
 {
-  static const bool value = T::Traits::LocalOperator::doAlphaSkeleton;
+  template<typename T>
+  struct test {
+    static const bool value = T::Traits::LocalOperator::doAlphaSkeleton;
+  };
 };
 
-template<typename T>
 struct do_alpha_boundary
 {
-  static const bool value = T::Traits::LocalOperator::doAlphaBoundary;
+  template<typename T>
+  struct test {
+    static const bool value = T::Traits::LocalOperator::doAlphaBoundary;
+  };
 };
 
-template<typename T>
 struct do_alpha_skeleton_or_boundary
 {
-  static const bool value = T::Traits::LocalOperator::doAlphaSkeleton || T::Traits::LocalOperator::doAlphaBoundary;
+  template<typename T>
+  struct test {
+    static const bool value = T::Traits::LocalOperator::doAlphaSkeleton || T::Traits::LocalOperator::doAlphaBoundary;
+  };
 };
 
-template<typename T>
 struct do_lambda_volume
 {
-  static const bool value = T::Traits::LocalOperator::doLambdaVolume;
+  template<typename T>
+  struct test {
+    static const bool value = T::Traits::LocalOperator::doLambdaVolume;
+  };
 };
 
-template<typename T>
 struct do_lambda_boundary
 {
-  static const bool value = T::Traits::LocalOperator::doLambdaBoundary;
+  template<typename T>
+  struct test {
+    static const bool value = T::Traits::LocalOperator::doLambdaBoundary;
+  };
 };
 
 #if 0
+struct do_alpha_volume_post_skeleton
+{
+  template<typename T>
+  struct test {
+    static const bool value = T::Traits::LocalOperator::doAlphaVolumePostSkeleton;
+  };
+};
+
+struct do_lambda_volume_post_skeleton
+{
+  template<typename T>
+  struct test {
+    static const bool value = T::Traits::LocalOperator::doLambdaVolumePostSkeleton;
+  };
+};
 
 //================================================
 // The operator

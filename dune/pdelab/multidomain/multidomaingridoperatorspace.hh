@@ -1832,6 +1832,7 @@ private:
   const CV* pconstraintsv;
   CU emptyconstraintsu;
   CV emptyconstraintsv;
+  bool nonoverlapping_mode;
 };
 
 //! \} group GridFunctionSpace

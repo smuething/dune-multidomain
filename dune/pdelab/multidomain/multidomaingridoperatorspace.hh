@@ -489,8 +489,8 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
   };
 
   template<std::size_t k>
-  const SubProblem<k>::Type& subProblem() const {
-    return this->getChild<std::tuple_element<k,SubProblemList>::type::globalIndex>();
+  const typename SubProblem<k>::Type& subProblem() const {
+    return this->template getChild<std::tuple_element<k,SubProblemList>::type::globalIndex>();
   }
 
   template<std::size_t k>
@@ -499,8 +499,8 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
   };
 
   template<std::size_t k>
-  const Coupling<k>::Type& coupling() const {
-    return this->getChild<std::tuple_element<k,CouplingList>::type::globalIndex>();
+  const typename Coupling<k>::Type& coupling() const {
+    return this->template getChild<std::tuple_element<k,CouplingList>::type::globalIndex>();
   }
 
   // extract useful types
@@ -1120,7 +1120,7 @@ public:
         lfsv.bind(*it);
         apply_operator.setElementSubDomains(gfsu.gridview().indexSet().subDomains(*it));
 
-        apply_operator.conditional<do_pattern_volume>(BuildVolumePattern<P>(globalpattern));
+        apply_operator.template conditional<do_pattern_volume>(BuildVolumePattern<P>(globalpattern));
 
         // skeleton and boundary pattern
         if (!any_child<MultiDomainGridOperatorSpace,do_pattern_skeleton>::value) continue;
@@ -1143,7 +1143,7 @@ public:
             apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*it));
 
             // get pattern
-            apply_operator.conditional<do_pattern_skeleton>(BuildSkeletonPattern<P>(globalpattern));
+            apply_operator.template conditional<do_pattern_skeleton>(BuildSkeletonPattern<P>(globalpattern));
           }
       }
   }
@@ -1205,8 +1205,8 @@ public:
         lfsu.vread(x,xl);
 
         // volume evaluation
-        apply_operator.conditional<do_alpha_volume>(InvokeAlphaVolume<XL,RL>(xl,rl));
-        apply_operator.conditional<do_lambda_volume>(InvokeLambdaVolume<RL>(rl));
+        apply_operator.template conditional<do_alpha_volume>(InvokeAlphaVolume<XL,RL>(xl,rl));
+        apply_operator.template conditional<do_lambda_volume>(InvokeLambdaVolume<RL>(rl));
 
         // skip if no intersection iterator is needed
         if (any_child<MultiDomainGridOperatorSpace,do_alpha_skeleton>::value ||
@@ -1251,7 +1251,7 @@ public:
                     lfsun.vread(x,xn);
 
                     // unique vist of intersection
-                    apply_operator.conditional<do_alpha_skeleton_or_boundary>
+                    apply_operator.template conditional<do_alpha_skeleton_or_boundary>
                       (InvokeAlphaSkeletonOrBoundary<XL,RL>(xl,xn,rl,rn,
                                                             id > idn ||
                                                             (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
@@ -1267,14 +1267,14 @@ public:
                 // boundary term
                 if (iit->boundary())
                   {
-                    apply_operator.conditional<do_alpha_boundary>(InvokeAlphaBoundary<XL,RL>(xl,rl));
-                    apply_operator.conditional<do_lambda_boundary>(InvokeLambdaBoundary<RL>(rl));
+                    apply_operator.template conditional<do_alpha_boundary>(InvokeAlphaBoundary<XL,RL>(xl,rl));
+                    apply_operator.template conditional<do_lambda_boundary>(InvokeLambdaBoundary<RL>(rl));
                   }
               }
           }
 
-        apply_operator.conditional<do_alpha_volume_post_skeleton>(InvokeAlphaVolumePostSkeleton<XL,RL>(xl,rl));
-        apply_operator.conditional<do_lambda_volume_post_skeleton>(InvokeLambdaVolumePostSkeleton<RL>(rl));
+        apply_operator.template conditional<do_alpha_volume_post_skeleton>(InvokeAlphaVolumePostSkeleton<XL,RL>(xl,rl));
+        apply_operator.template conditional<do_lambda_volume_post_skeleton>(InvokeLambdaVolumePostSkeleton<RL>(rl));
 
         // accumulate result (note: r needs to be cleared outside)
         lfsv.vadd(rl,r);
@@ -1338,7 +1338,7 @@ public:
         lfsu.vread(x,xl);
 
         // volume evaluation
-        apply_operator.conditional<do_alpha_volume>(InvokeJacobianApplyVolume<XL,YL>(xl,yl));
+        apply_operator.template conditional<do_alpha_volume>(InvokeJacobianApplyVolume<XL,YL>(xl,yl));
 
         // skeleton and boundary evaluation
         if (any_child<MultiDomainGridOperatorSpace,do_alpha_skeleton>::value ||
@@ -1380,7 +1380,7 @@ public:
                     // read coefficents
                     lfsun.vread(x,xn);
 
-                    apply_operator.conditional<do_alpha_skeleton_or_boundary>
+                    apply_operator.template conditional<do_alpha_skeleton_or_boundary>
                       (InvokeJacobianApplySkeletonOrBoundary<XL,YL>(xl,xn,yl,yn,
                                                                     id > idn ||
                                                                     (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
@@ -1396,12 +1396,12 @@ public:
                 // boundary term
                 if (iit->boundary())
                   {
-                    apply_operator.conditional<do_alpha_boundary>(InvokeJacobianApplyBoundary<XL,YL>(xl,yl));
+                    apply_operator.template conditional<do_alpha_boundary>(InvokeJacobianApplyBoundary<XL,YL>(xl,yl));
                   }
               }
           }
 
-        apply_operator.conditional<do_alpha_volume_post_skeleton>(InvokeJakobianApplyVolumePostSkeleton<XL,YL>(xl,yl));
+        apply_operator.template conditional<do_alpha_volume_post_skeleton>(InvokeJacobianApplyVolumePostSkeleton<XL,YL>(xl,yl));
 
         // accumulate result (note: r needs to be cleared outside)
         lfsv.vadd(yl,y);
@@ -1470,7 +1470,7 @@ public:
         lfsu.vread(x,xl);
 
         // volume evaluation
-        apply_operator.conditional<do_alpha_volume>(InvokeJacobianVolume<XL,AL>(xl,al));
+        apply_operator.template conditional<do_alpha_volume>(InvokeJacobianVolume<XL,AL>(xl,al));
 
         // skeleton and boundary evaluation
         if (any_child<MultiDomainGridOperatorSpace,do_alpha_skeleton>::value ||
@@ -1516,7 +1516,7 @@ public:
                     // read coefficents
                     lfsun.vread(x,xn);
 
-                    apply_operator.conditional<do_alpha_skeleton_or_boundary>
+                    apply_operator.template conditional<do_alpha_skeleton_or_boundary>
                       (InvokeJacobianSkeletonOrBoundary<XL,AL>(xl,xn,al,al_sn,al_ns,al_nn,
                                                                     id > idn ||
                                                                     (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
@@ -1534,12 +1534,12 @@ public:
                 // boundary term
                 if (iit->boundary())
                   {
-                    apply_operator.conditional<do_alpha_boundary>(InvokeJacobianBoundary<XL,AL>(xl,al));
+                    apply_operator.template conditional<do_alpha_boundary>(InvokeJacobianBoundary<XL,AL>(xl,al));
                   }
               }
           }
 
-        apply_operator.conditional<do_alpha_volume_post_skeleton>(InvokeJacobianPostSkeleton<XL,AL>(xl,al));
+        apply_operator.template conditional<do_alpha_volume_post_skeleton>(InvokeJacobianVolumePostSkeleton<XL,AL>(xl,al));
 
         // accumulate result (note: a needs to be cleared outside)
         etadd(lfsv,lfsu,al,a);

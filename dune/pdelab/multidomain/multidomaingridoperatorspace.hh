@@ -270,10 +270,12 @@ struct conditional_apply_operator_helper<Applier, Condition, Operator, n,n>
 };
 
 
-template<typename MDGOS, typename LFSU, typename LFSV>
+template<typename MDGOS>
 class operator_applier
 {
 
+  typedef typename MDGOS::Traits::TrialGridFunctionSpace::Traits::LocalFunctionSpace LFSU;
+  typedef typename MDGOS::Traits::TestGridFunctionSpace::Traits::LocalFunctionSpace LFSV;
   typedef typename MDGOS::Traits::TrialGridFunctionSpace::Traits::Grid Grid;
 
 public:

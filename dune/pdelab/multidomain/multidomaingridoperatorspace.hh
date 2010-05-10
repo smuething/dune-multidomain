@@ -466,7 +466,6 @@ struct do_lambda_boundary
   };
 };
 
-#if 0
 struct do_alpha_volume_post_skeleton
 {
   template<typename T>
@@ -1861,7 +1860,6 @@ private:
 
 //! \} group GridFunctionSpace
 
-#endif
 
 } // namespace MultiDomain
 } // namespace PDELab

@@ -288,13 +288,13 @@ public:
   {}
 
   template<typename Operator>
-  void operator()(Operator op)
+  void operator()(Operator& op)
   {
     apply_operator_helper<MDGOS,Operator,0,MDGOS::CHILDREN>::apply(_mdgos,op);
   }
 
-  template<template<typename> class Condition, typename Operator>
-  void conditional_apply(Operator op)
+  template<typename Condition, typename Operator>
+  void conditional(Operator& op)
   {
     conditional_apply_operator_helper<MDGOS,Condition,Operator,0,MDGOS::CHILDREN>::apply(_mdgos,op);
   }

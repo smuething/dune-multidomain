@@ -23,6 +23,30 @@ namespace PDELab {
 
 namespace MultiDomain {
 
+template<typename GFSU, typename GFSV, typename B,
+         typename CU, typename CV>
+
+struct MultiDomainGridOperatorSpaceTraits
+{
+  typedef GFSU TrialGridFunctionSpace;
+
+  typedef CU TrialConstraintsType;
+
+  typedef GFSV TestGridFunctionSpace;
+
+  typedef CV TestConstraintsType;
+
+  //! \brief the grid view where grid function is defined upon
+  typedef typename GFSU::Traits::GridType GridType;
+  typedef typename GridType::LeafGridView GridViewType;
+
+  //! \brief vector backend
+  typedef B BackendType;
+
+  //! \brief short cut for size type exported by Backend
+  typedef typename B::size_type SizeType;
+};
+
 //namespace {
 
 template<typename T>
@@ -1041,7 +1065,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
 
 
 public:
-  typedef GridOperatorSpaceTraits<GFSU,GFSV,B,CU,CV> Traits;
+  typedef MultiDomainGridOperatorSpaceTraits<GFSU,GFSV,B,CU,CV> Traits;
 
   template<typename E>
   struct MatrixContainer

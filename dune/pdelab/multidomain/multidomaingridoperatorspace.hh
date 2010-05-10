@@ -647,7 +647,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
       LFSV lfsv(data.lfsv());
       if (child.appliesTo(data.neighborSubDomains()))
         {
-          if (applyOneSided || LOP::doSkeletonTwoSided)
+          if (_applyOneSided || LOP::doSkeletonTwoSided)
             {
               LFSU lfsun(data.lfsun());
               LFSV lfsvn(data.lfsvn());
@@ -723,7 +723,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
         return;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSV lfsv(data.lfsv());
-      child.localOperator().lambda_volume(IntersctionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsv,r);
+      child.localOperator().lambda_volume(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsv,r);
     }
 
     RL& r;
@@ -825,7 +825,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
       LFSV lfsv(data.lfsv());
       if (child.appliesTo(data.neighborSubDomains()))
         {
-          if (applyOneSided || LOP::doSkeletonTwoSided)
+          if (_applyOneSided || LOP::doSkeletonTwoSided)
             {
               LFSU lfsun(data.lfsun());
               LFSV lfsvn(data.lfsvn());
@@ -957,7 +957,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
       LFSV lfsv(data.lfsv());
       if (child.appliesTo(data.neighborSubDomains()))
         {
-          if (applyOneSided || LOP::doSkeletonTwoSided)
+          if (_applyOneSided || LOP::doSkeletonTwoSided)
             {
               LFSU lfsun(data.lfsun());
               LFSV lfsvn(data.lfsvn());
@@ -1047,7 +1047,7 @@ public:
   struct MatrixContainer
   {
     //! \brief define Type as the Type of a Matrix of E's
-    typedef typename B::template Matrix<GridOperatorSpace,E> Type;
+    typedef typename B::template Matrix<MultiDomainGridOperatorSpace,E> Type;
   private:
     MatrixContainer () {}
   };
@@ -1212,7 +1212,6 @@ public:
         // skip if no intersection iterator is needed
         if (any_child<MultiDomainGridOperatorSpace,do_alpha_skeleton>::value ||
             any_child<MultiDomainGridOperatorSpace,do_alpha_boundary>::value ||
-            any_child<MultiDomainGridOperatorSpace,do_lambda_skeleton>::value ||
             any_child<MultiDomainGridOperatorSpace,do_lambda_boundary>::value)
           {
             // local function spaces in neighbor
@@ -1490,7 +1489,7 @@ public:
               {
                 apply_operator.setIntersectionIndex(intersection_index);
                 // skeleton term
-                if (iit->neighbor() &&)
+                if (iit->neighbor())
                   {
                     // assign offset for geometry type;
                     Dune::GeometryType gtn = iit->outside()->type();

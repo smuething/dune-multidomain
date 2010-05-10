@@ -8,11 +8,11 @@
 #include<dune/common/exceptions.hh>
 #include<dune/common/geometrytype.hh>
 
-//#include"../common/geometrywrapper.hh"
+#include <dune/pdelab/common/geometrywrapper.hh>
 //#include"../gridfunctionspace/gridfunctionspace.hh"
-//#include"../gridfunctionspace/constraints.hh"
-//#include"localmatrix.hh"
-//#include"gridoperatorspaceutilities.hh"
+#include <dune/pdelab/gridfunctionspace/constraints.hh>
+#include <dune/pdelab/gridoperatorspace/localmatrix.hh>
+#include <dune/pdelab/gridoperatorspace/gridoperatorspaceutilities.hh>
 
 #include <dune/pdelab/multidomain/typemap.hh>
 

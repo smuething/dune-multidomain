@@ -23,18 +23,13 @@ namespace PDELab {
 
 namespace MultiDomain {
 
-template<typename GFSU, typename GFSV, typename B,
-         typename CU, typename CV>
+template<typename GFSU, typename GFSV, typename B>
 
 struct MultiDomainGridOperatorSpaceTraits
 {
   typedef GFSU TrialGridFunctionSpace;
 
-  typedef CU TrialConstraintsType;
-
   typedef GFSV TestGridFunctionSpace;
-
-  typedef CV TestConstraintsType;
 
   //! \brief the grid view where grid function is defined upon
   typedef typename GFSU::Traits::GridType GridType;
@@ -237,7 +232,7 @@ struct any_child : public child_condition<MDGOS,Condition,or_,false,0,MDGOS::CHI
 template<typename Applier, typename Operator, std::size_t i, std::size_t n>
 struct apply_operator_helper
 {
-  static void apply(Applier& applier, Operator& op)
+  static void apply(const Applier& applier, Operator& op)
   {
     op(applier,applier.gos().template getChild<i>());
     apply_operator_helper<Applier,Operator,i+1,n>::apply(applier,op);
@@ -248,7 +243,7 @@ struct apply_operator_helper
 template<typename Applier, typename Operator, std::size_t n>
 struct apply_operator_helper<Applier, Operator, n,n>
 {
-  static void apply(Applier& applier, Operator& op)
+  static void apply(const Applier& applier, Operator& op)
   {
   }
 };
@@ -260,7 +255,7 @@ struct conditional_apply;
 template<typename Applier, typename Operator, std::size_t i>
 struct conditional_apply<Applier,Operator,i,true>
 {
-  static void apply(Applier& applier, Operator& op)
+  static void apply(const Applier& applier, Operator& op)
   {
     op(applier,applier.gos().template getChild<i>());
   }
@@ -269,7 +264,7 @@ struct conditional_apply<Applier,Operator,i,true>
 template<typename Applier, typename Operator, std::size_t i>
 struct conditional_apply<Applier,Operator,i,false>
 {
-  static void apply(Applier& applier, Operator& op)
+  static void apply(const Applier& applier, Operator& op)
   {
   }
 };
@@ -277,10 +272,10 @@ struct conditional_apply<Applier,Operator,i,false>
 template<typename Applier, typename Condition, typename Operator, std::size_t i, std::size_t n>
 struct conditional_apply_operator_helper
 {
-  static void apply(Applier& applier, Operator& op)
+  static void apply(const Applier& applier, Operator& op)
   {
     conditional_apply<Applier,Operator,i,Condition::template test<typename Applier::MDGOS::template Child<i>::Type>::value>::apply(applier,op);
-    apply_operator_helper<Applier,Operator,i+1,n>::apply(applier,op);
+    conditional_apply_operator_helper<Applier,Condition,Operator,i+1,n>::apply(applier,op);
   }
 };
 
@@ -288,78 +283,76 @@ struct conditional_apply_operator_helper
 template<typename Applier, typename Condition, typename Operator, std::size_t n>
 struct conditional_apply_operator_helper<Applier, Condition, Operator, n,n>
 {
-  static void apply(Applier& applier, Operator& op)
+  static void apply(const Applier& applier, Operator& op)
   {
   }
 };
 
 
-template<typename MDGOS>
+template<typename MDGOS_>
 class operator_applier
 {
 
-  typedef typename MDGOS::Traits::TrialGridFunctionSpace::Traits::LocalFunctionSpace LFSU;
-  typedef typename MDGOS::Traits::TestGridFunctionSpace::Traits::LocalFunctionSpace LFSV;
-  typedef typename MDGOS::Traits::TrialGridFunctionSpace::Traits::Grid Grid;
-
 public:
 
-  typedef typename Grid::template Codim<0>::SubDomainSet ElementSubDomainSet;
 
-  operator_applier(MDGOS& mdgos) :
+  typedef MDGOS_ MDGOS;
+  typedef typename MDGOS::Traits::TrialGridFunctionSpace::LocalFunctionSpace LFSU;
+  typedef typename MDGOS::Traits::TestGridFunctionSpace::LocalFunctionSpace LFSV;
+  typedef typename MDGOS::Traits::TrialGridFunctionSpace::Traits::GridType Grid;
+  typedef typename Grid::template Codim<0>::Entity Element;
+  typedef typename Grid::LeafGridView::Intersection Intersection;
+
+  typedef typename Grid::Traits::LeafIndexSet::SubDomainSet ElementSubDomainSet;
+
+  operator_applier(const MDGOS& mdgos, LFSU& lfsu, LFSV& lfsv) :
     _mdgos(mdgos),
+    _lfsu(lfsu),
+    _lfsv(lfsv),
     _alphaSkeletonInvoked(false)
   {}
 
   template<typename Operator>
-  void operator()(Operator& op)
+  void operator()(Operator&& op)
   {
-    apply_operator_helper<MDGOS,Operator,0,MDGOS::CHILDREN>::apply(_mdgos,op);
+    apply_operator_helper<operator_applier,Operator,0,MDGOS::CHILDREN>::apply(*this,op);
   }
 
   template<typename Condition, typename Operator>
-  void conditional(Operator& op)
+  void conditional(Operator&& op)
   {
-    conditional_apply_operator_helper<MDGOS,Condition,Operator,0,MDGOS::CHILDREN>::apply(_mdgos,op);
+    conditional_apply_operator_helper<operator_applier,Condition,Operator,0,MDGOS::CHILDREN>::apply(*this,op);
   }
 
-  MDGOS& gos() {
+  const MDGOS& gos() const {
     return _mdgos;
   }
 
-  LFSU& lfsu() {
-    return *_plfsu;
+  const LFSU& lfsu() const {
+    return _lfsu;
   }
 
-  void set(LFSU& lfsu) {
-    _plfsu = &lfsu;
+  const LFSV& lfsv() const {
+    return _lfsv;
   }
 
-  LFSV& lfsv() {
-    return *_plfsv;
-  }
-
-  void set(LFSV& lfsv) {
-    _plfsv = &lfsv;
-  }
-
-  LFSU& lfsun() {
+  const LFSU& lfsun() const {
     return *_plfsun;
   }
 
-  void setn(LFSU& lfsun) {
+  void setlfsun(LFSU& lfsun) {
     _plfsun = &lfsun;
   }
 
-  LFSV& lfsvn() {
+  const LFSV& lfsvn() const {
     return *_plfsvn;
   }
 
-  void setn(LFSV& lfsvn) {
+  void setlfsvn(LFSV& lfsvn) {
     _plfsvn = &lfsvn;
   }
 
-  ElementSubDomainSet& elementSubDomains() {
+  const ElementSubDomainSet& elementSubDomains() const {
     return _elementSet;
   }
 
@@ -367,7 +360,7 @@ public:
     _elementSet = elementSet;
   }
 
-  ElementSubDomainSet& neighborSubDomains() {
+  const ElementSubDomainSet& neighborSubDomains() const {
     return _neighborSet;
   }
 
@@ -375,7 +368,7 @@ public:
     _neighborSet = neighborSet;
   }
 
-  void setAlphaSkeletonInvoked() {
+  void setAlphaSkeletonInvoked() const {
     _alphaSkeletonInvoked = true;
   }
 
@@ -387,17 +380,43 @@ public:
     return _alphaSkeletonInvoked;
   }
 
+  void setIntersectionIndex(int index) {
+    _intersectionIndex = index;
+  }
+
+  int intersectionIndex() const {
+    return _intersectionIndex;
+  }
+
+  void setElement(const Element& element) {
+    _element = &element;
+  }
+
+  const Element& element() const {
+    return *_element;
+  }
+
+  void setIntersection(const Intersection intersection) {
+    _intersection = &intersection;
+  }
+
+  const Intersection& intersection() const {
+    return *_intersection;
+  }
 
 private:
 
-  MDGOS& _mdgos;
-  LFSU* _plfsu;
-  LFSV* _plfsv;
+  const MDGOS& _mdgos;
+  LFSU& _lfsu;
+  LFSV& _lfsv;
   LFSU* _plfsun;
   LFSV* _plfsvn;
+  int _intersectionIndex;
   ElementSubDomainSet _elementSet;
   ElementSubDomainSet _neighborSet;
-  bool _alphaSkeletonInvoked;
+  mutable bool _alphaSkeletonInvoked;
+  const Element* _element;
+  const Intersection* _intersection;
 
 };
 
@@ -493,7 +512,7 @@ struct do_lambda_volume_post_skeleton
  * \tparam LP   local pattern assembler (provided by user)
  * \tparam LA   local operator assembler (provided by user)
  */
-template<typename GFSU, typename CU, typename GFSV, typename CV,
+template<typename GFSU, typename GFSV,
          typename B,
          typename... SubProblemsAndCouplings>
 class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePolicy,SubProblemsAndCouplings...>
@@ -506,6 +525,9 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
 
   static const std::size_t subProblemCount = std::tuple_size<SubProblemList>::value;
   static const std::size_t couplingCount = std::tuple_size<SubProblemList>::value;
+
+  typedef typename GFSU::template ConstraintsContainer<double>::Type CU;
+  typedef CU CV;
 
   template<std::size_t k>
   struct SubProblem {
@@ -528,7 +550,8 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
   }
 
   // extract useful types
-  typedef typename GFSU::Traits::GridViewType GV;
+  typedef typename GFSU::Traits::GridType Grid;
+  typedef typename Grid::LeafGridView GV;
   typedef typename GV::Traits::template Codim<0>::Iterator ElementIterator;
   typedef typename GV::Traits::template Codim<0>::Entity Element;
   typedef typename GV::IntersectionIterator IntersectionIterator;
@@ -546,17 +569,17 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
         return;
       typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu());
-      LFSV lfsv(data.lfsv());
+      LFSU lfsu(data.lfsu(),child.condition());
+      LFSV lfsv(data.lfsv(),child.condition());
       LocalSparsityPattern localpattern;
       child.localOperator().pattern_volume(lfsu,lfsv,localpattern);
 
       // translate local to global indices and add to global pattern
       for (size_t k=0; k<localpattern.size(); ++k)
-        add_entry(globalpattern,
-                  lfsv.globalIndex(localpattern[k].i()),
-                      lfsu.globalIndex(localpattern[k].j())
-                  );
+        data.gos().add_entry(globalpattern,
+                             lfsv.globalIndex(localpattern[k].i()),
+                             lfsu.globalIndex(localpattern[k].j())
+                             );
     }
 
     P& globalpattern;
@@ -584,16 +607,16 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
 
       // translate local to global indices and add to global pattern
       for (size_t k=0; k<localpattern_sn.size(); ++k)
-        add_entry(globalpattern,
-                  lfsv.globalIndex(localpattern_sn[k].i()),
-                  lfsun.globalIndex(localpattern_sn[k].j())
-                  );
+        data.gos().add_entry(globalpattern,
+                             lfsv.globalIndex(localpattern_sn[k].i()),
+                             lfsun.globalIndex(localpattern_sn[k].j())
+                             );
 
       for (size_t k=0; k<localpattern_ns.size(); ++k)
-        add_entry(globalpattern,
-                  lfsvn.globalIndex(localpattern_ns[k].i()),
-                  lfsu.globalIndex(localpattern_ns[k].j())
-                  );
+        data.gos().add_entry(globalpattern,
+                             lfsvn.globalIndex(localpattern_ns[k].i()),
+                             lfsu.globalIndex(localpattern_ns[k].j())
+                             );
     }
 
     P& globalpattern;
@@ -921,7 +944,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSU lfsu(data.lfsu());
       LFSV lfsv(data.lfsv());
-      child.localOperator().jacobian_apply_volume_post_skeleton(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,y);
+      child.localOperator().jacobian_apply_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,y);
     }
 
     const XL& x;
@@ -943,11 +966,11 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
     {
       if (!child.appliesTo(data.elementSubDomains()))
         return;
-      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu());
-      LFSV lfsv(data.lfsv());
-      child.localOperator().jacobian_volume(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,a);
+      typedef typename Child::Traits::LocalTrialFunctionSpace LFSU;
+      typedef typename Child::Traits::LocalTestFunctionSpace LFSV;
+      LFSU lfsu(data.lfsu(),child.condition());
+      LFSV lfsv(data.lfsv(),child.condition());
+      child.localOperator().jacobian_volume(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,a);
     }
 
     const XL& x;
@@ -976,18 +999,18 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
       typedef typename Child::Traits::LocalOperator LOP;
       typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu());
-      LFSV lfsv(data.lfsv());
+      LFSU lfsu(data.lfsu(),child.condition());
+      LFSV lfsv(data.lfsv(),child.condition());
       if (child.appliesTo(data.neighborSubDomains()))
         {
           if (_applyOneSided || LOP::doSkeletonTwoSided)
             {
-              LFSU lfsun(data.lfsun());
-              LFSV lfsvn(data.lfsvn());
+              LFSU lfsun(data.lfsun(),child.condition());
+              LFSV lfsvn(data.lfsvn(),child.condition());
               LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
                 jacobian_skeleton(child.localOperator(),
                                   IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                    data.intersection_index),
+                                                                                    data.intersectionIndex()),
                                   lfsu,_xl,lfsv,lfsun,_xn,lfsvn,_al,_al_sn,_al_ns,_al_nn);
               if(LOP::doAlphaSkeleton)
                 data.setAlphaSkeletonInvoked();
@@ -998,7 +1021,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
           LocalAssemblerCallSwitch<LOP,LOP::doAlphaBoundary>::
             jacobian_boundary(child.localOperator(),
                               IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                data.intersection_index),
+                                                                                data.intersectionIndex()),
                               lfsu,_xl,lfsv,_al);
         }
     }
@@ -1028,8 +1051,8 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
         return;
       typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu());
-      LFSV lfsv(data.lfsv());
+      LFSU lfsu(data.lfsu(),child.condition());
+      LFSV lfsv(data.lfsv(),child.condition());
       child.localOperator().jacobian_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,a);
     }
 
@@ -1053,8 +1076,8 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
         return;
       typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu());
-      LFSV lfsv(data.lfsv());
+      LFSU lfsu(data.lfsu(),child.condition());
+      LFSV lfsv(data.lfsv(),child.condition());
       child.localOperator().jacobian_volume_post_skeleton(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,a);
     }
 
@@ -1064,7 +1087,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
 
 
 public:
-  typedef MultiDomainGridOperatorSpaceTraits<GFSU,GFSV,B,CU,CV> Traits;
+  typedef MultiDomainGridOperatorSpaceTraits<GFSU,GFSV,B> Traits;
 
   template<typename E>
   struct MatrixContainer
@@ -1076,21 +1099,9 @@ public:
   };
 
   //! construct GridOperatorSpace
-  MultiDomainGridOperatorSpace (const GFSU& gfsu_, const GFSV& gfsv_, const SubProblemsAndCouplings&... subProblems_)
-    : gfsu(gfsu_), gfsv(gfsv_), BaseT(subProblems_...)
+  MultiDomainGridOperatorSpace (const GFSU& gfsu_, const GFSV& gfsv_, SubProblemsAndCouplings&... subProblems_)
+    :  BaseT(subProblems_...), gfsu(gfsu_), gfsv(gfsv_)
   {
-    pconstraintsu = &emptyconstraintsu;
-    pconstraintsv = &emptyconstraintsv;
-  }
-
-  //! construct GridOperatorSpace, with constraints
-  MultiDomainGridOperatorSpace (const GFSU& gfsu_, const CU& cu,
-                                  const GFSV& gfsv_, const CV& cv,
-                                  const SubProblemsAndCouplings&... subProblems_)
-    : gfsu(gfsu_), gfsv(gfsv_), BaseT(subProblems_...)
-  {
-    pconstraintsu = &cu;
-    pconstraintsv = &cv;
   }
 
   //! get dimension of space u
@@ -1132,9 +1143,7 @@ public:
     typedef typename GFSV::LocalFunctionSpace LFSV;
     LFSV lfsv(gfsv);
 
-    operator_applier<MultiDomainGridOperatorSpace> apply_operator(*this);
-    apply_operator.set(lfsu);
-    apply_operator.set(lfsv);
+    operator_applier<MultiDomainGridOperatorSpace> apply_operator(*this,lfsu,lfsv);
 
     for (ElementIterator it = gfsu.gridview().template begin<0>();
          it!=gfsu.gridview().template end<0>(); ++it)
@@ -1152,8 +1161,8 @@ public:
         // local function spaces in neighbor
         LFSU lfsun(gfsu);
         LFSV lfsvn(gfsv);
-        apply_operator.setn(lfsun);
-        apply_operator.setn(lfsvn);
+        apply_operator.setlfsun(lfsun);
+        apply_operator.setlfsvn(lfsvn);
 
         IntersectionIterator endit = gfsu.gridview().iend(*it);
         for (IntersectionIterator iit = gfsu.gridview().ibegin(*it); iit!=endit; ++iit)
@@ -1192,9 +1201,7 @@ public:
     typedef typename GFSV::LocalFunctionSpace LFSV;
     LFSV lfsv(gfsv);
 
-    operator_applier<MultiDomainGridOperatorSpace> apply_operator(*this);
-    apply_operator.set(lfsu);
-    apply_operator.set(lfsv);
+    operator_applier<MultiDomainGridOperatorSpace> apply_operator(*this,lfsu,lfsv);
 
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
@@ -1240,8 +1247,8 @@ public:
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
             LFSV lfsvn(gfsv);
-            apply_operator.setn(lfsun);
-            apply_operator.setn(lfsvn);
+            apply_operator.setlfsun(lfsun);
+            apply_operator.setlfsvn(lfsvn);
 
             // traverse intersections
             unsigned int intersection_index = 0;
@@ -1323,9 +1330,7 @@ public:
     typedef typename GFSV::LocalFunctionSpace LFSV;
     LFSV lfsv(gfsv);
 
-    operator_applier<MultiDomainGridOperatorSpace> apply_operator(*this);
-    apply_operator.set(lfsu);
-    apply_operator.set(lfsv);
+    operator_applier<MultiDomainGridOperatorSpace> apply_operator(*this,lfsu,lfsv);
 
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
@@ -1370,8 +1375,8 @@ public:
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
             LFSV lfsvn(gfsv);
-            apply_operator.setn(lfsun);
-            apply_operator.setn(lfsvn);
+            apply_operator.setlfsun(lfsun);
+            apply_operator.setlfsvn(lfsvn);
 
             unsigned int intersection_index = 0;
             IntersectionIterator endit = gfsu.gridview().iend(*it);
@@ -1454,9 +1459,7 @@ public:
     typedef typename GFSV::LocalFunctionSpace LFSV;
     LFSV lfsv(gfsv);
 
-    operator_applier<MultiDomainGridOperatorSpace> apply_operator(*this);
-    apply_operator.set(lfsu);
-    apply_operator.set(lfsv);
+    operator_applier<MultiDomainGridOperatorSpace> apply_operator(*this,lfsu,lfsv);
 
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
@@ -1480,7 +1483,7 @@ public:
         // bind local function spaces to element
         lfsu.bind(*it);
         lfsv.bind(*it);
-
+        apply_operator.setElement(*it);
         apply_operator.setElementSubDomains(is.subDomains(*it));
 
         // allocate local data container
@@ -1502,8 +1505,8 @@ public:
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
             LFSV lfsvn(gfsv);
-            apply_operator.setn(lfsun);
-            apply_operator.setn(lfsvn);
+            apply_operator.setlfsun(lfsun);
+            apply_operator.setlfsvn(lfsvn);
 
             unsigned int intersection_index = 0;
             IntersectionIterator endit = gfsu.gridview().iend(*it);
@@ -1511,6 +1514,7 @@ public:
                  iit!=endit; ++iit, ++intersection_index)
               {
                 apply_operator.setIntersectionIndex(intersection_index);
+                apply_operator.setIntersection(*iit);
                 // skeleton term
                 if (iit->neighbor())
                   {

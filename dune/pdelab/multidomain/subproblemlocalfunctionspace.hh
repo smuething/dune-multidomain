@@ -92,7 +92,7 @@ struct SubProblemLocalFunctionSpaceVisitChildMetaProgram // visit child of inner
     t.offset = offset;
     Int initial_offset = offset; // remember initial offset to compute size later
     GuardedVisit<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,Dune::mdgrid::GridType<typename C::Traits::GridViewType::Grid>::v >::
-      fill_indices(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,begin,offset);
+      fill_indices(t.template getChild<i>(),t.pgfs->template getChild<i>().gridview(),e,begin,offset);
     for (Int j=initial_offset; j<offset; j++)
       begin[j] = t.pgfs->template subMap<i>(begin[j]);
     NextChild::fill_indices(t,e,begin,offset);
@@ -103,7 +103,7 @@ struct SubProblemLocalFunctionSpaceVisitChildMetaProgram // visit child of inner
     // vist children of node t in order
     typedef typename T::template Child<i>::Type C;
     GuardedVisit<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,Dune::mdgrid::GridType<typename C::Traits::GridViewType::Grid>::v >::
-      reserve(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,offset);
+      reserve(t.template getChild<i>(),t.pgfs->template getChild<i>().gridview(),e,offset);
     NextChild::reserve(t,e,offset);
   }
 };
@@ -152,6 +152,33 @@ struct SubProblemLocalFunctionSpaceTraits
   typedef typename std::vector<SizeType> IndexContainer;
 };
 
+
+template<typename GFS, typename N, typename BaseLFS>
+struct SubProblemLeafLocalFunctionSpaceTraits
+{
+  //! \brief the grid view where grid function is defined upon
+  typedef GFS GridFunctionSpaceType;
+
+  //! type of local function space node
+  typedef N NodeType;
+
+  //! \brief Type to store indices from Backend
+  typedef typename GFS::Traits::GridType GridType;
+
+  //! \brief Type of codim 0 entity in the grid
+  typedef typename GridType::Traits::template Codim<0>::Entity Element;
+
+  //! \brief Type to store indices from Backend
+  typedef typename GFS::Traits::SizeType SizeType;
+
+  //! \brief Type of container to store indices
+  typedef typename std::vector<SizeType> IndexContainer;
+
+  //! \brief local finite element
+  typedef typename BaseLFS::Traits::LocalFiniteElementType LocalFiniteElementType;
+};
+
+
 namespace {
 
 // *************************************************************************************
@@ -166,7 +193,7 @@ struct build_splfs_node<MDLFS,FirstIndex,ChildIndices...>
   template<typename... Types>
   struct result
   {
-    typedef typename build_splfs_node<MDLFS,ChildIndices...>::template result<Types..., typename MDLFS::template Child<FirstIndex>::Type>::type type;
+    typedef typename build_splfs_node<MDLFS,ChildIndices...>::template result<Types..., const typename MDLFS::template Child<FirstIndex>::Type>::type type;
   };
 };
 
@@ -196,7 +223,7 @@ struct SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,i,ChildIndices...> :
 {
 
   template<typename... Children>
-  SubProblemLocalFunctionSpaceBase(MDLFS& mdlfs, Children&... children) :
+  SubProblemLocalFunctionSpaceBase(const MDLFS& mdlfs, Children&... children) :
     SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,ChildIndices...>(mdlfs, children..., mdlfs.template getChild<i>())
   {}
 
@@ -208,7 +235,7 @@ struct SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode> :
 {
 
   template<typename... Children>
-  SubProblemLocalFunctionSpaceBase(MDLFS& mdlfs, Children&... children) :
+  SubProblemLocalFunctionSpaceBase(const MDLFS& mdlfs, Children&... children) :
     VariadicNode(children...)
   {}
 
@@ -246,7 +273,10 @@ class SubProblemLocalFunctionSpace
                                            ChildIndices...> BaseT;
 
 public:
-  typedef SubProblemLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpace> Traits;
+  typedef typename Dune::SelectType<sizeof...(ChildIndices) == 1,
+                                    SubProblemLeafLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpace,typename BaseT::template Child<0>::Type>,
+                                    SubProblemLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpace>
+                                    >::Type Traits;
 
 protected:
   typedef SubProblemLocalFunctionSpaceVisitChildMetaProgram<SubProblemLocalFunctionSpace,
@@ -264,18 +294,19 @@ public:
   }
 
   //! \brief initialize with grid function space
-  SubProblemLocalFunctionSpace (MDLFS& mdlfs, const Condition& condition_) :
+  SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const Condition& condition_) :
     BaseT(mdlfs),
     plfs(&mdlfs),
     pgfs(&(mdlfs.gfs())),
     condition(condition_)
   {
-    setup(mdlfs);
+    //setup(mdlfs);
   }
 
   //! \brief initialize with grid function space
   void setup (const MDLFS& lfs)
   {
+    assert(false);
     plfs = &lfs;
     pgfs = &(lfs.gfs());
     VisitChildTMP::setup(*this,*pgfs);
@@ -342,25 +373,29 @@ public:
   void bind (const typename Traits::Element& e)
   {
     // make offset
-    typename Traits::IndexContainer::size_type offset=0;
+    typename Traits::IndexContainer::size_type offset2=0;
 
     // compute sizes
-    VisitChildTMP::reserve(*this,e,offset);
+    VisitChildTMP::reserve(*this,e,offset2);
 
-    this->n = offset;
+    this->n = offset2;
 
     // now reserve space in vector
-    global.resize(offset);
+    global.resize(offset2);
 
     // initialize iterators and fill indices
-    offset = 0;
+    offset2 = 0;
     this->offset = 0;
     this->i = global.begin();
-    VisitChildTMP::fill_indices(*this,e,global.begin(),offset);
+    VisitChildTMP::fill_indices(*this,e,global.begin(),offset2);
 
     // apply upMap
-    for (typename BaseT::Traits::IndexContainer::size_type i=0; i<offset; i++)
+    for (typename Traits::IndexContainer::size_type i=0; i<offset2; i++)
       global[i] = pgfs->upMap(global[i]);
+  }
+
+  const typename Traits::LocalFiniteElementType& localFiniteElement() const {
+    return this->template getChild<0>().localFiniteElement();
   }
 
 private:

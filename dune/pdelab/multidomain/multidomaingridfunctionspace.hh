@@ -198,6 +198,8 @@ public:
     VectorContainer ();
   };
 
+  typename G::LeafGridView gridview() const { return grid().leafView(); }
+
   //! extract type for storing constraints
   template<typename E>
   struct ConstraintsContainer

@@ -1,10 +1,16 @@
 dunedir = $(includedir)/dune
 
 include $(top_srcdir)/am/global-rules
+AM_CPPFLAGS += $(ALL_PKG_CPPFLAGS) $(BOOST_CPPFLAGS)
+AM_LDFLAGS += $(ALL_PKG_LDFLAGS)
+AM_LIBS = $(ALL_PKG_LIBS)
+CXXFLAGS += -g3
 
-check_PROGRAMS = testmultidomaingridfunctionspace
+check_PROGRAMS = testmultidomaingridfunctionspace poisson
 
 testmultidomaingridfunctionspace_SOURCES = testmultidomaingridfunctionspace.cc
-testmultidomaingridfunctionspace_CXXFLAGS = $(AM_CXXFLAGS) $(ALL_PKG_CPPFLAGS) $(BOOST_CPPFLAGS)
-testmultidomaingridfunctionspace_LDFLAGS = $(AM_LDFLAGS) $(ALL_PKG_LDFLAGS)
-testmultidomaingridfunctionspace_LIBS = $(ALL_PKG_LIBS)
+#testmultidomaingridfunctionspace_CXXFLAGS = $(AM_CXXFLAGS) $(ALL_PKG_CPPFLAGS) $(BOOST_CPPFLAGS)
+#testmultidomaingridfunctionspace_LDFLAGS = $(AM_LDFLAGS) $(ALL_PKG_LDFLAGS)
+#testmultidomaingridfunctionspace_LIBS = $(ALL_PKG_LIBS)
+
+poisson_SOURCES = poisson.cc

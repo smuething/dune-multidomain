@@ -527,7 +527,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
   static const std::size_t couplingCount = std::tuple_size<SubProblemList>::value;
 
   typedef typename GFSU::template ConstraintsContainer<double>::Type CU;
-  typedef CU CV;
+  typedef typename GFSV::template ConstraintsContainer<double>::Type CV;
 
   template<std::size_t k>
   struct SubProblem {
@@ -1099,9 +1099,11 @@ public:
   };
 
   //! construct GridOperatorSpace
-  MultiDomainGridOperatorSpace (const GFSU& gfsu_, const GFSV& gfsv_, SubProblemsAndCouplings&... subProblems_)
+  MultiDomainGridOperatorSpace (const GFSU& gfsu_, const GFSV& gfsv_, const CU& cu, const CV& cv, SubProblemsAndCouplings&... subProblems_)
     :  BaseT(subProblems_...), gfsu(gfsu_), gfsv(gfsv_)
   {
+    pconstraintsu = &cu;
+    pconstraintsv = &cv;
   }
 
   //! get dimension of space u

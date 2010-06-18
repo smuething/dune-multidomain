@@ -190,7 +190,7 @@ void constraints(const F& f, const GFS& gfs, CG& cg, const SubProblemBoundaries&
       ConstraintsVisitNodeMetaProgram2<LFS,LFS::isLeaf>
         ::volume(lfs_e,cg,ElementGeometry<Element>(*it));
 
-      SubProblemConstraints::volume(lfs_e,cg,*it,subProblemBoundaries...);
+      SubProblemConstraints::volume(lfs_e,cg,ElementGeometry<Element>(*it),is.subDomains(*it),subProblemBoundaries...);
 
       // iterate over intersections and call metaprogram
       unsigned int intersection_index = 0;
@@ -199,9 +199,9 @@ void constraints(const F& f, const GFS& gfs, CG& cg, const SubProblemBoundaries&
         {
           if (iit->boundary())
             {
-              ConstraintsVisitNodeMetaProgram<F,F::isLeaf,LFS,LFS::isLeaf>
-                ::boundary(f,lfs_e,cg,IntersectionGeometry<Intersection>(*iit,intersection_index));
-              SubProblemConstraints::boundary(lfs_e,cg,*iit,intersection_index,subProblemBoundaries...);
+              //ConstraintsVisitNodeMetaProgram<F,F::isLeaf,LFS,LFS::isLeaf>
+              //  ::boundary(f,lfs_e,cg,IntersectionGeometry<Intersection>(*iit,intersection_index));
+              SubProblemConstraints::boundary(lfs_e,cg,IntersectionGeometry<Intersection>(*iit,intersection_index),is.subDomains(*(iit->inside())),subProblemBoundaries...);
             }
 
           /* TODO: parallel
@@ -221,10 +221,10 @@ void constraints(const F& f, const GFS& gfs, CG& cg, const SubProblemBoundaries&
               // bind local function space to element in neighbor
               lfs_f.bind( *(iit->outside()) );
 
-              ConstraintsVisitNodeMetaProgram2<LFS,LFS::isLeaf>
-                ::skeleton(lfs_e,lfs_f,cg,IntersectionGeometry<Intersection>(*iit,intersection_index));
+              //ConstraintsVisitNodeMetaProgram2<LFS,LFS::isLeaf>
+              //  ::skeleton(lfs_e,lfs_f,cg,IntersectionGeometry<Intersection>(*iit,intersection_index));
 
-              SubProblemConstraints::skeletonOrBoundary(lfs_e,lfs_f,cg,*iit,intersection_index,subProblemBoundaries...);
+              SubProblemConstraints::skeletonOrBoundary(lfs_e,lfs_f,cg,IntersectionGeometry<Intersection>(*iit,intersection_index),is.subDomains(*(iit->inside())),is.subDomains(*(iit->outside())),subProblemBoundaries...);
             }
           }
         }

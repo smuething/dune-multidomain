@@ -501,9 +501,9 @@ public:
   void setup (const MDLFS& lfs) const
   {
     /*
-    assert(false);
+      assert(false);*/
     plfs = &lfs;
-    pgfs = &(lfs.gfs());
+    pgfs = &(lfs.gfs());/*
     VisitChildTMP::setup(*this,*pgfs);
     */
 

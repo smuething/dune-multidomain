@@ -10,8 +10,8 @@
 #include <dune/pdelab/multidomain/multidomaingridoperatorspace.hh>
 #include <dune/pdelab/multidomain/subproblem.hh>
 #include <dune/pdelab/finiteelementmap/conformingconstraints.hh>
-#include <dune/pdelab/gridfunctionspace/interpolate.hh>
 #include <dune/pdelab/multidomain/constraints.hh>
+#include <dune/pdelab/multidomain/interpolate.hh>
 #include <dune/pdelab/common/function.hh>
 #include <dune/pdelab/common/vtkexport.hh>
 #include <dune/pdelab/backend/istlsolverbackend.hh>
@@ -215,10 +215,6 @@ int main(int argc, char** argv) {
 
   MultiGFS multigfs(grid,gfs);
 
-  typedef MultiGFS::VectorContainer<R>::Type V;
-  V x0(multigfs);
-  x0 = 0.0;
-
   //typedef B<MDGV> BType;
   //BType b(mdgv);
 
@@ -251,6 +247,18 @@ int main(int argc, char** argv) {
   constraints(bt,multigfs,cg,bt,splfs0,bt,splfs1);
 
   std::for_each(cg.begin(),cg.end(),[](C::value_type& e) { std::cout << e.first << std::endl; });
+  // make coefficent Vector and initialize it from a function
+  typedef MultiGFS::VectorContainer<R>::Type V;
+  V x0(multigfs);
+  x0 = 0.0;
+  Dune::PDELab::MultiDomain::interpolate(multigfs,x0,g,splfs0,g,splfs1);
+  V x1(multigfs);
+  x1 = x0;
+  Dune::PDELab::set_shifted_dofs(cg,0.0,x0);
+
+  for (int i = 0; i < 26; ++i) {
+    std::cout << i << " " << x0[i] << " " << x1[i] << std::endl;
+  }
 
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 

@@ -11,12 +11,12 @@ namespace MultiDomain {
 template<typename... SubProblemBoundaries>
 struct constraints_pairs;
 
-template<typename BoundaryConditionTypeFunction, typename SubProblem, typename... SubProblemBoundaries>
-struct constraints_pairs<BoundaryConditionTypeFunction,SubProblem,SubProblemBoundaries...>
+template<typename BoundaryConditionTypeFunction, typename SubProblemLFS, typename... SubProblemBoundaries>
+struct constraints_pairs<BoundaryConditionTypeFunction,SubProblemLFS,SubProblemBoundaries...>
 {
   typedef constraints_pairs<SubProblemBoundaries...> next_pair;
 
-  dune_static_assert(((tag<SubProblem>::value == true)), "subproblem parameter is not a valid subproblem type");
+  dune_static_assert(((tag<typename SubProblemLFS::Traits::SubProblem>::value == true)), "subproblem local function space parameter invalid");
 
   template<typename LFS, typename CG, typename Geometry, typename SubDomainSet>
   static void volume(const LFS& lfs,
@@ -24,12 +24,10 @@ struct constraints_pairs<BoundaryConditionTypeFunction,SubProblem,SubProblemBoun
                      const Geometry& geometry,
                      const SubDomainSet& subDomainSet,
                      const BoundaryConditionTypeFunction& boundaryType,
-                     const SubProblem& subProblem,
-                     const SubProblemBoundaries...& subProblemBoundaries)
+                     const SubProblemLFS& subProblemLFS,
+                     const SubProblemBoundaries&... subProblemBoundaries)
   {
-    typedef typename SubProblem::Traits::TrialLocalFunctionSpace SubProblemLFS;
-    SubProblemLFS subProblemLFS(lfs);
-    if (subProblem.appliesTo(subDomainSet))
+    if (subProblemLFS.appliesTo(subDomainSet))
     {
       ConstraintsVisitNodeMetaProgram2<SubProblemLFS,SubProblemLFS::isLeaf>
         ::volume(subProblemLFS,cg,geometry);
@@ -43,10 +41,8 @@ struct constraints_pairs<BoundaryConditionTypeFunction,SubProblem,SubProblemBoun
                           const IntersectionGeometry& intersectionGeometry,
                           const SubDomainSet& subDomainSet,
                           const BoundaryConditionTypeFunction& boundaryType,
-                          const SubProblem& subProblem)
+                          const SubProblemLFS& subProblemLFS)
   {
-    typedef typename SubProblem::Traits::TrialLocalFunctionSpace SubProblemLFS;
-    SubProblemLFS subProblemLFS(lfs);
     ConstraintsVisitNodeMetaProgram<BoundaryConditionTypeFunction,
                                     BoundaryConditionTypeFunction::isLeaf,
                                     SubProblemLFS,
@@ -60,12 +56,12 @@ struct constraints_pairs<BoundaryConditionTypeFunction,SubProblem,SubProblemBoun
                        const IntersectionGeometry& intersectionGeometry,
                        const SubDomainSet& subDomainSet,
                        const BoundaryConditionTypeFunction& boundaryType,
-                       const SubProblem& subProblem,
-                       const SubProblemBoundaries...& subProblemBoundaries)
+                       const SubProblemLFS& subProblemLFS,
+                       const SubProblemBoundaries&... subProblemBoundaries)
   {
-    if (subProblem.appliesTo(subDomainSet))
+    if (subProblemLFS.appliesTo(subDomainSet))
     {
-      do_boundary(lfs,cg,intersectionGeometry,subDomainSet,boundaryType,subProblem);
+      do_boundary(lfs,cg,intersectionGeometry,subDomainSet,boundaryType,subProblemLFS);
     }
     next_pair::boundary(lfs,cg,intersectionGeometry,subDomainSet,subProblemBoundaries...);
   }
@@ -78,20 +74,18 @@ struct constraints_pairs<BoundaryConditionTypeFunction,SubProblem,SubProblemBoun
                                  const SubDomainSet& subDomainSet,
                                  const SubDomainSet& neighborSubDomainSet,
                                  const BoundaryConditionTypeFunction& boundaryType,
-                                 const SubProblem& subProblem,
-                                 const SubProblemBoundaries...& subProblemBoundaries)
+                                 const SubProblemLFS& subProblemLFS,
+                                 const SubProblemBoundaries&... subProblemBoundaries)
   {
-    if (subProblem.appliesTo(subDomainSet))
+    if (subProblemLFS.appliesTo(subDomainSet))
     {
-      if (subProblem.appliesTo(neighborSubDomainSet))
+      if (subProblemLFS.appliesTo(neighborSubDomainSet))
       {
-        typedef typename SubProblem::Traits::TrialLocalFunctionSpace SubProblemLFS;
-        SubProblemLFS subProblemLFS(lfs);
-        SubProblemLFS subProblemLFS_neighbor(lfs_n);
+        SubProblemLFS subProblemLFS_neighbor(lfs_n,subProblemLFS.subProblem(),subProblemLFS.constraints());
         ConstraintsVisitNodeMetaProgram2<SubProblemLFS,SubProblemLFS::isLeaf>
           ::skeleton(subProblemLFS,subProblemLFS_neighbor,cg,intersectionGeometry);
       } else {
-        do_boundary(lfs,cg,intersectionGeometry,subDomainSet,boundaryType,subProblem);
+        do_boundary(lfs,cg,intersectionGeometry,subDomainSet,boundaryType,subProblemLFS);
       }
     }
     next_pair::skeletonOrBoundary(lfs,lfs_n,cg,intersectionGeometry,subDomainSet,neighborSubDomainSet,subProblemBoundaries...);
@@ -102,7 +96,7 @@ struct constraints_pairs<BoundaryConditionTypeFunction,SubProblem,SubProblemBoun
 template<typename UnpairedParameter>
 struct constraints_pairs<UnpairedParameter>
 {
-  dune_static_assert(AlwaysFalse<UnpairedParameter>::value, "incomplete BoundaryTypeFunction/SubProblem pair in constraints()");
+  dune_static_assert(AlwaysFalse<UnpairedParameter>::value, "incomplete BoundaryTypeFunction/SubProblemLFS pair in constraints()");
 };
 
 template<>

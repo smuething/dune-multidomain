@@ -9,6 +9,7 @@ namespace MultiDomain {
 
 
 template<
+  typename SubProblem,
   typename GFSU,
   typename CONU,
   typename GFSV,
@@ -22,12 +23,12 @@ struct SubProblemTraits
 
   typedef GFSU MultiDomainTrialGridFunctionSpace;
   typedef typename GFSU::LocalFunctionSpace MultiDomainLocalTrialFunctionSpace;
-  typedef SubProblemLocalFunctionSpace<typename GFSU::LocalFunctionSpace,Condition_,Indices...> LocalTrialFunctionSpace;
+  typedef SubProblemLocalFunctionSpace<typename GFSU::LocalFunctionSpace,SubProblem,CONU,Indices...> LocalTrialFunctionSpace;
   typedef LocalTrialFunctionSpace TrialLocalFunctionSpace;
   typedef CONU TrialGridFunctionSpaceConstraints;
   typedef GFSV MultiDomainTestGridFunctionSpace;
   typedef typename GFSV::LocalFunctionSpace MultiDomainLocalTestFunctionSpace;
-  typedef SubProblemLocalFunctionSpace<typename GFSV::LocalFunctionSpace,Condition_,Indices...> LocalTestFunctionSpace;
+  typedef SubProblemLocalFunctionSpace<typename GFSV::LocalFunctionSpace,SubProblem,CONV,Indices...> LocalTestFunctionSpace;
   typedef LocalTestFunctionSpace TestLocalFunctionSpace;
   typedef CONV TestGridFunctionSpaceConstraints;
   typedef Condition_ Condition;
@@ -52,7 +53,7 @@ class SubProblem
 
 public:
 
-  typedef SubProblemTraits<GFSU,CONU,GFSV,CONV,LocalOperator,Condition,Indices...> Traits;
+  typedef SubProblemTraits<SubProblem,GFSU,CONU,GFSV,CONV,LocalOperator,Condition,Indices...> Traits;
 
   SubProblem(const CONU& conu, const CONV& conv, const LocalOperator& lop, const Condition& condition) :
     _conu(conu),

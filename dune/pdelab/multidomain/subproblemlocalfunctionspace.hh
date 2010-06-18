@@ -130,7 +130,7 @@ struct SubProblemLocalFunctionSpaceVisitChildMetaProgram<T,E,It,Int,n,n> // end 
 };
 
 
-template<typename GFS, typename N>
+template<typename GFS, typename N, typename _SubProblem, typename _Constraints>
 struct SubProblemLocalFunctionSpaceTraits
 {
   //! \brief the grid view where grid function is defined upon
@@ -150,10 +150,19 @@ struct SubProblemLocalFunctionSpaceTraits
 
   //! \brief Type of container to store indices
   typedef typename std::vector<SizeType> IndexContainer;
+
+  typedef _SubProblem SubProblem;
+
+  typedef typename SubProblem::Traits::Condition Condition;
+
+  typedef _Constraints Constraints;
+
+  typedef Constraints ConstraintsType;
+
 };
 
 
-template<typename GFS, typename N, typename BaseLFS>
+template<typename GFS, typename N, typename BaseLFS, typename _SubProblem, typename _Constraints>
 struct SubProblemLeafLocalFunctionSpaceTraits
 {
   //! \brief the grid view where grid function is defined upon
@@ -176,6 +185,15 @@ struct SubProblemLeafLocalFunctionSpaceTraits
 
   //! \brief local finite element
   typedef typename BaseLFS::Traits::LocalFiniteElementType LocalFiniteElementType;
+
+  typedef _SubProblem SubProblem;
+
+  typedef typename SubProblem::Traits::Condition Condition;
+
+  typedef _Constraints Constraints;
+
+  typedef Constraints ConstraintsType;
+
 };
 
 
@@ -247,7 +265,7 @@ struct SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode> :
 // ********************************************************************************
 // LocalFunctionSpace for subproblems
 
-template<typename MDLFS, typename Condition, int... ChildIndices>
+template<typename MDLFS, typename SubProblem, typename Constraints, int... ChildIndices>
 class SubProblemLocalFunctionSpace
   : public SubProblemLocalFunctionSpaceBase<MDLFS,
                                             typename build_splfs_node<MDLFS,ChildIndices...>::template result<>::type,
@@ -274,8 +292,8 @@ class SubProblemLocalFunctionSpace
 
 public:
   typedef typename Dune::SelectType<sizeof...(ChildIndices) == 1,
-                                    SubProblemLeafLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpace,typename BaseT::template Child<0>::Type>,
-                                    SubProblemLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpace>
+                                    SubProblemLeafLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpace,typename BaseT::template Child<0>::Type,SubProblem,Constraints>,
+                                    SubProblemLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpace,SubProblem,Constraints>
                                     >::Type Traits;
 
 protected:
@@ -294,11 +312,13 @@ public:
   }
 
   //! \brief initialize with grid function space
-  SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const Condition& condition_) :
+  SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const SubProblem& subProblem, const Constraints& constraints) :
     BaseT(mdlfs),
     plfs(&mdlfs),
     pgfs(&(mdlfs.gfs())),
-    condition(condition_)
+    _subProblem(subProblem),
+    _constraints(constraints),
+    n(VisitChildTMP::size(*this))
   {
     //setup(mdlfs);
   }
@@ -392,6 +412,19 @@ public:
     // apply upMap
     for (typename Traits::IndexContainer::size_type i=0; i<offset2; i++)
       global[i] = pgfs->upMap(global[i]);
+  }
+
+  const SubProblem& subProblem() const {
+    return _subProblem;
+  }
+
+  const Constraints& constraints() const {
+    return _constraints();
+  }
+
+  template<typename SubDomainSet>
+  bool appliesTo(const SubDomainSet& sds) const {
+    return _subProblem.appliesTo(sds);
   }
 
   const typename Traits::LocalFiniteElementType& localFiniteElement() const {

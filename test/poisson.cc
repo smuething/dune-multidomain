@@ -246,7 +246,6 @@ int main(int argc, char** argv) {
 
   constraints(bt,multigfs,cg,bt,splfs0,bt,splfs1);
 
-  std::for_each(cg.begin(),cg.end(),[](C::value_type& e) { std::cout << e.first << std::endl; });
   // make coefficent Vector and initialize it from a function
   typedef MultiGFS::VectorContainer<R>::Type V;
   V x0(multigfs);

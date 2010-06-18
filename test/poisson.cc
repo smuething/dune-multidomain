@@ -2,21 +2,22 @@
 
 #include <dune/grid/sgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
-#include<dune/pdelab/finiteelementmap/q1fem.hh>
-#include<dune/pdelab/backend/istlvectorbackend.hh>
-#include<dune/pdelab/backend/istlmatrixbackend.hh>
+#include <dune/pdelab/finiteelementmap/q1fem.hh>
+#include <dune/pdelab/backend/istlvectorbackend.hh>
+#include <dune/pdelab/backend/istlmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemgridfunctionspace.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/multidomaingridoperatorspace.hh>
 #include <dune/pdelab/multidomain/subproblem.hh>
-#include<dune/pdelab/finiteelementmap/conformingconstraints.hh>
-#include<dune/pdelab/gridfunctionspace/interpolate.hh>
-#include<dune/pdelab/gridfunctionspace/constraints.hh>
-#include<dune/pdelab/common/function.hh>
-#include<dune/pdelab/common/vtkexport.hh>
-#include<dune/pdelab/backend/istlsolverbackend.hh>
-#include<dune/pdelab/localoperator/laplacedirichletp12d.hh>
-#include<dune/pdelab/localoperator/poisson.hh>
+#include <dune/pdelab/finiteelementmap/conformingconstraints.hh>
+#include <dune/pdelab/gridfunctionspace/interpolate.hh>
+#include <dune/pdelab/multidomain/constraints.hh>
+#include <dune/pdelab/common/function.hh>
+#include <dune/pdelab/common/vtkexport.hh>
+#include <dune/pdelab/backend/istlsolverbackend.hh>
+#include <dune/pdelab/localoperator/laplacedirichletp12d.hh>
+#include <dune/pdelab/localoperator/poisson.hh>
+#include <dune/pdelab/multidomain/boundarytypefunction.hh>
 
 #include<typeinfo>
 
@@ -124,6 +125,35 @@ SIMPLE_ANALYTIC_FUNCTION(J,
 })
 
 
+template<typename GV>
+class B2
+  : public Dune::PDELab::BoundaryGridFunctionBase<Dune::PDELab::BoundaryTypeGridFunctionTraits<GV>,
+                                                  B2<GV> >
+{
+
+public:
+
+  typedef Dune::PDELab::BoundaryTypeGridFunctionTraits<GV> Traits;
+
+  template<typename I>
+  inline void evaluate (const Dune::PDELab::IntersectionGeometry<I>& ig,
+                        const typename Traits::DomainType& x,
+                        typename Traits::RangeType& bct) const
+  {
+    Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
+      xg = ig.geometry().global(x);
+
+    if (xg[0]<1E-6 || xg[0]>1.0-1E-6 || xg[1]<1E-6 || xg[1]>1.0-1E-6)
+      {
+        bct = Traits::Dirichlet;
+        return;
+      }
+    bct = Traits::None; // no boundary conditions on subproblem-subproblem interface
+  }
+
+};
+
+
 int main(int argc, char** argv) {
 
   const int dim = 2;
@@ -142,6 +172,7 @@ int main(int argc, char** argv) {
   MDGV mdgv = grid.leafView();
   SDGV sdgv0 = sdg0.leafView();
   SDGV sdgv1 = sdg1.leafView();
+  sdg0.hostEntityPointer(*sdgv0.begin<0>());
   grid.startSubDomainMarking();
   for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
     {
@@ -154,6 +185,11 @@ int main(int argc, char** argv) {
   grid.updateSubDomains();
   grid.postUpdateSubDomains();
 
+  typedef B2<MDGV> BT;
+
+  BT bt;
+  typedef BT BType;
+
   typedef typename MDGV::Grid::ctype DF;
 
   typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM;
@@ -162,18 +198,19 @@ int main(int argc, char** argv) {
     LocalBasisType::Traits::RangeFieldType R;
 
   FEM fem;
-  typedef Dune::PDELab::NoConstraints CON;
+  typedef Dune::PDELab::NoConstraints NOCON;
+  typedef Dune::PDELab::ConformingDirichletConstraints CON;
   typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
 
   CON con;
 
-  typedef Dune::PDELab::GridFunctionSpace<MDGV,FEM,CON,
+  typedef Dune::PDELab::GridFunctionSpace<MDGV,FEM,NOCON,
     Dune::PDELab::ISTLVectorBackend<1> > GFS;
 
   typedef GFS::ConstraintsContainer<R>::Type C;
   C cg;
 
-  GFS gfs(mdgv,fem,con);
+  GFS gfs(mdgv,fem);
 
   typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS> MultiGFS;
 
@@ -183,8 +220,8 @@ int main(int argc, char** argv) {
   V x0(multigfs);
   x0 = 0.0;
 
-  typedef B<MDGV> BType;
-  BType b(mdgv);
+  //typedef B<MDGV> BType;
+  //BType b(mdgv);
 
   typedef F<MDGV,R> FType;
   FType f(mdgv);
@@ -196,7 +233,7 @@ int main(int argc, char** argv) {
   JType j(mdgv);
 
   typedef Dune::PDELab::Poisson<FType,BType,JType,2> LOP;
-  LOP lop(f,b,j);
+  LOP lop(f,bt,j);
 
   typedef MDGV::IndexSet::SubDomainSet SDS;
   typedef Dune::PDELab::MultiDomain::EqualsSubDomains<SDS> EC;
@@ -204,9 +241,17 @@ int main(int argc, char** argv) {
   EC ec0(0);
   EC ec1(1);
 
-  typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,C,MultiGFS,C,LOP,EC,0> SubProblem;
-  SubProblem sp0(cg,cg,lop,ec0);
-  SubProblem sp1(cg,cg,lop,ec1);
+  typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,CON,MultiGFS,CON,LOP,EC,0> SubProblem;
+  SubProblem sp0(con,con,lop,ec0);
+  SubProblem sp1(con,con,lop,ec1);
+
+  SubProblem::Traits::LocalTrialFunctionSpace
+    splfs0(multigfs,sp0,sp0.trialGridFunctionSpaceConstraints()),
+    splfs1(multigfs,sp1,sp1.trialGridFunctionSpaceConstraints());
+
+  constraints(bt,multigfs,cg,bt,splfs0,bt,splfs1);
+
+  std::for_each(cg.begin(),cg.end(),[](C::value_type& e) { std::cout << e.first << std::endl; });
 
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 
@@ -219,5 +264,19 @@ int main(int argc, char** argv) {
   m = 0.0;
 
   multigos.jacobian(x0,m);
+
+
+  typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,
+    LOP,C,C,Dune::PDELab::ISTLBCRSMatrixBackend<1,1> > GOS;
+  GOS gos(gfs,cg,gfs,cg,lop);
+
+  typedef GOS::MatrixContainer<R>::Type M2;
+  M2 m2(gos);
+  m2 = 0.0;
+
+  gos.jacobian(x0,m2);
+
+  //Dune::printmatrix(std::cout,m.base(),"","");
+  //Dune::printmatrix(std::cout,m2.base(),"","");
 
 }

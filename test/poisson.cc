@@ -17,7 +17,6 @@
 #include <dune/pdelab/backend/istlsolverbackend.hh>
 #include <dune/pdelab/localoperator/laplacedirichletp12d.hh>
 #include <dune/pdelab/localoperator/poisson.hh>
-#include <dune/pdelab/multidomain/boundarytypefunction.hh>
 
 #include<typeinfo>
 

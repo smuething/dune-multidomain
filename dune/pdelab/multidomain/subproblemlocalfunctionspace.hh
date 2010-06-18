@@ -334,12 +334,15 @@ public:
   }
 
   //! \brief initialize with grid function space
-  void setup (const MDLFS& lfs)
+  void setup (const MDLFS& lfs) const
   {
+    /*
     assert(false);
     plfs = &lfs;
     pgfs = &(lfs.gfs());
     VisitChildTMP::setup(*this,*pgfs);
+    */
+
   }
 
   //! \brief get current size

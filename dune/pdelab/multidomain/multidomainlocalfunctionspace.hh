@@ -277,13 +277,13 @@ public:
     std::cout << ")" << std::endl;
   }
 
-protected:
+public:
 
   const GFS& gfs() const {
     return *pgfs;
   }
 
-private:
+protected:
   const GFS* pgfs;
   typename Traits::IndexContainer::iterator i;
   typename Traits::IndexContainer::size_type n;

@@ -189,11 +189,11 @@ int main(int argc, char** argv) {
   BT bt;
   typedef BT BType;
 
-  typedef typename MDGV::Grid::ctype DF;
+  typedef MDGV::Grid::ctype DF;
 
   typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM;
 
-  typedef typename FEM::Traits::LocalFiniteElementType::Traits::
+  typedef FEM::Traits::LocalFiniteElementType::Traits::
     LocalBasisType::Traits::RangeFieldType R;
 
   FEM fem;
@@ -215,7 +215,7 @@ int main(int argc, char** argv) {
 
   MultiGFS multigfs(grid,gfs);
 
-  typedef typename MultiGFS::VectorContainer<R>::Type V;
+  typedef MultiGFS::VectorContainer<R>::Type V;
   V x0(multigfs);
   x0 = 0.0;
 

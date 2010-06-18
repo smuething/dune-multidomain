@@ -18,6 +18,16 @@ struct constraints_pairs<BoundaryConditionTypeFunction,SubProblemLFS,SubProblemB
 
   dune_static_assert(((tag<typename SubProblemLFS::Traits::SubProblem>::value == true)), "subproblem local function space parameter invalid");
 
+  template<typename LFS>
+  static void setupLFS(const LFS& lfs,
+                       const BoundaryConditionTypeFunction& boundaryType,
+                       const SubProblemLFS& subProblemLFS,
+                       const SubProblemBoundaries&... subProblemBoundaries)
+  {
+    subProblemLFS.setup(lfs);
+    next_pair::setupLFS(lfs,subProblemBoundaries...);
+  }
+
   template<typename LFS, typename CG, typename Geometry, typename SubDomainSet>
   static void volume(const LFS& lfs,
                      CG& cg,
@@ -103,6 +113,11 @@ template<>
 struct constraints_pairs<>
 {
 
+  template<typename LFS>
+  static void setupLFS(const LFS& lfs)
+  {
+  }
+
   template<typename LFS, typename CG, typename Geometry, typename SubDomainSet>
   static void volume(const LFS& lfs,
                      CG& cg,
@@ -162,6 +177,7 @@ void constraints(const F& f, const GFS& gfs, CG& cg, const SubProblemBoundaries&
   typedef typename GFS::LocalFunctionSpace LFS;
   LFS lfs_e(gfs);
   LFS lfs_f(gfs);
+  SubProblemConstraints::setupLFS(lfs_e,subProblemBoundaries...);
 
   // get index set
   const typename GV::IndexSet& is=gfs.gridview().indexSet();

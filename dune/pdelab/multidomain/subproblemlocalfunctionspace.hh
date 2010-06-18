@@ -592,8 +592,8 @@ public:
   }
 
 private:
-  const MDLFS* plfs;
-  const GFS* pgfs;
+  mutable const MDLFS * plfs;
+  mutable const GFS * pgfs;
   const SubProblem& _subProblem;
   const Constraints& _constraints;
   typename Traits::IndexContainer::iterator i;

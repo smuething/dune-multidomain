@@ -437,14 +437,162 @@ public:
     return _subProblem.appliesTo(sds);
   }
 
+private:
+  const MDLFS* plfs;
+  const GFS* pgfs;
+  const SubProblem& _subProblem;
+  const Constraints& _constraints;
+  typename Traits::IndexContainer::iterator i;
+  typename Traits::IndexContainer::size_type n;
+  typename Traits::IndexContainer::size_type offset;
+  typename Traits::IndexContainer global;
+
+};
+
+
+// single-component version
+
+
+template<typename MDLFS, typename SubProblem, typename Constraints, int ChildIndex>
+class SubProblemLocalFunctionSpace<MDLFS,SubProblem,Constraints,ChildIndex>
+  : public LeafNode
+{
+
+  dune_static_assert((ChildIndex < MDLFS::CHILDREN),"Child index out of range");
+
+  typedef typename MDLFS::Traits::GridFunctionSpaceType GFS;
+
+  template<typename T, bool b, typename E, typename It, typename Int>
+  friend struct LocalFunctionSpaceBaseVisitNodeMetaProgram;
+  template<typename T, typename E, typename It, typename Int, int n, int i>
+  friend struct SubProblemLocalFunctionSpaceVisitChildMetaProgram;
+
+  typedef typename GFS::Traits::BackendType B;
+  typedef typename GFS::Traits::GridType::Traits::template Codim<0>::Entity Element;
+
+  typedef typename MDLFS::template Child<ChildIndex>::Type BaseLFS;
+
+  const BaseLFS& baseLFS() const {
+    return plfs->template getChild<ChildIndex>();
+  }
+
+public:
+  typedef SubProblemLeafLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpace,BaseLFS,SubProblem,Constraints> Traits;
+
+  //! \brief empty constructor - TODO:Do we need this???
+  /*SubProblemLocalFunctionSpace ()
+  {
+  }*/
+
+  //! \brief initialize with grid function space
+  SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const SubProblem& subProblem, const Constraints& constraints) :
+    plfs(&mdlfs),
+    pgfs(&(mdlfs.gfs())),
+    _subProblem(subProblem),
+    _constraints(constraints)
+  {
+    //setup(mdlfs);
+  }
+
+  //! \brief initialize with grid function space
+  void setup (const MDLFS& lfs) const
+  {
+    /*
+    assert(false);
+    plfs = &lfs;
+    pgfs = &(lfs.gfs());
+    VisitChildTMP::setup(*this,*pgfs);
+    */
+
+  }
+
+  //! \brief get current size
+  typename Traits::IndexContainer::size_type size () const
+  {
+    return baseLFS().size();
+  }
+
+  //! \brief get maximum possible size (which is maxLocalSize from grid function space)
+  typename Traits::IndexContainer::size_type maxSize () const
+  {
+    return pgfs->maxLocalSize();
+  }
+
+  // map index in this local function space to root local function space
+  typename Traits::IndexContainer::size_type localIndex (typename Traits::IndexContainer::size_type index) const
+  {
+    return baseLFS().localIndex(index);
+  }
+
+  // map index in this local function space to global index space
+  typename Traits::SizeType globalIndex (typename Traits::IndexContainer::size_type index) const
+  {
+    return baseLFS().globalIndex(index);
+  }
+
+  /** \brief extract coefficients for one element from container */
+  template<typename GC, typename LC>
+  void vread (const GC& globalcontainer, LC& localcontainer) const
+  {
+    baseLFS().vread(globalcontainer,localcontainer);
+  }
+
+  /** \brief write back coefficients for one element to container */
+  template<typename GC, typename LC>
+  void vwrite (const LC& localcontainer, GC& globalcontainer) const
+  {
+    baseLFS().vwrite(localcontainer,globalcontainer);
+  }
+
+  /** \brief add coefficients for one element to container */
+  template<typename GC, typename LC>
+  void vadd (const LC& localcontainer, GC& globalcontainer) const
+  {
+    baseLFS().vadd(localcontainer,globalcontainer);
+  }
+
+  void debug () const
+  {
+    std::cout << n << " indices = (";
+    for (typename Traits::IndexContainer::size_type k=0; k<n; k++)
+      std::cout << i[k] << " ";
+    std::cout << ")" << std::endl;
+  }
+
+  //! \brief bind local function space to entity
+  void bind (const typename Traits::Element& e)
+  {
+    assert(false);
+  }
+
+  template<typename GC, typename LC>
+  void mwrite (const LC& lc, GC& gc) const
+  {
+    baseLFS().mwrite(lc,gc);
+  }
+
   const typename Traits::LocalFiniteElementType& localFiniteElement() const {
-    return this->template getChild<0>().localFiniteElement();
+    return baseLFS().localFiniteElement();
+  }
+
+  const SubProblem& subProblem() const {
+    return _subProblem;
+  }
+
+  const Constraints& constraints() const {
+    return _constraints;
+  }
+
+  template<typename SubDomainSet>
+  bool appliesTo(const SubDomainSet& sds) const {
+    return _subProblem.appliesTo(sds);
   }
 
 private:
   const MDLFS* plfs;
   const GFS* pgfs;
-  const Condition condition;
+  const SubProblem& _subProblem;
+  const Constraints& _constraints;
   typename Traits::IndexContainer::iterator i;
   typename Traits::IndexContainer::size_type n;
   typename Traits::IndexContainer::size_type offset;

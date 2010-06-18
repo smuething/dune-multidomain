@@ -85,6 +85,11 @@ struct SubProblemLocalFunctionSpaceVisitChildMetaProgram // visit child of inner
     NextChild::setup(t,gfs);
   }
 
+  static std::size_t size(const T& t)
+  {
+    return t.template getChild<i>().size() + NextChild::size(t);
+  }
+
   static void fill_indices (T& t, const E& e, It begin, Int& offset)
   {
     // vist children of node t in order
@@ -116,6 +121,11 @@ struct SubProblemLocalFunctionSpaceVisitChildMetaProgram<T,E,It,Int,n,n> // end 
   template<typename GFS>
   static void setup (T& t, const GFS& gfs)
   {
+  }
+
+  static std::size_t size(const T& t)
+  {
+    return 0;
   }
 
   static void fill_indices (T& t, const E& e, It begin, Int& offset)

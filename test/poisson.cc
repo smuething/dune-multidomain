@@ -263,7 +263,7 @@ int main(int argc, char** argv) {
 
   typedef Dune::PDELab::MultiDomain::MultiDomainGridOperatorSpace<MultiGFS,MultiGFS,MBE,SubProblem,SubProblem> MultiGOS;
 
-  MultiGOS multigos(multigfs,multigfs,sp0,sp1);
+  MultiGOS multigos(multigfs,multigfs,cg,cg,sp0,sp1);
 
   typedef MultiGOS::MatrixContainer<R>::Type M;
   M m(multigos);

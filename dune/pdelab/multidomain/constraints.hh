@@ -125,7 +125,7 @@ struct constraints_pairs<>
                                  CG& cg,
                                  const IntersectionGeometry& intersectionGeometry,
                                  const SubDomainSet& subDomainSet,
-                                 const SubDomainSet& neighborsubDomainSet)
+                                 const SubDomainSet& neighborSubDomainSet)
   {
   }
 

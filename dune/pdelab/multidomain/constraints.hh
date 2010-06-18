@@ -152,7 +152,7 @@ void constraints(const F& f, const GFS& gfs, CG& cg, const SubProblemBoundaries&
   cg.clear();
 
   // get some types
-  typedef typename GFS::Traits::GridViewType GV;
+  typedef typename GFS::Traits::GridType::LeafGridView GV;
   typedef typename GV::Traits::template Codim<0>::Entity Element;
   typedef typename GV::Traits::template Codim<0>::Iterator ElementIterator;
   typedef typename GV::IntersectionIterator IntersectionIterator;

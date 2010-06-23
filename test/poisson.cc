@@ -17,6 +17,9 @@
 #include <dune/pdelab/backend/istlsolverbackend.hh>
 #include <dune/pdelab/localoperator/laplacedirichletp12d.hh>
 #include <dune/pdelab/localoperator/poisson.hh>
+#include<dune/pdelab/common/function.hh>
+#include<dune/pdelab/common/vtkexport.hh>
+#include<dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
 
 #include<typeinfo>
 
@@ -265,7 +268,32 @@ int main(int argc, char** argv) {
 
   multigos.jacobian(x0,m);
 
+  V r(multigfs);
 
+  r = 0.0;
+
+  multigos.residual(x0,r);
+
+  Dune::MatrixAdapter<M,V,V> opa(m);
+  Dune::SeqSSOR<M,V,V> ssor(m,1,1.0);
+  Dune::CGSolver<V> solver(opa,ssor,1e-10,5000,2);
+  Dune::InverseOperatorResult stat;
+
+  r *= -1.0;
+
+  V x(multigfs,0.0);
+  solver.apply(x,r,stat);
+
+  x += x0;
+
+  typedef Dune::PDELab::DiscreteGridFunction<GFS,V> DGF;
+  DGF dgf(gfs,x);
+
+  Dune::VTKWriter<MDGV> vtkwriter(mdgv,Dune::VTKOptions::conforming);
+  vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
+  vtkwriter.write("poisson.vtu",Dune::VTKOptions::ascii);
+
+  /*
   typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,
     LOP,C,C,Dune::PDELab::ISTLBCRSMatrixBackend<1,1> > GOS;
   GOS gos(gfs,cg,gfs,cg,lop);
@@ -275,7 +303,7 @@ int main(int argc, char** argv) {
   m2 = 0.0;
 
   gos.jacobian(x0,m2);
-
+  */
   //Dune::printmatrix(std::cout,m.base(),"","");
   //Dune::printmatrix(std::cout,m2.base(),"","");
 

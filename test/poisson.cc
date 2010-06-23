@@ -251,13 +251,7 @@ int main(int argc, char** argv) {
   V x0(multigfs);
   x0 = 0.0;
   Dune::PDELab::MultiDomain::interpolate(multigfs,x0,g,splfs0,g,splfs1);
-  V x1(multigfs);
-  x1 = x0;
   Dune::PDELab::set_shifted_dofs(cg,0.0,x0);
-
-  for (int i = 0; i < 26; ++i) {
-    std::cout << i << " " << x0[i] << " " << x1[i] << std::endl;
-  }
 
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 

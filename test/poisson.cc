@@ -136,11 +136,17 @@ END_SIMPLE_ANALYTIC_FUNCTION
 
 int main(int argc, char** argv) {
 
+  if (argc < 2) {
+    std::cerr << "Usage: " << argv[0] << " <refinement level>" << std::endl;
+    return 1;
+  }
+
   const int dim = 2;
   typedef Dune::SGrid<dim,dim> BaseGrid;
-  const int s[2] = {4,4};
+  const int s[2] = {1,1};
   const double h[2] = {1.0,1.0};
   BaseGrid baseGrid(s,h);
+  baseGrid.globalRefine(atoi(argv[1]));
   typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;
   Grid grid(baseGrid,false);
   typedef Grid::SubDomainGrid SubDomainGrid;

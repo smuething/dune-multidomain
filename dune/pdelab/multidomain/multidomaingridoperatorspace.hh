@@ -769,7 +769,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
         return;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      child.localOperator().lambda_volume(ElementGeometry<typename Data::Element>(data.element()),lfsv,r);
+      child.localOperator().lambda_volume(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsv,r);
     }
 
     RL& r;

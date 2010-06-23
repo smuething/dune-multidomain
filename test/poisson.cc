@@ -24,11 +24,11 @@
 template<typename GV, typename RF> \
 class _NAME_ \
   : public Dune::PDELab::AnalyticGridFunctionBase<Dune::PDELab::AnalyticGridFunctionTraits<GV,RF,1>, \
-                                                  F<GV,RF> > \
+                                                  _NAME_<GV,RF> > \
 { \
 public: \
   typedef Dune::PDELab::AnalyticGridFunctionTraits<GV,RF,1> Traits; \
-  typedef Dune::PDELab::AnalyticGridFunctionBase<Traits,F<GV,RF> > BaseT; \
+  typedef Dune::PDELab::AnalyticGridFunctionBase<Traits,_NAME_<GV,RF> > BaseT; \
 \
   _NAME_ (const GV& gv) : BaseT(gv) {} \
   inline void evaluateGlobal (const typename Traits::DomainType& x, \
@@ -42,13 +42,13 @@ class _NAME_ \
   : public Dune::PDELab::BoundaryGridFunctionBase<Dune::PDELab:: \
                                                   BoundaryGridFunctionTraits<GV,int,1, \
                                                                              Dune::FieldVector<int,1> >, \
-                                                  B<GV> > \
+                                                  _NAME_<GV> > \
 { \
   const GV& gv; \
 \
 public: \
   typedef Dune::PDELab::BoundaryGridFunctionTraits<GV,int,1,Dune::FieldVector<int,1> > Traits; \
-  typedef Dune::PDELab::BoundaryGridFunctionBase<Traits,B<GV> > BaseT; \
+  typedef Dune::PDELab::BoundaryGridFunctionBase<Traits,_NAME_<GV> > BaseT; \
 \
   _NAME_ (const GV& gv_) : gv(gv_) {} \
 \

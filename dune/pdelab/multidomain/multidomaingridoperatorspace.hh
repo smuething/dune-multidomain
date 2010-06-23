@@ -1153,6 +1153,7 @@ public:
         // bind local function spaces to element
         lfsu.bind(*it);
         lfsv.bind(*it);
+        apply_operator.setElement(*it);
         apply_operator.setElementSubDomains(gfsu.gridview().indexSet().subDomains(*it));
 
         apply_operator.template conditional<do_pattern_volume>(BuildVolumePattern<P>(globalpattern));
@@ -1226,6 +1227,7 @@ public:
         // bind local function spaces to element
         lfsu.bind(*it);
         lfsv.bind(*it);
+        apply_operator.setElement(*it);
         apply_operator.setElementSubDomains(is.subDomains(*it));
 
         // allocate local data container
@@ -1258,6 +1260,7 @@ public:
             for (IntersectionIterator iit = gfsu.gridview().ibegin(*it);
                  iit!=endit; ++iit, ++intersection_index)
               {
+                apply_operator.setIntersection(*iit);
                 apply_operator.setIntersectionIndex(intersection_index);
                 // skeleton term
                 if (iit->neighbor())
@@ -1356,6 +1359,7 @@ public:
         lfsu.bind(*it);
         lfsv.bind(*it);
 
+        apply_operator.setElement(*it);
         apply_operator.setElementSubDomains(is.subDomains(*it));
 
         // allocate local data container
@@ -1385,6 +1389,7 @@ public:
             for (IntersectionIterator iit = gfsu.gridview().ibegin(*it);
                  iit!=endit; ++iit, ++intersection_index)
               {
+                apply_operator.setIntersection(*iit);
                 apply_operator.setIntersectionIndex(intersection_index);
                 // skeleton term
                 if (iit->neighbor())

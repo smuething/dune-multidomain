@@ -293,18 +293,4 @@ int main(int argc, char** argv) {
   vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
   vtkwriter.write("poisson.vtu",Dune::VTKOptions::ascii);
 
-  /*
-  typedef Dune::PDELab::GridOperatorSpace<GFS,GFS,
-    LOP,C,C,Dune::PDELab::ISTLBCRSMatrixBackend<1,1> > GOS;
-  GOS gos(gfs,cg,gfs,cg,lop);
-
-  typedef GOS::MatrixContainer<R>::Type M2;
-  M2 m2(gos);
-  m2 = 0.0;
-
-  gos.jacobian(x0,m2);
-  */
-  //Dune::printmatrix(std::cout,m.base(),"","");
-  //Dune::printmatrix(std::cout,m2.base(),"","");
-
 }

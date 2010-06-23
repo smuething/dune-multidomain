@@ -640,7 +640,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSU lfsu(data.lfsu());
       LFSV lfsv(data.lfsv());
-      child.localOperator().alpha_volume(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,r);
+      child.localOperator().alpha_volume(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,r);
     }
 
     const XL& x;
@@ -662,7 +662,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
         return;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSV lfsv(data.lfsv());
-      child.localOperator().lambda_volume(ElementGeometry<typename Data::Entity>(data.element()),lfsv,r);
+      child.localOperator().lambda_volume(ElementGeometry<typename Data::Element>(data.element()),lfsv,r);
     }
 
     RL& r;
@@ -794,7 +794,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSU lfsu(data.lfsu());
       LFSV lfsv(data.lfsv());
-      child.localOperator().alpha_volume_post_skeleton(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,r);
+      child.localOperator().alpha_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,r);
     }
 
     const XL& x;
@@ -816,7 +816,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
         return;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSV lfsv(data.lfsv());
-      child.localOperator().lambda_volume_post_skeleton(ElementGeometry<typename Data::Entity>(data.element()),lfsv,r);
+      child.localOperator().lambda_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsv,r);
     }
 
     RL& r;
@@ -840,7 +840,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSU lfsu(data.lfsu());
       LFSV lfsv(data.lfsv());
-      child.localOperator().jacobian_apply_volume(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,y);
+      child.localOperator().jacobian_apply_volume(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,y);
     }
 
     const XL& x;
@@ -1078,7 +1078,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSU lfsu(data.lfsu(),child);
       LFSV lfsv(data.lfsv(),child);
-      child.localOperator().jacobian_volume_post_skeleton(ElementGeometry<typename Data::Entity>(data.element()),lfsu,x,lfsv,a);
+      child.localOperator().jacobian_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,a);
     }
 
     const XL& x;

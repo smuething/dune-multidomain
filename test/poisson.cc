@@ -23,7 +23,7 @@
 
 #include<typeinfo>
 
-#define SIMPLE_ANALYTIC_FUNCTION(_NAME_,_CODE_) \
+#define SIMPLE_ANALYTIC_FUNCTION(_NAME_,_POINT_,_VALUE_)  \
 template<typename GV, typename RF> \
 class _NAME_ \
   : public Dune::PDELab::AnalyticGridFunctionBase<Dune::PDELab::AnalyticGridFunctionTraits<GV,RF,1>, \
@@ -34,32 +34,32 @@ public: \
   typedef Dune::PDELab::AnalyticGridFunctionBase<Traits,_NAME_<GV,RF> > BaseT; \
 \
   _NAME_ (const GV& gv) : BaseT(gv) {} \
-  inline void evaluateGlobal (const typename Traits::DomainType& x, \
-                              typename Traits::RangeType& y) const \
-  _CODE_ \
-};
+  inline void evaluateGlobal (const typename Traits::DomainType& _POINT_, \
+                              typename Traits::RangeType& _VALUE_) const
 
-#define SIMPLE_BOUNDARY_FUNCTION(_NAME_,_CODE_) \
+#define END_SIMPLE_ANALYTIC_FUNCTION };
+
+#define SIMPLE_BOUNDARYTYPE_FUNCTION(_NAME_,_INTERSECTION_,_POINT_,_VALUE_)    \
 template<typename GV> \
 class _NAME_ \
   : public Dune::PDELab::BoundaryGridFunctionBase<Dune::PDELab:: \
-                                                  BoundaryGridFunctionTraits<GV,int,1, \
-                                                                             Dune::FieldVector<int,1> >, \
+                                                  BoundaryTypeGridFunctionTraits<GV>, \
                                                   _NAME_<GV> > \
 { \
   const GV& gv; \
 \
 public: \
-  typedef Dune::PDELab::BoundaryGridFunctionTraits<GV,int,1,Dune::FieldVector<int,1> > Traits; \
+  typedef Dune::PDELab::BoundaryTypeGridFunctionTraits<GV> Traits; \
   typedef Dune::PDELab::BoundaryGridFunctionBase<Traits,_NAME_<GV> > BaseT; \
 \
   _NAME_ (const GV& gv_) : gv(gv_) {} \
 \
   template<typename I>\
-  inline void evaluate (const Dune::PDELab::IntersectionGeometry<I>& ig, \
-                        const typename Traits::DomainType& x, \
-                        typename Traits::RangeType& y) const \
-  _CODE_ \
+  inline void evaluate (const Dune::PDELab::IntersectionGeometry<I>& _INTERSECTION_, \
+                        const typename Traits::DomainType& _POINT_, \
+                        typename Traits::RangeType& _VALUE_) const
+
+#define END_SIMPLE_BOUNDARYTYPE_FUNCTION \
   inline const GV& getGridView () \
   { \
     return gv; \
@@ -67,52 +67,58 @@ public: \
 };
 
 
-
-
-
 // source term
-SIMPLE_ANALYTIC_FUNCTION(F,
+SIMPLE_ANALYTIC_FUNCTION(F,x,y)
 {
   if (x[0]>0.25 && x[0]<0.375 && x[1]>0.25 && x[1]<0.375)
     y = 50.0;
   else
     y = 0.0;
   y=0;
-})
+}
+END_SIMPLE_ANALYTIC_FUNCTION
 
 
 // boundary condition type
-SIMPLE_BOUNDARY_FUNCTION(B,
-{({
+SIMPLE_BOUNDARYTYPE_FUNCTION(B,ig,x,y)
+{
   Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
     xg = ig.geometry().global(x);
 
+  if (!ig.boundary())
+    {
+      y = Traits::None; // no bc on subdomain interface
+      return;
+    }
+
   if (xg[1]<1E-6 || xg[1]>1.0-1E-6)
     {
-      y = 0; // Neumann
+      y = Traits::Neumann; // Neumann
       return;
     }
   if (xg[0]>1.0-1E-6 && xg[1]>0.5+1E-6)
     {
-      y = 0; // Neumann
+      y = Traits::Neumann; // Neumann
       return;
     }
-  y = 1; // Dirichlet
-});})
+  y = Traits::Dirichlet; // Dirichlet
+}
+END_SIMPLE_BOUNDARYTYPE_FUNCTION
 
 
 // dirichlet bc
-SIMPLE_ANALYTIC_FUNCTION(G,
+SIMPLE_ANALYTIC_FUNCTION(G,x,y)
 {
   typename Traits::DomainType center;
   for (int i=0; i<GV::dimension; i++) center[i] = 0.5;
   center -= x;
   y = exp(-center.two_norm2());
-})
+}
+END_SIMPLE_ANALYTIC_FUNCTION
 
 
 // neumann bc
-SIMPLE_ANALYTIC_FUNCTION(J,
+SIMPLE_ANALYTIC_FUNCTION(J,x,y)
 {
   if (x[1]<1E-6 || x[1]>1.0-1E-6)
     {
@@ -124,36 +130,8 @@ SIMPLE_ANALYTIC_FUNCTION(J,
       y = -5.0;
       return;
     }
-})
-
-
-template<typename GV>
-class B2
-  : public Dune::PDELab::BoundaryGridFunctionBase<Dune::PDELab::BoundaryTypeGridFunctionTraits<GV>,
-                                                  B2<GV> >
-{
-
-public:
-
-  typedef Dune::PDELab::BoundaryTypeGridFunctionTraits<GV> Traits;
-
-  template<typename I>
-  inline void evaluate (const Dune::PDELab::IntersectionGeometry<I>& ig,
-                        const typename Traits::DomainType& x,
-                        typename Traits::RangeType& bct) const
-  {
-    Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
-      xg = ig.geometry().global(x);
-
-    if (xg[0]<1E-6 || xg[0]>1.0-1E-6 || xg[1]<1E-6 || xg[1]>1.0-1E-6)
-      {
-        bct = Traits::Dirichlet;
-        return;
-      }
-    bct = Traits::None; // no boundary conditions on subproblem-subproblem interface
-  }
-
-};
+}
+END_SIMPLE_ANALYTIC_FUNCTION
 
 
 int main(int argc, char** argv) {
@@ -187,11 +165,6 @@ int main(int argc, char** argv) {
   grid.updateSubDomains();
   grid.postUpdateSubDomains();
 
-  typedef B2<MDGV> BT;
-
-  BT bt;
-  typedef BT BType;
-
   typedef MDGV::Grid::ctype DF;
 
   typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM;
@@ -218,8 +191,8 @@ int main(int argc, char** argv) {
 
   MultiGFS multigfs(grid,gfs);
 
-  //typedef B<MDGV> BType;
-  //BType b(mdgv);
+  typedef B<MDGV> BType;
+  BType b(mdgv);
 
   typedef F<MDGV,R> FType;
   FType f(mdgv);
@@ -231,7 +204,7 @@ int main(int argc, char** argv) {
   JType j(mdgv);
 
   typedef Dune::PDELab::Poisson<FType,BType,JType,2> LOP;
-  LOP lop(f,bt,j);
+  LOP lop(f,b,j);
 
   typedef MDGV::IndexSet::SubDomainSet SDS;
   typedef Dune::PDELab::MultiDomain::EqualsSubDomains<SDS> EC;
@@ -247,7 +220,7 @@ int main(int argc, char** argv) {
     splfs0(multigfs,sp0,sp0.trialGridFunctionSpaceConstraints()),
     splfs1(multigfs,sp1,sp1.trialGridFunctionSpaceConstraints());
 
-  constraints(bt,multigfs,cg,bt,splfs0,bt,splfs1);
+  constraints(b,multigfs,cg,b,splfs0,b,splfs1);
 
   // make coefficent Vector and initialize it from a function
   typedef MultiGFS::VectorContainer<R>::Type V;

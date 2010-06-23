@@ -396,7 +396,7 @@ public:
     return *_element;
   }
 
-  void setIntersection(const Intersection intersection) {
+  void setIntersection(const Intersection& intersection) {
     _intersection = &intersection;
   }
 

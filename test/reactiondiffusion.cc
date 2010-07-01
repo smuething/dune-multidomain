@@ -83,6 +83,8 @@ SIMPLE_BOUNDARYTYPE_FUNCTION(B,ig,x,y)
       return;
     }
 
+  y = Traits::Neumann;
+/*
   if (xg[1]<1E-6 || xg[1]>1.0-1E-6)
     {
       y = Traits::Neumann; // Neumann
@@ -93,7 +95,7 @@ SIMPLE_BOUNDARYTYPE_FUNCTION(B,ig,x,y)
       y = Traits::Neumann; // Neumann
       return;
     }
-  y = Traits::Dirichlet; // Dirichlet
+  y = Traits::Dirichlet; // Dirichlet*/
 }
 END_SIMPLE_BOUNDARYTYPE_FUNCTION
 

@@ -242,9 +242,9 @@ int main(int argc, char** argv) {
   UInitialType uinitial(u0initial,u1initial);
 
   SubProblem0::Traits::LocalTrialFunctionSpace
-    splfs0(multigfs,sp0,sp0.trialGridFunctionSpaceConstraints());
+    splfs0(sp0,sp0.trialGridFunctionSpaceConstraints());
   SubProblem1::Traits::LocalTrialFunctionSpace
-    splfs1(multigfs,sp1,sp1.trialGridFunctionSpaceConstraints());
+    splfs1(sp1,sp1.trialGridFunctionSpaceConstraints());
 
   typedef MultiGFS::VectorContainer<R>::Type V;
   V x0(multigfs);

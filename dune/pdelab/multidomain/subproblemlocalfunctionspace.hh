@@ -233,36 +233,50 @@ struct build_splfs_node<MDLFS>
 
 
 // *************************************************************************************
-// System of intermediate base classes for SubProblemLocalFunctionSpace that extracts the
-// selected children from the MultiDomainGridFunctionSpace so they can be passed on to the
-// constructor of the VariadicNode
+// compile-time mapper from subproblem child indices to global child indices
 
-template<typename MDLFS, typename VariadicNode, int... ChildIndices>
-struct SubProblemLocalFunctionSpaceBase;
-
-
-template<typename MDLFS, typename VariadicNode, int i, int... ChildIndices>
-struct SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,i,ChildIndices...> :
-  public SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,ChildIndices...>
+template<bool b, int v, typename next, int i>
+struct pick_value
 {
-
-  template<typename... Children>
-  SubProblemLocalFunctionSpaceBase(const MDLFS& mdlfs, Children&... children) :
-    SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode,ChildIndices...>(mdlfs, children..., mdlfs.template getChild<i>())
-  {}
-
+  static const int value = v;
 };
 
-template<typename MDLFS, typename VariadicNode>
-struct SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode> :
-  public VariadicNode
+template<int v, typename next, int i>
+struct pick_value<false,v,next,i>
 {
+  static const int value = next::template access<i>::value;
+};
 
-  template<typename... Children>
-  SubProblemLocalFunctionSpaceBase(const MDLFS& mdlfs, Children&... children) :
-    VariadicNode(children...)
-  {}
+template<int i, int... values>
+struct value_mapper_impl;
 
+template<int i, int v, int... values>
+struct value_mapper_impl<i,v,values...>
+{
+  static const int _key = i;
+  static const int _value = v;
+
+  template<int j>
+  struct access
+  {
+    static const int value = pick_value<_key == j,_value,value_mapper_impl<_key+1,values...>,j>::value;
+  };
+};
+
+template<int i>
+struct value_mapper_impl<i>
+{
+  // end of recursion
+};
+
+template<int... values>
+struct value_mapper
+{
+  template<int i>
+  struct map {
+    dune_static_assert(i < sizeof...(values),"index out of range");
+    static const int value = value_mapper_impl<0,values...>::template access<i>::value;
+  };
 };
 
 } // anonymous namespace
@@ -273,14 +287,33 @@ struct SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode> :
 
 template<typename MDLFS, typename SubProblem, typename Constraints, int... ChildIndices>
 class SubProblemLocalFunctionSpace
-  : public SubProblemLocalFunctionSpaceBase<MDLFS,
-                                            typename build_splfs_node<MDLFS,ChildIndices...>::template result<>::type,
-                                            ChildIndices...>
 {
 
   dune_static_assert((sizeof...(ChildIndices) <= MDLFS::CHILDREN),"SubProblemLocalFunctionSpace cannot have more components than the MultiDomainGridFunctionSpace");
 
   dune_static_assert((check_indices<MDLFS::CHILDREN, ChildIndices...>::value),"Invalid set of child indices (index out of range or duplicate indices)");
+
+  typedef value_mapper<ChildIndices...> index_mapper;
+
+public:
+  static const bool isLeaf = false;
+  static const bool isPower = false;
+  static const bool isComposite = true;
+  static const unsigned int CHILDREN = sizeof...(ChildIndices);
+
+  template<int i>
+  struct Child
+  {
+    typedef typename MDLFS::template Child<index_mapper::template map<i>::value>::Type Type;
+  };
+
+  template<int i>
+  const typename Child<i>::Type& getChild () const
+  {
+    return plfs->template getChild<index_mapper::template map<i>::value>();
+  }
+
+private:
 
   typedef typename MDLFS::Traits::GridFunctionSpaceType GFS;
 
@@ -292,10 +325,6 @@ class SubProblemLocalFunctionSpace
   typedef typename GFS::Traits::BackendType B;
   typedef typename GFS::Traits::GridType::Traits::template Codim<0>::Entity Element;
 
-  typedef SubProblemLocalFunctionSpaceBase<MDLFS,
-                                           typename build_splfs_node<MDLFS,ChildIndices...>::template result<>::type,
-                                           ChildIndices...> BaseT;
-
 public:
   typedef SubProblemLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpace,SubProblem,Constraints> Traits;
 
@@ -304,7 +333,7 @@ protected:
                                                             typename Traits::Element,
                                                             typename Traits::IndexContainer::iterator,
                                                             typename Traits::IndexContainer::size_type,
-                                                            BaseT::CHILDREN,
+                                                            CHILDREN,
                                                             0> VisitChildTMP;
 
 public:
@@ -316,7 +345,6 @@ public:
 
   //! \brief initialize with grid function space
   SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const SubProblem& subProblem, const Constraints& constraints) :
-    BaseT(mdlfs),
     plfs(&mdlfs),
     pgfs(&(mdlfs.gfs())),
     _subProblem(subProblem),

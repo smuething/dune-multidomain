@@ -364,7 +364,7 @@ public:
   // map index in this local function space to global index space
   typename Traits::SizeType globalIndex (typename Traits::IndexContainer::size_type index) const
   {
-    return i[index];
+    return global[index];
   }
 
   /** \brief extract coefficients for one element from container */
@@ -373,7 +373,7 @@ public:
   {
     localcontainer.resize(n);
     for (typename Traits::IndexContainer::size_type k=0; k<n; ++k)
-      localcontainer[k] = B::access(globalcontainer,i[k]);
+      localcontainer[k] = B::access(globalcontainer,global[k]);
   }
 
   /** \brief write back coefficients for one element to container */
@@ -381,7 +381,7 @@ public:
   void vwrite (const LC& localcontainer, GC& globalcontainer) const
   {
     for (typename Traits::IndexContainer::size_type k=0; k<n; ++k)
-      B::access(globalcontainer,i[k]) = localcontainer[k];
+      B::access(globalcontainer,global[k]) = localcontainer[k];
   }
 
   /** \brief add coefficients for one element to container */
@@ -389,14 +389,14 @@ public:
   void vadd (const LC& localcontainer, GC& globalcontainer) const
   {
     for (typename Traits::IndexContainer::size_type k=0; k<n; ++k)
-      B::access(globalcontainer,i[k]) += localcontainer[k];
+      B::access(globalcontainer,global[k]) += localcontainer[k];
   }
 
   void debug () const
   {
     std::cout << n << " indices = (";
     for (typename Traits::IndexContainer::size_type k=0; k<n; k++)
-      std::cout << i[k] << " ";
+      std::cout << global[k] << " ";
     std::cout << ")" << std::endl;
   }
 
@@ -417,7 +417,7 @@ public:
     // initialize iterators and fill indices
     offset2 = 0;
     this->offset = 0;
-    this->i = global.begin();
+    //this->i = global.begin();
     VisitChildTMP::fill_indices(*this,e,global.begin(),offset2);
 
     // apply upMap

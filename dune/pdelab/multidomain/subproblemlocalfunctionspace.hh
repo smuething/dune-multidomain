@@ -445,9 +445,7 @@ private:
   const GFS* pgfs;
   const SubProblem& _subProblem;
   const Constraints& _constraints;
-  typename Traits::IndexContainer::iterator i;
   typename Traits::IndexContainer::size_type n;
-  typename Traits::IndexContainer::size_type offset;
   typename Traits::IndexContainer global;
 
 };

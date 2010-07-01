@@ -269,7 +269,7 @@ struct SubProblemLocalFunctionSpaceBase<MDLFS,VariadicNode> :
 
 
 // ********************************************************************************
-// LocalFunctionSpace for subproblems
+// LocalFunctionSpace for subproblems - multi-component version
 
 template<typename MDLFS, typename SubProblem, typename Constraints, int... ChildIndices>
 class SubProblemLocalFunctionSpace

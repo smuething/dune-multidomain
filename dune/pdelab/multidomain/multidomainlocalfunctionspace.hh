@@ -88,7 +88,6 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inne
   {
     // vist children of node t in order
     typedef typename T::template Child<i>::Type C;
-    t.offset = offset;
     Int initial_offset = offset; // remember initial offset to compute size later
     GuardedVisit<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,Dune::mdgrid::GridType<typename C::Traits::GridViewType::Grid>::v >::
       fill_indices(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,begin,offset);

@@ -90,17 +90,13 @@ struct SubProblemLocalFunctionSpaceVisitChildMetaProgram // visit child of inner
     return t.template getChild<i>().size() + NextChild::size(t);
   }
 
-  static void fill_indices (T& t, const E& e, It begin, Int& offset)
+  static void fill_indices (T& t, It it)
   {
-    // vist children of node t in order
     typedef typename T::template Child<i>::Type C;
-    t.offset = offset;
-    Int initial_offset = offset; // remember initial offset to compute size later
-    GuardedVisit<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,Dune::mdgrid::GridType<typename C::Traits::GridViewType::Grid>::v >::
-      fill_indices(t.template getChild<i>(),t.pgfs->template getChild<i>().gridview(),e,begin,offset);
-    for (Int j=initial_offset; j<offset; j++)
-      begin[j] = t.pgfs->template subMap<i>(begin[j]);
-    NextChild::fill_indices(t,e,begin,offset);
+    const C& child = t.template getChild<i>();
+    for(int j = 0; j < child.size(); ++j, ++it)
+        *it = child.globalIndex(j);
+    NextChild::fill_indices(t,it);
   }
 
   static void reserve (T& t, const E& e, Int& offset)
@@ -128,7 +124,7 @@ struct SubProblemLocalFunctionSpaceVisitChildMetaProgram<T,E,It,Int,n,n> // end 
     return 0;
   }
 
-  static void fill_indices (T& t, const E& e, It begin, Int& offset)
+  static void fill_indices (T& t, It it)
   {
     return;
   }
@@ -307,7 +303,7 @@ public:
                                     >::Type Traits;
 
 protected:
-  typedef SubProblemLocalFunctionSpaceVisitChildMetaProgram<SubProblemLocalFunctionSpace,
+  typedef SubProblemLocalFunctionSpaceVisitChildMetaProgram<const SubProblemLocalFunctionSpace,
                                                             typename Traits::Element,
                                                             typename Traits::IndexContainer::iterator,
                                                             typename Traits::IndexContainer::size_type,
@@ -336,10 +332,12 @@ public:
   //! \brief initialize with grid function space
   void setup (const MDLFS& lfs) const
   {
-    /*
-    assert(false);
     plfs = &lfs;
     pgfs = &(lfs.gfs());
+    n = VisitChildTMP::size(*this);
+    global.resize(n);
+    VisitChildTMP::fill_indices(*this,global.begin());
+    /*
     VisitChildTMP::setup(*this,*pgfs);
     */
 

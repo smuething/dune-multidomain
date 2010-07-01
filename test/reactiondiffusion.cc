@@ -273,6 +273,15 @@ int main(int argc, char** argv) {
   r = 0.0;
 
   multigos.residual(x0,r);
+
+  typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
+  LS ls(5000,false);
+
+  typedef Dune::PDELab::Newton<MultiGOS,LS,V> PDESOLVER;
+
+  PDESOLVER pdesolver(multigos,ls);
+  pdesolver.setVerbosityLevel(4);
+  pdesolver.apply(x0);
   /*
   Dune::MatrixAdapter<M,V,V> opa(m);
   Dune::SeqSSOR<M,V,V> ssor(m,1,1.0);

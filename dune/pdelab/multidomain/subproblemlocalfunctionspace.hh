@@ -441,12 +441,12 @@ public:
   }
 
 private:
-  const MDLFS* plfs;
-  const GFS* pgfs;
+  mutable const MDLFS* plfs;
+  mutable const GFS* pgfs;
   const SubProblem& _subProblem;
   const Constraints& _constraints;
-  typename Traits::IndexContainer::size_type n;
-  typename Traits::IndexContainer global;
+  mutable typename Traits::IndexContainer::size_type n;
+  mutable typename Traits::IndexContainer global;
 
 };
 

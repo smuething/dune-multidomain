@@ -24,6 +24,7 @@
 
 #include "functionmacros.hh"
 #include "../../dune-pdelab-howto/examples/example05_operator.hh"
+#include "../../dune-pdelab-howto/examples/example05_initial.hh"
 
 template<typename GV, typename RF>
 class K
@@ -233,21 +234,24 @@ int main(int argc, char** argv) {
   SubProblem0 sp0(nocon,nocon,lop0,ec0);
   SubProblem1 sp1(nocon,nocon,lop1,ec1);
 
-  /*
-  SubProblem::Traits::LocalTrialFunctionSpace
-    splfs0(multigfs,sp0,sp0.trialGridFunctionSpaceConstraints()),
+  typedef U0Initial<MDGV,double> U0InitialType;
+  U0InitialType u0initial(mdgv);
+  typedef U1Initial<MDGV,double> U1InitialType;
+  U1InitialType u1initial(mdgv);
+  typedef Dune::PDELab::CompositeGridFunction<U0InitialType,U1InitialType> UInitialType;
+  UInitialType uinitial(u0initial,u1initial);
+
+  SubProblem0::Traits::LocalTrialFunctionSpace
+    splfs0(multigfs,sp0,sp0.trialGridFunctionSpaceConstraints());
+  SubProblem1::Traits::LocalTrialFunctionSpace
     splfs1(multigfs,sp1,sp1.trialGridFunctionSpaceConstraints());
 
-  constraints(b,multigfs,cg,b,splfs0,b,splfs1);
-  */
-  // make coefficent Vector and initialize it from a function
   typedef MultiGFS::VectorContainer<R>::Type V;
   V x0(multigfs);
   x0 = 0.0;
-  /*
-  Dune::PDELab::MultiDomain::interpolate(multigfs,x0,g,splfs0,g,splfs1);
-  Dune::PDELab::set_shifted_dofs(cg,0.0,x0);
-  */
+
+  Dune::PDELab::MultiDomain::interpolate(multigfs,x0,u0initial,splfs0,uinitial,splfs1);
+
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 
   typedef Dune::PDELab::MultiDomain::MultiDomainGridOperatorSpace<MultiGFS,MultiGFS,MBE,SubProblem0,SubProblem1> MultiGOS;

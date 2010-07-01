@@ -304,7 +304,7 @@ class MultiDomainLocalFunctionSpace : public MultiDomainLocalFunctionSpaceNode<G
 public:
   typedef typename BaseT::Traits Traits;
 
-  MultiDomainLocalFunctionSpace (const GFS& gfs)
+  explicit MultiDomainLocalFunctionSpace (const GFS& gfs)
     : BaseT(gfs), global(gfs.maxLocalSize())
   {}
 

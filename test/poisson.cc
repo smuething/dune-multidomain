@@ -180,8 +180,8 @@ int main(int argc, char** argv) {
   SubProblem sp1(con,con,lop,ec1);
 
   SubProblem::Traits::LocalTrialFunctionSpace
-    splfs0(multigfs,sp0,sp0.trialGridFunctionSpaceConstraints()),
-    splfs1(multigfs,sp1,sp1.trialGridFunctionSpaceConstraints());
+    splfs0(sp0,sp0.trialGridFunctionSpaceConstraints()),
+    splfs1(sp1,sp1.trialGridFunctionSpaceConstraints());
 
   constraints(b,multigfs,cg,b,splfs0,b,splfs1);
 

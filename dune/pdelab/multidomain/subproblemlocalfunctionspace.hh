@@ -329,6 +329,14 @@ public:
     setup(mdlfs);
   }
 
+  //! \brief variant if no local function space is availabe at construction time
+  SubProblemLocalFunctionSpace(const SubProblem& subProblem, const Constraints& constraints) :
+    plfs(NULL),
+    pgfs(NULL),
+    _subProblem(subProblem),
+    _constraints(constraints)
+  {}
+
   //! \brief initialize with grid function space
   void setup (const MDLFS& lfs) const
   {
@@ -490,8 +498,16 @@ public:
     _subProblem(subProblem),
     _constraints(constraints)
   {
-    //setup(mdlfs);
+    setup(mdlfs);
   }
+
+  //! \brief variant if no local function space is availabe at construction time
+  SubProblemLocalFunctionSpace(const SubProblem& subProblem, const Constraints& constraints) :
+    plfs(NULL),
+    pgfs(NULL),
+    _subProblem(subProblem),
+    _constraints(constraints)
+  {}
 
   //! \brief initialize with grid function space
   void setup (const MDLFS& lfs) const

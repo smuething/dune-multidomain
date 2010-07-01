@@ -326,7 +326,7 @@ public:
     _constraints(constraints),
     n(VisitChildTMP::size(*this))
   {
-    //setup(mdlfs);
+    setup(mdlfs);
   }
 
   //! \brief initialize with grid function space

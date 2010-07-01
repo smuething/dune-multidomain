@@ -297,10 +297,7 @@ class SubProblemLocalFunctionSpace
                                            ChildIndices...> BaseT;
 
 public:
-  typedef typename Dune::SelectType<sizeof...(ChildIndices) == 1,
-                                    SubProblemLeafLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpace,typename BaseT::template Child<0>::Type,SubProblem,Constraints>,
-                                    SubProblemLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpace,SubProblem,Constraints>
-                                    >::Type Traits;
+  typedef SubProblemLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpace,SubProblem,Constraints> Traits;
 
 protected:
   typedef SubProblemLocalFunctionSpaceVisitChildMetaProgram<const SubProblemLocalFunctionSpace,

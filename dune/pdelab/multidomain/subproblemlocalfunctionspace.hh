@@ -341,9 +341,6 @@ public:
   {
     plfs = &lfs;
     pgfs = &(lfs.gfs());
-    n = VisitChildTMP::size(*this);
-    global.resize(n);
-    VisitChildTMP::fill_indices(*this,global.begin());
     /*
     VisitChildTMP::setup(*this,*pgfs);
     */
@@ -408,28 +405,12 @@ public:
   }
 
   //! \brief bind local function space to entity
-  void bind (const typename Traits::Element& e)
+  void bind () const
   {
     // make offset
-    typename Traits::IndexContainer::size_type offset2=0;
-
-    // compute sizes
-    VisitChildTMP::reserve(*this,e,offset2);
-
-    this->n = offset2;
-
-    // now reserve space in vector
-    global.resize(offset2);
-
-    // initialize iterators and fill indices
-    offset2 = 0;
-    this->offset = 0;
-    //this->i = global.begin();
-    VisitChildTMP::fill_indices(*this,e,global.begin(),offset2);
-
-    // apply upMap
-    for (typename Traits::IndexContainer::size_type i=0; i<offset2; i++)
-      global[i] = pgfs->upMap(global[i]);
+    n = VisitChildTMP::size(*this);
+    global.resize(n);
+    VisitChildTMP::fill_indices(*this,global.begin());
   }
 
   const SubProblem& subProblem() const {
@@ -517,7 +498,11 @@ public:
     pgfs = &(lfs.gfs());/*
     VisitChildTMP::setup(*this,*pgfs);
     */
+  }
 
+  void bind() const
+  {
+    // nothing to do here...
   }
 
   //! \brief get current size

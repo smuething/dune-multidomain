@@ -205,32 +205,6 @@ struct SubProblemLeafLocalFunctionSpaceTraits
 
 namespace {
 
-// *************************************************************************************
-// TMP for constructing the type of the variadic node the SubProblemLocalFunctionSpace inherits from
-
-template<typename MDLFS, int... ChildIndices>
-struct build_splfs_node;
-
-template<typename MDLFS, int FirstIndex, int... ChildIndices>
-struct build_splfs_node<MDLFS,FirstIndex,ChildIndices...>
-{
-  template<typename... Types>
-  struct result
-  {
-    typedef typename build_splfs_node<MDLFS,ChildIndices...>::template result<Types..., const typename MDLFS::template Child<FirstIndex>::Type>::type type;
-  };
-};
-
-template<typename MDLFS>
-struct build_splfs_node<MDLFS>
-{
-  template<typename... Types>
-  struct result
-  {
-    typedef VariadicCompositeNode<CopyStoragePolicy,Types...> type;
-  };
-};
-
 
 // *************************************************************************************
 // compile-time mapper from subproblem child indices to global child indices

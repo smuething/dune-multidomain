@@ -39,6 +39,7 @@ struct constraints_pairs<BoundaryConditionTypeFunction,SubProblemLFS,SubProblemB
   {
     if (subProblemLFS.appliesTo(subDomainSet))
     {
+      subProblemLFS.bind();
       ConstraintsVisitNodeMetaProgram2<SubProblemLFS,SubProblemLFS::isLeaf>
         ::volume(subProblemLFS,cg,geometry);
     }
@@ -71,6 +72,7 @@ struct constraints_pairs<BoundaryConditionTypeFunction,SubProblemLFS,SubProblemB
   {
     if (subProblemLFS.appliesTo(subDomainSet))
     {
+      subProblemLFS.bind();
       do_boundary(lfs,cg,intersectionGeometry,subDomainSet,boundaryType,subProblemLFS);
     }
     next_pair::boundary(lfs,cg,intersectionGeometry,subDomainSet,subProblemBoundaries...);
@@ -91,7 +93,9 @@ struct constraints_pairs<BoundaryConditionTypeFunction,SubProblemLFS,SubProblemB
     {
       if (subProblemLFS.appliesTo(neighborSubDomainSet))
       {
+        subProblemLFS.bind();
         SubProblemLFS subProblemLFS_neighbor(lfs_n,subProblemLFS.subProblem(),subProblemLFS.constraints());
+        subProblemLFS_neighbor.bind();
         ConstraintsVisitNodeMetaProgram2<SubProblemLFS,SubProblemLFS::isLeaf>
           ::skeleton(subProblemLFS,subProblemLFS_neighbor,cg,intersectionGeometry);
       } else {

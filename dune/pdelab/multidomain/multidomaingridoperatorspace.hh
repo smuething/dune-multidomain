@@ -578,9 +578,10 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
 
       // translate local to global indices and add to global pattern
       for (size_t k=0; k<localpattern.size(); ++k)
+        // TODO: Figure out if we really need the localIndex() call
         data.gos().add_entry(globalpattern,
-                             data.lfsv().globalIndex(data.lfsv().localIndex(localpattern[k].i())),
-                             data.lfsu().globalIndex(data.lfsu().localIndex(localpattern[k].j()))
+                             lfsv.globalIndex(lfsv.localIndex(localpattern[k].i())),
+                             lfsu.globalIndex(lfsu.localIndex(localpattern[k].j()))
                              );
     }
 

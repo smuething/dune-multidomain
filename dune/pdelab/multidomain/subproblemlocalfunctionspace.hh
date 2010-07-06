@@ -312,10 +312,10 @@ protected:
 
 public:
 
-  //! \brief empty constructor
-  SubProblemLocalFunctionSpace ()
+  //! \brief empty constructor - TODO:Do we need this???
+  /*SubProblemLocalFunctionSpace ()
   {
-  }
+  }*/
 
   //! \brief initialize with grid function space
   SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const SubProblem& subProblem, const Constraints& constraints) :

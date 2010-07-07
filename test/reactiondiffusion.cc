@@ -10,7 +10,7 @@
 #include <dune/pdelab/multidomain/subproblemgridfunctionspace.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/multidomaingridoperatorspace.hh>
-#include <dune/pdelab/multidomain/subproblem.hh>
+#include <dune/pdelab/multidomain/instationarysubproblem.hh>
 #include <dune/pdelab/finiteelementmap/conformingconstraints.hh>
 #include <dune/pdelab/multidomain/constraints.hh>
 #include <dune/pdelab/multidomain/interpolate.hh>
@@ -233,10 +233,10 @@ int main(int argc, char** argv) {
 
   NOCON nocon;
 
-  typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP0,EC,0> SubProblem0;
-  typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP1,EC,0,1> SubProblem1;
-  SubProblem0 sp0(nocon,nocon,lop0,ec0);
-  SubProblem1 sp1(nocon,nocon,lop1,ec1);
+  typedef Dune::PDELab::MultiDomain::InstationarySubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP0,TLOP,EC,0> SubProblem0;
+  typedef Dune::PDELab::MultiDomain::InstationarySubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP1,TLOP,EC,0,1> SubProblem1;
+  SubProblem0 sp0(nocon,nocon,lop0,tlop,ec0);
+  SubProblem1 sp1(nocon,nocon,lop1,tlop,ec1);
 
   typedef U0Initial<MDGV,double> U0InitialType;
   U0InitialType u0initial(mdgv);

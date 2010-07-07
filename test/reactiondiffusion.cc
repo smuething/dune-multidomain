@@ -24,6 +24,7 @@
 
 #include "functionmacros.hh"
 #include "../../dune-pdelab-howto/examples/example05_operator.hh"
+#include "../../dune-pdelab-howto/examples/example05_toperator.hh"
 #include "../../dune-pdelab-howto/examples/example05_initial.hh"
 
 template<typename GV, typename RF>
@@ -220,6 +221,9 @@ int main(int argc, char** argv) {
 
   typedef Example05LocalOperator LOP1;
   LOP1 lop1(d_0,d_1,lambda,sigma,kappa,2);
+
+  typedef Example05TimeLocalOperator TLOP;
+  TLOP tlop(tau,2);
 
   typedef MDGV::IndexSet::SubDomainSet SDS;
   typedef Dune::PDELab::MultiDomain::EqualsSubDomains<SDS> EC;

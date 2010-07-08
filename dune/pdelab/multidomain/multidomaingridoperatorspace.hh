@@ -1216,7 +1216,7 @@ public:
             // bind local function spaces to neighbor element
             lfsun.bind(*(iit->outside()));
             lfsvn.bind(*(iit->outside()));
-            apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*it));
+            apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*(iit->outside())));
 
             // get pattern
             apply_operator.template conditional<do_pattern_skeleton>(BuildSkeletonPattern<P>(globalpattern));
@@ -1317,6 +1317,7 @@ public:
                     int idn = is.index(*(iit->outside()))+gtoffset[gtn];
                     lfsun.bind(*(iit->outside()));
                     lfsvn.bind(*(iit->outside()));
+                    apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*(iit->outside())));
 
                     // allocate local data container
                     XL xn(lfsun.size());
@@ -1398,7 +1399,6 @@ public:
         // bind local function spaces to element
         lfsu.bind(*it);
         lfsv.bind(*it);
-
         apply_operator.setElement(*it);
         apply_operator.setElementSubDomains(is.subDomains(*it));
 
@@ -1447,6 +1447,7 @@ public:
 
                     lfsun.bind(*(iit->outside()));
                     lfsvn.bind(*(iit->outside()));
+                    apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*(iit->outside())));
 
                     // allocate local data container
                     XL xn(lfsun.size());
@@ -1521,7 +1522,6 @@ public:
 
         // compute unique id
         const typename GV::IndexSet::IndexType id = is.index(*it)+gtoffset[it->type()];
-        //            std::cout << "[" << gfsu.gridview().comm().rank() << "] " << " element: " << id << std::endl;
 
         // skip ghost and overlap
         if (nonoverlapping_mode && it->partitionType()!=Dune::InteriorEntity)
@@ -1579,7 +1579,7 @@ public:
                     // bind local function spaces to neighbor element
                     lfsun.bind(*(iit->outside()));
                     lfsvn.bind(*(iit->outside()));
-
+                    apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*(iit->outside())));
 
                         // allocate local data container
                     XL xn(lfsun.size());

@@ -1176,7 +1176,7 @@ public:
             // bind local function spaces to neighbor element
             lfsun.bind(*(iit->outside()));
             lfsvn.bind(*(iit->outside()));
-            apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*it));
+            apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*(iit->outside())));
 
             // get pattern
             apply_operator.template conditional<do_pattern_skeleton>(BuildSkeletonPattern<P>(globalpattern));
@@ -1277,6 +1277,7 @@ public:
                     int idn = is.index(*(iit->outside()))+gtoffset[gtn];
                     lfsun.bind(*(iit->outside()));
                     lfsvn.bind(*(iit->outside()));
+                    apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*(iit->outside())));
 
                     // allocate local data container
                     XL xn(lfsun.size());
@@ -1407,6 +1408,7 @@ public:
 
                     lfsun.bind(*(iit->outside()));
                     lfsvn.bind(*(iit->outside()));
+                    apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*(iit->outside())));
 
                     // allocate local data container
                     XL xn(lfsun.size());
@@ -1539,7 +1541,7 @@ public:
                     // bind local function spaces to neighbor element
                     lfsun.bind(*(iit->outside()));
                     lfsvn.bind(*(iit->outside()));
-
+                    apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*(iit->outside())));
 
                         // allocate local data container
                     XL xn(lfsun.size());

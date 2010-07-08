@@ -1359,7 +1359,6 @@ public:
         // bind local function spaces to element
         lfsu.bind(*it);
         lfsv.bind(*it);
-
         apply_operator.setElement(*it);
         apply_operator.setElementSubDomains(is.subDomains(*it));
 
@@ -1483,7 +1482,6 @@ public:
 
         // compute unique id
         const typename GV::IndexSet::IndexType id = is.index(*it)+gtoffset[it->type()];
-        //            std::cout << "[" << gfsu.gridview().comm().rank() << "] " << " element: " << id << std::endl;
 
         // skip ghost and overlap
         if (nonoverlapping_mode && it->partitionType()!=Dune::InteriorEntity)

@@ -14,7 +14,7 @@
 #include <dune/pdelab/gridoperatorspace/localmatrix.hh>
 #include <dune/pdelab/gridoperatorspace/gridoperatorspaceutilities.hh>
 
-#include <dune/pdelab/multidomain/typemap.hh>
+#include <dune/pdelab/multidomain/operatorapplier.hh>
 
 
 namespace Dune {
@@ -196,310 +196,6 @@ struct extract_couplings
 
 
 //} // anonymous namespace
-
-template<typename MDGOS, typename Condition, template<bool,bool> class BooleanOp, bool start_value, std::size_t i, std::size_t n>
-struct child_condition
-{
-  static const bool value = BooleanOp<Condition::template test<typename MDGOS::template Child<i>::Type>::value,
-                                      child_condition<MDGOS,Condition,BooleanOp,start_value,i+1,n>::value
-                                     >::value;
-};
-
-template<typename MDGOS, typename Condition, template<bool,bool> class BooleanOp, bool start_value, std::size_t n>
-struct child_condition<MDGOS,Condition,BooleanOp,start_value,n,n>
-{
-  static const bool value = start_value;
-};
-
-template<bool a, bool b>
-struct and_
-{
-  static const bool value = a && b;
-};
-
-template<bool a, bool b>
-struct or_
-{
-  static const bool value = a || b;
-};
-
-template<typename MDGOS, typename Condition>
-struct all_childs : public child_condition<MDGOS,Condition,and_,true,0,MDGOS::CHILDREN> {};
-
-template<typename MDGOS, typename Condition>
-struct any_child : public child_condition<MDGOS,Condition,or_,false,0,MDGOS::CHILDREN> {};
-
-template<typename Applier, typename Operator, std::size_t i, std::size_t n>
-struct apply_operator_helper
-{
-  static void apply(const Applier& applier, Operator& op)
-  {
-    op(applier,applier.gos().template getChild<i>());
-    apply_operator_helper<Applier,Operator,i+1,n>::apply(applier,op);
-  }
-};
-
-// end of recursion
-template<typename Applier, typename Operator, std::size_t n>
-struct apply_operator_helper<Applier, Operator, n,n>
-{
-  static void apply(const Applier& applier, Operator& op)
-  {
-  }
-};
-
-
-template<typename Applier, typename Operator, std::size_t i, bool do_apply>
-struct conditional_apply;
-
-template<typename Applier, typename Operator, std::size_t i>
-struct conditional_apply<Applier,Operator,i,true>
-{
-  static void apply(const Applier& applier, Operator& op)
-  {
-    op(applier,applier.gos().template getChild<i>());
-  }
-};
-
-template<typename Applier, typename Operator, std::size_t i>
-struct conditional_apply<Applier,Operator,i,false>
-{
-  static void apply(const Applier& applier, Operator& op)
-  {
-  }
-};
-
-template<typename Applier, typename Condition, typename Operator, std::size_t i, std::size_t n>
-struct conditional_apply_operator_helper
-{
-  static void apply(const Applier& applier, Operator& op)
-  {
-    conditional_apply<Applier,Operator,i,Condition::template test<typename Applier::MDGOS::template Child<i>::Type>::value>::apply(applier,op);
-    conditional_apply_operator_helper<Applier,Condition,Operator,i+1,n>::apply(applier,op);
-  }
-};
-
-// end of recursion
-template<typename Applier, typename Condition, typename Operator, std::size_t n>
-struct conditional_apply_operator_helper<Applier, Condition, Operator, n,n>
-{
-  static void apply(const Applier& applier, Operator& op)
-  {
-  }
-};
-
-
-template<typename MDGOS_>
-class operator_applier
-{
-
-public:
-
-
-  typedef MDGOS_ MDGOS;
-  typedef typename MDGOS::Traits::TrialGridFunctionSpace::LocalFunctionSpace LFSU;
-  typedef typename MDGOS::Traits::TestGridFunctionSpace::LocalFunctionSpace LFSV;
-  typedef typename MDGOS::Traits::TrialGridFunctionSpace::Traits::GridType Grid;
-  typedef typename Grid::template Codim<0>::Entity Element;
-  typedef typename Grid::LeafGridView::Intersection Intersection;
-
-  typedef typename Grid::Traits::LeafIndexSet::SubDomainSet ElementSubDomainSet;
-
-  operator_applier(const MDGOS& mdgos, LFSU& lfsu, LFSV& lfsv) :
-    _mdgos(mdgos),
-    _lfsu(lfsu),
-    _lfsv(lfsv),
-    _alphaSkeletonInvoked(false)
-  {}
-
-  template<typename Operator>
-  void operator()(Operator&& op)
-  {
-    apply_operator_helper<operator_applier,Operator,0,MDGOS::CHILDREN>::apply(*this,op);
-  }
-
-  template<typename Condition, typename Operator>
-  void conditional(Operator&& op)
-  {
-    conditional_apply_operator_helper<operator_applier,Condition,Operator,0,MDGOS::CHILDREN>::apply(*this,op);
-  }
-
-  const MDGOS& gos() const {
-    return _mdgos;
-  }
-
-  const LFSU& lfsu() const {
-    return _lfsu;
-  }
-
-  const LFSV& lfsv() const {
-    return _lfsv;
-  }
-
-  const LFSU& lfsun() const {
-    return *_plfsun;
-  }
-
-  void setlfsun(LFSU& lfsun) {
-    _plfsun = &lfsun;
-  }
-
-  const LFSV& lfsvn() const {
-    return *_plfsvn;
-  }
-
-  void setlfsvn(LFSV& lfsvn) {
-    _plfsvn = &lfsvn;
-  }
-
-  const ElementSubDomainSet& elementSubDomains() const {
-    return _elementSet;
-  }
-
-  void setElementSubDomains(const ElementSubDomainSet& elementSet) {
-    _elementSet = elementSet;
-  }
-
-  const ElementSubDomainSet& neighborSubDomains() const {
-    return _neighborSet;
-  }
-
-  void setNeighborSubDomains(const ElementSubDomainSet& neighborSet) {
-    _neighborSet = neighborSet;
-  }
-
-  void setAlphaSkeletonInvoked() const {
-    _alphaSkeletonInvoked = true;
-  }
-
-  void clearAlphaSkeletonInvoked() {
-    _alphaSkeletonInvoked = false;
-  }
-
-  bool alphaSkeletonInvoked() const {
-    return _alphaSkeletonInvoked;
-  }
-
-  void setIntersectionIndex(int index) {
-    _intersectionIndex = index;
-  }
-
-  int intersectionIndex() const {
-    return _intersectionIndex;
-  }
-
-  void setElement(const Element& element) {
-    _element = &element;
-  }
-
-  const Element& element() const {
-    return *_element;
-  }
-
-  void setIntersection(const Intersection& intersection) {
-    _intersection = &intersection;
-  }
-
-  const Intersection& intersection() const {
-    return *_intersection;
-  }
-
-private:
-
-  const MDGOS& _mdgos;
-  LFSU& _lfsu;
-  LFSV& _lfsv;
-  LFSU* _plfsun;
-  LFSV* _plfsvn;
-  int _intersectionIndex;
-  ElementSubDomainSet _elementSet;
-  ElementSubDomainSet _neighborSet;
-  mutable bool _alphaSkeletonInvoked;
-  const Element* _element;
-  const Intersection* _intersection;
-
-};
-
-
-struct do_pattern_skeleton
-{
-  template<typename T>
-  struct test {
-    static const bool value = T::Traits::LocalOperator::doPatternSkeleton;
-  };
-};
-
-struct do_pattern_volume
-{
-  template<typename T>
-  struct test {
-    static const bool value = T::Traits::LocalOperator::doPatternVolume;
-  };
-};
-
-struct do_alpha_volume
-{
-  template<typename T>
-  struct test {
-    static const bool value = T::Traits::LocalOperator::doAlphaVolume;
-  };
-};
-
-struct do_alpha_skeleton
-{
-  template<typename T>
-  struct test {
-    static const bool value = T::Traits::LocalOperator::doAlphaSkeleton;
-  };
-};
-
-struct do_alpha_boundary
-{
-  template<typename T>
-  struct test {
-    static const bool value = T::Traits::LocalOperator::doAlphaBoundary;
-  };
-};
-
-struct do_alpha_skeleton_or_boundary
-{
-  template<typename T>
-  struct test {
-    static const bool value = T::Traits::LocalOperator::doAlphaSkeleton || T::Traits::LocalOperator::doAlphaBoundary;
-  };
-};
-
-struct do_lambda_volume
-{
-  template<typename T>
-  struct test {
-    static const bool value = T::Traits::LocalOperator::doLambdaVolume;
-  };
-};
-
-struct do_lambda_boundary
-{
-  template<typename T>
-  struct test {
-    static const bool value = T::Traits::LocalOperator::doLambdaBoundary;
-  };
-};
-
-struct do_alpha_volume_post_skeleton
-{
-  template<typename T>
-  struct test {
-    static const bool value = T::Traits::LocalOperator::doAlphaVolumePostSkeleton;
-  };
-};
-
-struct do_lambda_volume_post_skeleton
-{
-  template<typename T>
-  struct test {
-    static const bool value = T::Traits::LocalOperator::doLambdaVolumePostSkeleton;
-  };
-};
 
 //================================================
 // The operator
@@ -1170,6 +866,14 @@ public:
     return gfsv;
   }
 
+  typedef operator_applier<
+    MultiDomainGridOperatorSpace,
+    data::ElementData,
+    data::NeighborData,
+    data::IntersectionReference,
+    data::SkeletonInvocationTracker
+    > operator_applier_all_data;
+
 
   /**\brief Construct global sparsity pattern from local description
 
@@ -1185,7 +889,13 @@ public:
     typedef typename GFSV::LocalFunctionSpace LFSV;
     LFSV lfsv(gfsv);
 
-    operator_applier<MultiDomainGridOperatorSpace> apply_operator(*this,lfsu,lfsv);
+    operator_applier<
+      MultiDomainGridOperatorSpace,
+      data::ElementData,
+      data::NeighborData
+      > apply_operator(*this);
+    apply_operator.setlfsu(lfsu);
+    apply_operator.setlfsv(lfsv);
 
     for (ElementIterator it = gfsu.gridview().template begin<0>();
          it!=gfsu.gridview().template end<0>(); ++it)
@@ -1244,7 +954,9 @@ public:
     typedef typename GFSV::LocalFunctionSpace LFSV;
     LFSV lfsv(gfsv);
 
-    operator_applier<MultiDomainGridOperatorSpace> apply_operator(*this,lfsu,lfsv);
+    operator_applier_all_data apply_operator(*this);
+    apply_operator.setlfsu(lfsu);
+    apply_operator.setlfsv(lfsv);
 
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
@@ -1300,8 +1012,7 @@ public:
             for (IntersectionIterator iit = gfsu.gridview().ibegin(*it);
                  iit!=endit; ++iit, ++intersection_index)
               {
-                apply_operator.setIntersection(*iit);
-                apply_operator.setIntersectionIndex(intersection_index);
+                apply_operator.setIntersection(*iit,intersection_index);
                 // skeleton term
                 if (iit->neighbor())
                   {
@@ -1376,7 +1087,9 @@ public:
     typedef typename GFSV::LocalFunctionSpace LFSV;
     LFSV lfsv(gfsv);
 
-    operator_applier<MultiDomainGridOperatorSpace> apply_operator(*this,lfsu,lfsv);
+    operator_applier_all_data apply_operator(*this);
+    apply_operator.setlfsu(lfsu);
+    apply_operator.setlfsv(lfsv);
 
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
@@ -1429,8 +1142,7 @@ public:
             for (IntersectionIterator iit = gfsu.gridview().ibegin(*it);
                  iit!=endit; ++iit, ++intersection_index)
               {
-                apply_operator.setIntersection(*iit);
-                apply_operator.setIntersectionIndex(intersection_index);
+                apply_operator.setIntersection(*iit,intersection_index);
                 // skeleton term
                 if (iit->neighbor())
                   {
@@ -1507,7 +1219,9 @@ public:
     typedef typename GFSV::LocalFunctionSpace LFSV;
     LFSV lfsv(gfsv);
 
-    operator_applier<MultiDomainGridOperatorSpace> apply_operator(*this,lfsu,lfsv);
+    operator_applier_all_data apply_operator(*this);
+    apply_operator.setlfsu(lfsu);
+    apply_operator.setlfsv(lfsv);
 
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
@@ -1560,8 +1274,7 @@ public:
             for (IntersectionIterator iit = gfsu.gridview().ibegin(*it);
                  iit!=endit; ++iit, ++intersection_index)
               {
-                apply_operator.setIntersectionIndex(intersection_index);
-                apply_operator.setIntersection(*iit);
+                apply_operator.setIntersection(*iit,intersection_index);
                 // skeleton term
                 if (iit->neighbor())
                   {

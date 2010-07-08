@@ -1,9 +1,6 @@
 #ifndef DUNE_MULTIDOMAIN_OPERATORAPPLIER_HH
 #define DUNE_MULTIDOMAIN_OPERATORAPPLIER_HH
 
-#include <dune/pdelab/multidomain/typemap.hh>
-
-
 namespace Dune {
 
 namespace PDELab {

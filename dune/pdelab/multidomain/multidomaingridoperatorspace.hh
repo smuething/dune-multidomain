@@ -695,7 +695,7 @@ public:
   }
 
   typedef operator_applier<
-    MultiDomainGridOperatorSpace,
+    const MultiDomainGridOperatorSpace,
     data::ElementData,
     data::NeighborData,
     data::IntersectionReference,
@@ -718,7 +718,7 @@ public:
     LFSV lfsv(gfsv);
 
     operator_applier<
-      MultiDomainGridOperatorSpace,
+      const MultiDomainGridOperatorSpace,
       data::ElementData,
       data::NeighborData
       > apply_operator(*this);

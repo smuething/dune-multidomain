@@ -384,6 +384,7 @@ public:
 
 
   typedef MDGOS_ MDGOS;
+  typedef MDGOS_ GOS;
 
   operator_applier(MDGOS& mdgos) :
     _mdgos(mdgos)

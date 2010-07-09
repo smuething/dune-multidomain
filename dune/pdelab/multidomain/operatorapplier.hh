@@ -417,6 +417,37 @@ private:
 };
 
 
+struct SpatialOperator
+{
+
+  template<typename SubProblem>
+  struct ExtractType
+  {
+    typedef typename SubProblem::Traits::LocalOperator Type;
+  };
+
+  template<typename SubProblem>
+  static typename SubProblem::Traits::LocalOperator& extract(SubProblem& subProblem) {
+    return subProblem.localOperator();
+  }
+};
+
+struct TemporalOperator
+{
+
+  template<typename SubProblem>
+  struct ExtractType
+  {
+    typedef typename SubProblem::Traits::TemporalOperator Type;
+  };
+
+  template<typename SubProblem>
+  static typename SubProblem::Traits::TemporalOperator& extract(SubProblem& subProblem) {
+    return subProblem.temporalOperator();
+  }
+};
+
+
 struct do_pattern_skeleton
 {
   template<typename T>

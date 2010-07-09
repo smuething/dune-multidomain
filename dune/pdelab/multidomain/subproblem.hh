@@ -55,7 +55,7 @@ public:
 
   typedef SubProblemTraits<SubProblem,GFSU,CONU,GFSV,CONV,LocalOperator,Condition,Indices...> Traits;
 
-  SubProblem(const CONU& conu, const CONV& conv, const LocalOperator& lop, const Condition& condition) :
+  SubProblem(const CONU& conu, const CONV& conv, LocalOperator& lop, const Condition& condition) :
     _conu(conu),
     _conv(conv),
     _lop(lop),
@@ -107,7 +107,7 @@ public:
 private:
   CONU _conu;
   CONV _conv;
-  const LocalOperator& _lop;
+  LocalOperator& _lop;
   const Condition _condition;
 
 };

@@ -54,7 +54,7 @@ public:
 
   typedef InstationarySubProblemTraits<InstationarySubProblem,TReal,GFSU,CONU,GFSV,CONV,LocalOperator,TemporalOperator,Condition,Indices...> Traits;
 
-  InstationarySubProblem(const CONU& conu, const CONV& conv, const LocalOperator& lop, const TemporalOperator& top, const Condition& condition) :
+  InstationarySubProblem(const CONU& conu, const CONV& conv, LocalOperator& lop, TemporalOperator& top, const Condition& condition) :
     BaseT(conu,conv,lop,condition),
     _top(top)
   {}
@@ -64,7 +64,7 @@ public:
   }
 
 private:
-  const TemporalOperator& _top;
+  TemporalOperator& _top;
 
 };
 

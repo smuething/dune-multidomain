@@ -90,6 +90,24 @@ public:
   typedef typename GV::IntersectionIterator IntersectionIterator;
   typedef typename IntersectionIterator::Intersection Intersection;
 
+
+  struct SetTime
+  {
+
+    SetTime(TReal t) :
+      time(t)
+    {}
+
+    template<typename Data, typename Child>
+    void operator()(Data& data, Child& child)
+    {
+      child.setTime(time);
+    }
+
+  private:
+    const TReal time;
+  };
+
   struct PreStep
   {
 

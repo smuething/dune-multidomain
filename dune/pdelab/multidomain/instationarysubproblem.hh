@@ -12,6 +12,7 @@ namespace MultiDomain {
 
 template<
   typename SubProblem,
+  typename TReal,
   typename GFSU,
   typename CONU,
   typename GFSV,
@@ -26,11 +27,14 @@ struct InstationarySubProblemTraits :
 {
 
   typedef TOP TemporalOperator;
+  typedef TReal TimeType;
+  typedef unsigned int StepType;
 
 };
 
 
 template<
+  typename TReal,
   typename GFSU,
   typename CONU,
   typename GFSV,
@@ -48,7 +52,7 @@ class InstationarySubProblem :
 
 public:
 
-  typedef InstationarySubProblemTraits<InstationarySubProblem,GFSU,CONU,GFSV,CONV,LocalOperator,TemporalOperator,Condition,Indices...> Traits;
+  typedef InstationarySubProblemTraits<InstationarySubProblem,TReal,GFSU,CONU,GFSV,CONV,LocalOperator,TemporalOperator,Condition,Indices...> Traits;
 
   InstationarySubProblem(const CONU& conu, const CONV& conv, const LocalOperator& lop, const TemporalOperator& top, const Condition& condition) :
     BaseT(conu,conv,lop,condition),
@@ -65,6 +69,7 @@ private:
 };
 
 template<
+  typename TReal,
   typename GFSU,
   typename CONU,
   typename GFSV,
@@ -74,7 +79,7 @@ template<
   typename Condition,
   std::size_t... Indices
   >
-struct tag<InstationarySubProblem<GFSU,CONU,GFSV,CONV,LocalOperator,TemporalOperator,Condition,Indices...> >
+struct tag<InstationarySubProblem<TReal,GFSU,CONU,GFSV,CONV,LocalOperator,TemporalOperator,Condition,Indices...> >
 {
   static const bool value = true;
 };

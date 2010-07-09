@@ -845,7 +845,7 @@ public:
   }
 
   typedef operator_applier<
-    InstationaryMultiDomainGridOperatorSpace,
+    const InstationaryMultiDomainGridOperatorSpace,
     data::ElementData,
     data::NeighborData,
     data::IntersectionReference,

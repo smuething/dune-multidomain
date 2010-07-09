@@ -592,7 +592,7 @@ public:
   };
 
 
-  template<typename XL, typename AL>
+  template<typename Operator, typename XL, typename AL>
   struct InvokeJacobianVolume
   {
 
@@ -612,14 +612,14 @@ public:
       LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
       lfsu.bind();
       lfsv.bind();
-      child.localOperator().jacobian_volume(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,a);
+      Operator::extract(child).jacobian_volume(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,a);
     }
 
     const XL& x;
     AL& a;
   };
 
-  template<typename XL, typename AL>
+  template<typename Operator, typename XL, typename AL>
   struct InvokeJacobianSkeletonOrBoundary
   {
 
@@ -654,7 +654,7 @@ public:
               lfsun.bind();
               lfsvn.bind();
               LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
-                jacobian_skeleton(child.localOperator(),
+                jacobian_skeleton(Operator::extract(child),
                                   IntersectionGeometry<typename Data::Intersection>(data.intersection(),
                                                                                     data.intersectionIndex()),
                                   lfsu,_xl,lfsv,lfsun,_xn,lfsvn,_al,_al_sn,_al_ns,_al_nn);
@@ -665,7 +665,7 @@ public:
       else
         {
           LocalAssemblerCallSwitch<LOP,LOP::doAlphaBoundary>::
-            jacobian_boundary(child.localOperator(),
+            jacobian_boundary(Operator::extract(child),
                               IntersectionGeometry<typename Data::Intersection>(data.intersection(),
                                                                                 data.intersectionIndex()),
                               lfsu,_xl,lfsv,_al);
@@ -681,7 +681,7 @@ public:
     const bool _applyOneSided;
   };
 
-  template<typename XL, typename AL>
+  template<typename Operator, typename XL, typename AL>
   struct InvokeJacobianBoundary
   {
 
@@ -701,14 +701,14 @@ public:
       LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
       lfsu.bind();
       lfsv.bind();
-      child.localOperator().jacobian_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,a);
+      Operator::extract(child).jacobian_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,a);
     }
 
     const XL& x;
     AL& a;
   };
 
-  template<typename XL, typename AL>
+  template<typename Operator, typename XL, typename AL>
   struct InvokeJacobianVolumePostSkeleton
   {
 
@@ -728,7 +728,7 @@ public:
       LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
       lfsu.bind();
       lfsv.bind();
-      child.localOperator().jacobian_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,a);
+      Operator::extract(child).jacobian_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,a);
     }
 
     const XL& x;
@@ -1206,6 +1206,13 @@ public:
     apply_operator.setlfsu(lfsu);
     apply_operator.setlfsv(lfsv);
 
+    const TReal b_rr = method->b(stage,stage);
+    const TReal d_r = method->d(stage);
+    const bool implicit = method->implicit();
+
+    // set time in local operators for evaluation
+    apply_operator(SetTime(time+d_r*dt));
+
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
          it!=gfsu.gridview().template end<0>(); ++it)
@@ -1235,16 +1242,20 @@ public:
         XL xl(lfsu.size());
         typedef LocalMatrix<typename A::ElementType> AL;
         AL al(lfsv.size(),lfsu.size(),0.0);
+        AL ml(lfsv.size(),lfsu.size(),0.0);
 
         // read coefficents
         lfsu.vread(x,xl);
 
         // volume evaluation
-        apply_operator.template conditional<do_alpha_volume>(InvokeJacobianVolume<XL,AL>(xl,al));
+        if (implicit)
+          apply_operator.template conditional<do_alpha_volume<SpatialOperator> >(InvokeJacobianVolume<SpatialOperator,XL,AL>(xl,al));
+        apply_operator.template conditional<do_alpha_volume<TemporalOperator> >(InvokeJacobianVolume<TemporalOperator,XL,AL>(xl,ml));
+
 
         // skeleton and boundary evaluation
-        if (any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_skeleton>::value ||
-            any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_boundary>::value)
+        if (implicit && (any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_skeleton<SpatialOperator> >::value ||
+                         any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_boundary<SpatialOperator> >::value))
           {
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
@@ -1286,16 +1297,19 @@ public:
                     // read coefficents
                     lfsun.vread(x,xn);
 
-                    apply_operator.template conditional<do_alpha_skeleton_or_boundary>
-                      (InvokeJacobianSkeletonOrBoundary<XL,AL>(xl,xn,al,al_sn,al_ns,al_nn,
-                                                                    id > idn ||
-                                                                    (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
-                                                                    )
+                    apply_operator.template conditional<do_alpha_skeleton_or_boundary<SpatialOperator> >
+                      (InvokeJacobianSkeletonOrBoundary<SpatialOperator,XL,AL>(xl,xn,al,al_sn,al_ns,al_nn,
+                                                                               id > idn ||
+                                                                               (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
+                                                                               )
                        );
                     if (apply_operator.alphaSkeletonInvoked())
                       {
+                        al_sn *= b_rr*dt;
                         etadd(lfsv,lfsun,al_sn,a);
+                        al_ns *= b_rr*dt;
                         etadd(lfsvn,lfsu,al_ns,a);
+                        al_nn *= b_rr*dt;
                         etadd(lfsvn,lfsun,al_nn,a);
                         apply_operator.clearAlphaSkeletonInvoked();
                       }
@@ -1304,15 +1318,19 @@ public:
                 // boundary term
                 if (iit->boundary())
                   {
-                    apply_operator.template conditional<do_alpha_boundary>(InvokeJacobianBoundary<XL,AL>(xl,al));
+                    apply_operator.template conditional<do_alpha_boundary<SpatialOperator> >(InvokeJacobianBoundary<SpatialOperator,XL,AL>(xl,al));
                   }
               }
           }
 
-        apply_operator.template conditional<do_alpha_volume_post_skeleton>(InvokeJacobianVolumePostSkeleton<XL,AL>(xl,al));
+        if (implicit) {
+          apply_operator.template conditional<do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeJacobianVolumePostSkeleton<SpatialOperator,XL,AL>(xl,al));
+          al *= b_rr*dt;
+          etadd(lfsv,lfsu,al,a);
+        }
 
         // accumulate result (note: a needs to be cleared outside)
-        etadd(lfsv,lfsu,al,a);
+        etadd(lfsv,lfsu,ml,a);
       }
 
 

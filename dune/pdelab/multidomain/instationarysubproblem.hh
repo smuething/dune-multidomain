@@ -63,6 +63,29 @@ public:
     return _top;
   }
 
+  TemporalOperator& temporalOperator() {
+    return _top;
+  }
+
+  void preStep(typename Traits::TimeType time, typename Traits::TimeType dt, typename Traits::StepType step) {
+    this->localOperator().preStep(time,dt,step);
+    this->temporalOperator().preStep(time,dt,step);
+  }
+
+  void postStep() {
+    this->localOperator().postStep();
+    this->temporalOperator().postStep();
+  }
+
+  void postStage() {
+    this->localOperator().postStage();
+    this->temporalOperator().postStage();
+  }
+
+  typename Traits::TimeType suggestTimestep(typename Traits::TimeType dt) const {
+    return this->localOperator().suggestTimestep(dt);
+  }
+
 private:
   TemporalOperator& _top;
 

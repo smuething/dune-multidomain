@@ -104,7 +104,7 @@ public:
   }
 
 
-private:
+protected:
   CONU _conu;
   CONV _conv;
   LocalOperator& _lop;

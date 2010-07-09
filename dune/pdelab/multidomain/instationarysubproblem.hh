@@ -82,6 +82,11 @@ public:
     this->temporalOperator().postStage();
   }
 
+  void setTime(TReal t) const {
+    this->_lop.setTime(t);
+    this->_top.setTime(t);
+  }
+
   typename Traits::TimeType suggestTimestep(typename Traits::TimeType dt) const {
     return this->localOperator().suggestTimestep(dt);
   }

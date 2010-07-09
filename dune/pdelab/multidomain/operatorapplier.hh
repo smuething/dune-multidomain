@@ -430,6 +430,11 @@ struct SpatialOperator
   static typename SubProblem::Traits::LocalOperator& extract(SubProblem& subProblem) {
     return subProblem.localOperator();
   }
+
+  template<typename SubProblem>
+  static const typename SubProblem::Traits::LocalOperator& extract(const SubProblem& subProblem) {
+    return subProblem.localOperator();
+  }
 };
 
 struct TemporalOperator
@@ -443,6 +448,11 @@ struct TemporalOperator
 
   template<typename SubProblem>
   static typename SubProblem::Traits::TemporalOperator& extract(SubProblem& subProblem) {
+    return subProblem.temporalOperator();
+  }
+
+  template<typename SubProblem>
+  static const typename SubProblem::Traits::TemporalOperator& extract(const SubProblem& subProblem) {
     return subProblem.temporalOperator();
   }
 };

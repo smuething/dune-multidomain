@@ -448,83 +448,93 @@ struct TemporalOperator
 };
 
 
+template<typename Operator = SpatialOperator>
 struct do_pattern_skeleton
 {
   template<typename T>
   struct test {
-    static const bool value = T::Traits::LocalOperator::doPatternSkeleton;
+    static const bool value = Operator::template ExtractType<T>::Type::doPatternSkeleton;
   };
 };
 
+template<typename Operator = SpatialOperator>
 struct do_pattern_volume
 {
   template<typename T>
   struct test {
-    static const bool value = T::Traits::LocalOperator::doPatternVolume;
+    static const bool value = Operator::template ExtractType<T>::Type::doPatternVolume;
   };
 };
 
+template<typename Operator = SpatialOperator>
 struct do_alpha_volume
 {
   template<typename T>
   struct test {
-    static const bool value = T::Traits::LocalOperator::doAlphaVolume;
+    static const bool value = Operator::template ExtractType<T>::Type::doAlphaVolume;
   };
 };
 
+template<typename Operator = SpatialOperator>
 struct do_alpha_skeleton
 {
   template<typename T>
   struct test {
-    static const bool value = T::Traits::LocalOperator::doAlphaSkeleton;
+    static const bool value = Operator::template ExtractType<T>::Type::doAlphaSkeleton;
   };
 };
 
+template<typename Operator = SpatialOperator>
 struct do_alpha_boundary
 {
   template<typename T>
   struct test {
-    static const bool value = T::Traits::LocalOperator::doAlphaBoundary;
+    static const bool value = Operator::template ExtractType<T>::Type::doAlphaBoundary;
   };
 };
 
+template<typename Operator = SpatialOperator>
 struct do_alpha_skeleton_or_boundary
 {
   template<typename T>
   struct test {
-    static const bool value = T::Traits::LocalOperator::doAlphaSkeleton || T::Traits::LocalOperator::doAlphaBoundary;
+    static const bool value = Operator::template ExtractType<T>::Type::doAlphaSkeleton || Operator::template ExtractType<T>::Type::doAlphaBoundary;
   };
 };
 
+template<typename Operator = SpatialOperator>
 struct do_lambda_volume
 {
   template<typename T>
   struct test {
-    static const bool value = T::Traits::LocalOperator::doLambdaVolume;
+    static const bool value = Operator::template ExtractType<T>::Type::doLambdaVolume;
   };
 };
 
+template<typename Operator = SpatialOperator>
 struct do_lambda_boundary
 {
   template<typename T>
   struct test {
-    static const bool value = T::Traits::LocalOperator::doLambdaBoundary;
+    static const bool value = Operator::template ExtractType<T>::Type::doLambdaBoundary;
   };
 };
 
+template<typename Operator = SpatialOperator>
 struct do_alpha_volume_post_skeleton
 {
   template<typename T>
   struct test {
-    static const bool value = T::Traits::LocalOperator::doAlphaVolumePostSkeleton;
+    static const bool value = Operator::template ExtractType<T>::Type::doAlphaVolumePostSkeleton;
   };
 };
 
+template<typename Operator = SpatialOperator>
 struct do_lambda_volume_post_skeleton
 {
   template<typename T>
   struct test {
-    static const bool value = T::Traits::LocalOperator::doLambdaVolumePostSkeleton;
+    static const bool value = Operator::template ExtractType<T>::Type::doLambdaVolumePostSkeleton;
   };
 };
 

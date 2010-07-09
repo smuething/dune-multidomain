@@ -167,7 +167,7 @@ public:
   };
 
 
-  template<typename P>
+  template<typename Operator, typename P>
   struct BuildVolumePattern
   {
     BuildVolumePattern(P& gp) : globalpattern(gp) {}
@@ -184,7 +184,7 @@ public:
       lfsu.bind();
       lfsv.bind();
       LocalSparsityPattern localpattern;
-      child.localOperator().pattern_volume(lfsu,lfsv,localpattern);
+      Operator::extract(child).pattern_volume(lfsu,lfsv,localpattern);
 
       // translate local to global indices and add to global pattern
       for (size_t k=0; k<localpattern.size(); ++k)
@@ -198,7 +198,7 @@ public:
     P& globalpattern;
   };
 
-  template<typename P>
+  template<typename Operator, typename P>
   struct BuildSkeletonPattern
   {
     BuildSkeletonPattern(P& gp) : globalpattern(gp) {}
@@ -220,7 +220,7 @@ public:
       lfsun.bind();
       lfsvn.bind();
       LocalSparsityPattern localpattern_sn, localpattern_ns;
-      child.localOperator().pattern_skeleton(lfsu,lfsv,lfsun,lfsvn,localpattern_sn,localpattern_ns);
+      Operator::extract(child).pattern_skeleton(lfsu,lfsv,lfsun,lfsvn,localpattern_sn,localpattern_ns);
 
       // translate local to global indices and add to global pattern
       for (size_t k=0; k<localpattern_sn.size(); ++k)
@@ -867,7 +867,7 @@ public:
     LFSV lfsv(gfsv);
 
     operator_applier<
-      InstationaryMultiDomainGridOperatorSpace,
+      const InstationaryMultiDomainGridOperatorSpace,
       data::ElementData,
       data::NeighborData
       > apply_operator(*this);
@@ -883,10 +883,14 @@ public:
         apply_operator.setElement(*it);
         apply_operator.setElementSubDomains(gfsu.gridview().indexSet().subDomains(*it));
 
-        apply_operator.template conditional<do_pattern_volume>(BuildVolumePattern<P>(globalpattern));
+        if (method->implicit())
+          apply_operator.template conditional<do_pattern_volume<SpatialOperator> >(BuildVolumePattern<SpatialOperator,P>(globalpattern));
+        apply_operator.template conditional<do_pattern_volume<TemporalOperator> >(BuildVolumePattern<TemporalOperator,P>(globalpattern));
+
 
         // skeleton and boundary pattern
-        if (!any_child<InstationaryMultiDomainGridOperatorSpace,do_pattern_skeleton>::value) continue;
+        if (!(any_child<InstationaryMultiDomainGridOperatorSpace,do_pattern_skeleton<TemporalOperator> >::value ||
+              (any_child<InstationaryMultiDomainGridOperatorSpace,do_pattern_skeleton<SpatialOperator> >::value && method->implicit()))) continue;
 
         // local function spaces in neighbor
         LFSU lfsun(gfsu);
@@ -906,7 +910,9 @@ public:
             apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*(iit->outside())));
 
             // get pattern
-            apply_operator.template conditional<do_pattern_skeleton>(BuildSkeletonPattern<P>(globalpattern));
+            if (method->implicit())
+              apply_operator.template conditional<do_pattern_skeleton<SpatialOperator> >(BuildSkeletonPattern<SpatialOperator,P>(globalpattern));
+            apply_operator.template conditional<do_pattern_skeleton<TemporalOperator> >(BuildSkeletonPattern<TemporalOperator,P>(globalpattern));
           }
       }
   }

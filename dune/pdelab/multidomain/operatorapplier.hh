@@ -42,7 +42,7 @@ struct any_child : public child_condition<MDGOS,Condition,or_,false,0,MDGOS::CHI
 template<typename Applier, typename Operator, std::size_t i, std::size_t n>
 struct apply_operator_helper
 {
-  static void apply(const Applier& applier, Operator& op)
+  static void apply(Applier& applier, Operator& op)
   {
     op(applier,applier.gos().template getChild<i>());
     apply_operator_helper<Applier,Operator,i+1,n>::apply(applier,op);
@@ -53,7 +53,7 @@ struct apply_operator_helper
 template<typename Applier, typename Operator, std::size_t n>
 struct apply_operator_helper<Applier, Operator, n,n>
 {
-  static void apply(const Applier& applier, Operator& op)
+  static void apply(Applier& applier, Operator& op)
   {
   }
 };
@@ -65,7 +65,7 @@ struct conditional_apply;
 template<typename Applier, typename Operator, std::size_t i>
 struct conditional_apply<Applier,Operator,i,true>
 {
-  static void apply(const Applier& applier, Operator& op)
+  static void apply(Applier& applier, Operator& op)
   {
     op(applier,applier.gos().template getChild<i>());
   }
@@ -74,7 +74,7 @@ struct conditional_apply<Applier,Operator,i,true>
 template<typename Applier, typename Operator, std::size_t i>
 struct conditional_apply<Applier,Operator,i,false>
 {
-  static void apply(const Applier& applier, Operator& op)
+  static void apply(Applier& applier, Operator& op)
   {
   }
 };
@@ -82,7 +82,7 @@ struct conditional_apply<Applier,Operator,i,false>
 template<typename Applier, typename Condition, typename Operator, std::size_t i, std::size_t n>
 struct conditional_apply_operator_helper
 {
-  static void apply(const Applier& applier, Operator& op)
+  static void apply(Applier& applier, Operator& op)
   {
     conditional_apply<Applier,Operator,i,Condition::template test<typename Applier::MDGOS::template Child<i>::Type>::value>::apply(applier,op);
     conditional_apply_operator_helper<Applier,Condition,Operator,i+1,n>::apply(applier,op);
@@ -93,7 +93,7 @@ struct conditional_apply_operator_helper
 template<typename Applier, typename Condition, typename Operator, std::size_t n>
 struct conditional_apply_operator_helper<Applier, Condition, Operator, n,n>
 {
-  static void apply(const Applier& applier, Operator& op)
+  static void apply(Applier& applier, Operator& op)
   {
   }
 };
@@ -385,7 +385,7 @@ public:
 
   typedef MDGOS_ MDGOS;
 
-  operator_applier(const MDGOS& mdgos) :
+  operator_applier(MDGOS& mdgos) :
     _mdgos(mdgos)
   {}
 
@@ -401,13 +401,17 @@ public:
     conditional_apply_operator_helper<operator_applier,Condition,Operator,0,MDGOS::CHILDREN>::apply(*this,op);
   }
 
+  MDGOS& gos() {
+    return _mdgos;
+  }
+
   const MDGOS& gos() const {
     return _mdgos;
   }
 
 private:
 
-  const MDGOS& _mdgos;
+  MDGOS& _mdgos;
 
 };
 

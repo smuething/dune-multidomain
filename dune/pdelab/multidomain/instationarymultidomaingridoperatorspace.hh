@@ -306,7 +306,7 @@ public:
     {
       if (!child.appliesTo(data.elementSubDomains()))
         return;
-      typedef typename Child::Traits::LocalOperator LOP;
+      typedef typename Operator::template ExtractType<Child>::Type LOP;
       typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
@@ -638,7 +638,7 @@ public:
     {
       if (!child.appliesTo(data.elementSubDomains()))
         return;
-      typedef typename Child::Traits::LocalOperator LOP;
+      typedef typename Operator::template ExtractType<Child>::Type LOP;
       typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());

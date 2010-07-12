@@ -452,7 +452,7 @@ public:
     RL& r;
   };
 
-  template<typename XL, typename YL>
+  template<typename Operator, typename XL, typename YL>
   struct InvokeJacobianApplyVolume
   {
 
@@ -472,14 +472,14 @@ public:
       LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
       lfsu.bind();
       lfsv.bind();
-      child.localOperator().jacobian_apply_volume(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,y);
+      Operator::extract(child).jacobian_apply_volume(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,y);
     }
 
     const XL& x;
     YL& y;
   };
 
-  template<typename XL, typename YL>
+  template<typename Operator, typename XL, typename YL>
   struct InvokeJacobianApplySkeletonOrBoundary
   {
 
@@ -496,7 +496,7 @@ public:
     {
       if (!child.appliesTo(data.elementSubDomains()))
         return;
-      typedef typename Child::Traits::LocalOperator LOP;
+      typedef typename Operator::template ExtractType<Child>::Type LOP;
       typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
@@ -512,7 +512,7 @@ public:
               lfsun.bind();
               lfsvn.bind();
               LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
-                jacobian_apply_skeleton(child.localOperator(),
+                jacobian_apply_skeleton(Operator::extract(child),
                                         IntersectionGeometry<typename Data::Intersection>(data.intersection(),
                                                                                           data.intersection_index),
                                         lfsu,_xl,lfsv,lfsun,_xn,lfsvn,_yl,_yn);
@@ -523,7 +523,7 @@ public:
       else
         {
           LocalAssemblerCallSwitch<LOP,LOP::doAlphaBoundary>::
-            jacobian_apply_boundary(child.localOperator(),
+            jacobian_apply_boundary(Operator::extract(child),
                                     IntersectionGeometry<typename Data::Intersection>(data.intersection(),
                                                                                       data.intersection_index),
                                     lfsu,_xl,lfsv,_yl);
@@ -537,7 +537,7 @@ public:
     const bool _applyOneSided;
   };
 
-  template<typename XL, typename YL>
+  template<typename Operator, typename XL, typename YL>
   struct InvokeJacobianApplyBoundary
   {
 
@@ -557,14 +557,14 @@ public:
       LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
       lfsu.bind();
       lfsv.bind();
-      child.localOperator().jacobian_apply_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,y);
+      Operator::extract(child).jacobian_apply_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,y);
     }
 
     const XL& x;
     YL& y;
   };
 
-  template<typename XL, typename YL>
+  template<typename Operator, typename XL, typename YL>
   struct InvokeJacobianApplyVolumePostSkeleton
   {
 
@@ -584,7 +584,7 @@ public:
       LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
       lfsu.bind();
       lfsv.bind();
-      child.localOperator().jacobian_apply_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,y);
+      Operator::extract(child).jacobian_apply_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,y);
     }
 
     const XL& x;
@@ -1074,6 +1074,13 @@ public:
     apply_operator.setlfsu(lfsu);
     apply_operator.setlfsv(lfsv);
 
+    const TReal b_rr = method->b(stage,stage);
+    const TReal d_r = method->d(stage);
+    const bool implicit = method->implicit();
+
+    // set time in local operators for evaluation
+    apply_operator(SetTime(time+d_r*dt));
+
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
          it!=gfsu.gridview().template end<0>(); ++it)
@@ -1102,17 +1109,21 @@ public:
         typedef std::vector<typename X::ElementType> XL;
         XL xl(lfsu.size());
         typedef std::vector<typename Y::ElementType> YL;
-        YL yl(lfsv.size(),0.0);
+        YL yl_a(lfsv.size(),0.0);
+        YL yl_m(lfsv.size(),0.0);
+
 
         // read coefficents
         lfsu.vread(x,xl);
 
         // volume evaluation
-        apply_operator.template conditional<do_alpha_volume>(InvokeJacobianApplyVolume<XL,YL>(xl,yl));
+        if (implicit)
+          apply_operator.template conditional<do_alpha_volume<SpatialOperator> >(InvokeJacobianApplyVolume<SpatialOperator,XL,YL>(xl,yl_a));
+        apply_operator.template conditional<do_alpha_volume<TemporalOperator> >(InvokeJacobianApplyVolume<TemporalOperator,XL,YL>(xl,yl_m));
 
         // skeleton and boundary evaluation
-        if (any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_skeleton>::value ||
-            any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_boundary>::value)
+        if (implicit && (any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_skeleton<SpatialOperator> >::value ||
+                         any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_boundary<SpatialOperator> >::value))
           {
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
@@ -1146,20 +1157,22 @@ public:
 
                     // allocate local data container
                     XL xn(lfsun.size());
-                    YL yn(lfsvn.size(),0.0);
+                    YL yn_a(lfsvn.size(),0.0);
 
                     // read coefficents
                     lfsun.vread(x,xn);
 
-                    apply_operator.template conditional<do_alpha_skeleton_or_boundary>
-                      (InvokeJacobianApplySkeletonOrBoundary<XL,YL>(xl,xn,yl,yn,
-                                                                    id > idn ||
-                                                                    (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
-                                                                    )
+                    apply_operator.template conditional<do_alpha_skeleton_or_boundary<SpatialOperator> >
+                      (InvokeJacobianApplySkeletonOrBoundary<SpatialOperator,XL,YL>(xl,xn,yl_a,yn_a,
+                                                                                    id > idn ||
+                                                                                    (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
+                                                                                    )
                        );
                     if (apply_operator.alphaSkeletonInvoked())
                       {
-                        lfsvn.vadd(yn,y);
+                        for(auto it = yn_a.begin(); it != yn_a.end(); ++it)
+                          (*it) *= b_rr*dt;
+                        lfsvn.vadd(yn_a,y);
                         apply_operator.clearAlphaSkeletonInvoked();
                       }
                   }
@@ -1167,15 +1180,20 @@ public:
                 // boundary term
                 if (iit->boundary())
                   {
-                    apply_operator.template conditional<do_alpha_boundary>(InvokeJacobianApplyBoundary<XL,YL>(xl,yl));
+                    apply_operator.template conditional<do_alpha_boundary<SpatialOperator> >(InvokeJacobianApplyBoundary<SpatialOperator,XL,YL>(xl,yl_a));
                   }
               }
           }
 
-        apply_operator.template conditional<do_alpha_volume_post_skeleton>(InvokeJacobianApplyVolumePostSkeleton<XL,YL>(xl,yl));
-
-        // accumulate result (note: r needs to be cleared outside)
-        lfsv.vadd(yl,y);
+        if (implicit)
+          {
+            apply_operator.template conditional<do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeJacobianApplyVolumePostSkeleton<SpatialOperator,XL,YL>(xl,yl_a));
+            for(auto it = yl_a.begin(); it != yl_a.end(); ++it)
+              (*it) *= b_rr*dt;
+            // accumulate result (note: r needs to be cleared outside)
+            lfsv.vadd(yl_a,y);
+          }
+        lfsv.vadd(yl_m,y);
       }
 
     // set residual to zero on constrained dofs

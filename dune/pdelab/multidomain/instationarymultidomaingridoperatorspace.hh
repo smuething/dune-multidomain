@@ -258,7 +258,7 @@ public:
     P& globalpattern;
   };
 
-  template<typename XL, typename RL>
+  template<typename Operator, typename XL, typename RL>
   struct InvokeAlphaVolume
   {
 
@@ -278,14 +278,14 @@ public:
       LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
       lfsu.bind();
       lfsv.bind();
-      child.localOperator().alpha_volume(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,r);
+      Operator::extract(child).alpha_volume(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,r);
     }
 
     const XL& x;
     RL& r;
   };
 
-  template<typename RL>
+  template<typename Operator, typename RL>
   struct InvokeLambdaVolume
   {
 
@@ -301,14 +301,14 @@ public:
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
       lfsv.bind();
-      child.localOperator().lambda_volume(ElementGeometry<typename Data::Element>(data.element()),lfsv,r);
+      Operator::extract(child).lambda_volume(ElementGeometry<typename Data::Element>(data.element()),lfsv,r);
     }
 
     RL& r;
   };
 
 
-  template<typename XL, typename RL>
+  template<typename Operator, typename XL, typename RL>
   struct InvokeAlphaSkeletonOrBoundary
   {
 
@@ -341,7 +341,7 @@ public:
               lfsun.bind();
               lfsvn.bind();
               LocalAssemblerCallSwitch<Child,LOP::doAlphaSkeleton>::
-                alpha_skeleton(child.localOperator(),
+                alpha_skeleton(Operator::extract(child),
                                IntersectionGeometry<typename Data::Intersection>(data.intersection(),
                                                                                  data.intersection_index),
                                lfsu,_xl,lfsv,lfsun,_xn,lfsvn,_rl,_rn);
@@ -352,12 +352,12 @@ public:
       else
         {
           LocalAssemblerCallSwitch<LOP,LOP::doAlphaBoundary>::
-            alpha_boundary(child.localOperator(),
+            alpha_boundary(Operator::extract(child),
                            IntersectionGeometry<typename Data::Intersection>(data.intersection(),
                                                                              data.intersection_index),
                            lfsu,_xl,lfsv,_rl);
           LocalAssemblerCallSwitch<LOP,LOP::doLambdaBoundary>::
-            lambda_boundary(child.localOperator(),
+            lambda_boundary(Operator::extract(child),
                             IntersectionGeometry<typename Data::Intersection>(data.intersection(),
                                                                               data.intersection_index),
                             lfsv,_rl);
@@ -372,7 +372,7 @@ public:
   };
 
 
-  template<typename XL, typename RL>
+  template<typename Operator, typename XL, typename RL>
   struct InvokeAlphaBoundary
   {
 
@@ -392,14 +392,14 @@ public:
       LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
       lfsu.bind();
       lfsv.bind();
-      child.localOperator().alpha_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,r);
+      Operator::extract(child).alpha_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,r);
     }
 
     const XL& x;
     RL& r;
   };
 
-  template<typename RL>
+  template<typename Operator, typename RL>
   struct InvokeLambdaBoundary
   {
 
@@ -415,14 +415,14 @@ public:
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
       lfsv.bind();
-      child.localOperator().lambda_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsv,r);
+      Operator::extract(child).lambda_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsv,r);
     }
 
     RL& r;
   };
 
 
-  template<typename XL, typename RL>
+  template<typename Operator, typename XL, typename RL>
   struct InvokeAlphaVolumePostSkeleton
   {
 
@@ -442,14 +442,14 @@ public:
       LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
       lfsu.bind();
       lfsv.bind();
-      child.localOperator().alpha_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,r);
+      Operator::extract(child).alpha_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,r);
     }
 
     const XL& x;
     RL& r;
   };
 
-  template<typename RL>
+  template<typename Operator, typename RL>
   struct InvokeLambdaVolumePostSkeleton
   {
 
@@ -465,7 +465,7 @@ public:
       typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
       LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
       lfsv.bind();
-      child.localOperator().lambda_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsv,r);
+      Operator::extract(child).lambda_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsv,r);
     }
 
     RL& r;
@@ -945,6 +945,190 @@ public:
   }
 
 
+  template<typename X>
+  void preStage(StageType stage_, const std::vector<X*>& x)
+  {
+    stage = stage_;
+    if (x.size()!=stage)
+      DUNE_THROW(Exception,"wrong number of solutions in InstationaryGridOperatorSpace");
+    if (stage<1 || stage>method->s())
+      DUNE_THROW(Exception,"invalid stage number in InstationaryGridOperatorSpace");
+
+    // visit each face only once
+    const int chunk=1<<28;
+    int offset = 0;
+    const typename GV::IndexSet& is=gfsu.gridview().indexSet();
+    std::map<Dune::GeometryType,int> gtoffset;
+
+    // extract coefficients of time stepping scheme
+    std::vector<TReal> a(stage);
+    for (size_t i=0; i<stage; ++i) a[i] = method->a(stage,i);
+    std::vector<TReal> b(stage);
+    for (size_t i=0; i<stage; ++i) b[i] = method->b(stage,i);
+    std::vector<TReal> d(stage);
+    for (size_t i=0; i<stage; ++i) d[i] = method->d(i);
+
+    // make local function spaces
+    typedef typename GFSU::LocalFunctionSpace LFSU;
+    LFSU lfsu(gfsu);
+    typedef typename GFSV::LocalFunctionSpace LFSV;
+    LFSV lfsv(gfsv);
+
+    non_const_operator_applier_all_data apply_operator(*this);
+    apply_operator.setlfsu(lfsu);
+    apply_operator.setlfsv(lfsv);
+
+    // prepare local operators for stage
+    apply_operator(PreStage(time+method->d(stage)*dt,stage));
+
+    // clear constant part residual before assembling
+    r0 = 0.0;
+
+    const bool needsSkeleton =
+      any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_skeleton<SpatialOperator> >::value ||
+      any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_boundary<SpatialOperator> >::value ||
+      any_child<InstationaryMultiDomainGridOperatorSpace,do_lambda_boundary<SpatialOperator> >::value;
+
+    // traverse grid view
+    for (ElementIterator it = gfsu.gridview().template begin<0>();
+         it!=gfsu.gridview().template end<0>(); ++it)
+      {
+        // assign offset for geometry type;
+        if (gtoffset.find(it->type())==gtoffset.end())
+          {
+            gtoffset[it->type()] = offset;
+            offset += chunk;
+          }
+
+        // compute unique id
+        int id = is.index(*it)+gtoffset[it->type()];
+
+        // skip ghost and overlap
+        if (nonoverlapping_mode && it->partitionType()!=Dune::InteriorEntity)
+          continue;
+
+        // bind local function spaces to element
+        lfsu.bind(*it);
+        lfsv.bind(*it);
+        apply_operator.setElement(*it);
+        apply_operator.setElementSubDomains(is.subDomains(*it));
+
+
+        // loop over all previous time steps
+        for(StageType i = 0; i < stage; ++i)
+          {
+            // set time in local operators for evaluation
+            apply_operator(SetTime(time+d[i]*dt));
+
+            // allocate local data container
+            typedef std::vector<typename X::ElementType> XL;
+            XL xl(lfsu.size());
+            typedef std::vector<typename R::ElementType> RL;
+            RL rl_a(lfsv.size(),0.0);
+            RL rl_m(lfsv.size(),0.0);
+
+            // read coefficents
+            lfsu.vread(*x[i],xl);
+
+            const bool doM = std::abs(a[i]) > 1e-6;
+            const bool doA = std::abs(b[i]) > 1e-6;
+
+            // volume evaluation
+            if (doA)
+              {
+                apply_operator.template conditional<do_alpha_volume<SpatialOperator> >(InvokeAlphaVolume<SpatialOperator,XL,RL>(xl,rl_a));
+                apply_operator.template conditional<do_lambda_volume<SpatialOperator> >(InvokeLambdaVolume<SpatialOperator,RL>(rl_a));
+              }
+            if (doM)
+              {
+                apply_operator.template conditional<do_alpha_volume<TemporalOperator> >(InvokeAlphaVolume<TemporalOperator,XL,RL>(xl,rl_m));
+              }
+
+            // skip if no intersection iterator is needed
+            if (needsSkeleton && doA)
+              {
+                // local function spaces in neighbor
+                LFSU lfsun(gfsu);
+                LFSV lfsvn(gfsv);
+                apply_operator.setlfsun(lfsun);
+                apply_operator.setlfsvn(lfsvn);
+
+                // traverse intersections
+                unsigned int intersection_index = 0;
+                IntersectionIterator endit = gfsu.gridview().iend(*it);
+                for (IntersectionIterator iit = gfsu.gridview().ibegin(*it);
+                     iit!=endit; ++iit, ++intersection_index)
+                  {
+                    apply_operator.setIntersection(*iit,intersection_index);
+                    // skeleton term
+                    if (iit->neighbor())
+                      {
+                        // assign offset for geometry type;
+                        Dune::GeometryType gtn = iit->outside()->type();
+                        if (gtoffset.find(gtn)==gtoffset.end())
+                          {
+                            gtoffset[gtn] = offset;
+                            offset += chunk;
+                          }
+
+                        // compute unique id for neighbor
+                        int idn = is.index(*(iit->outside()))+gtoffset[gtn];
+                        lfsun.bind(*(iit->outside()));
+                        lfsvn.bind(*(iit->outside()));
+                        apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*(iit->outside())));
+
+                        // allocate local data container
+                        XL xn(lfsun.size());
+                        RL rn(lfsvn.size(),0.0);
+
+                        // read coefficents
+                        lfsun.vread(*x[i],xn);
+
+                        // unique vist of intersection
+                        apply_operator.template conditional<do_alpha_skeleton_or_boundary<SpatialOperator> >
+                          (InvokeAlphaSkeletonOrBoundary<SpatialOperator,XL,RL>(xl,xn,rl_a,rn,
+                                                                                id > idn ||
+                                                                                (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
+                                                                                )
+                           );
+                        if (apply_operator.alphaSkeletonInvoked())
+                          {
+                            for(auto it = rn.begin(); it != rn.end(); ++it)
+                              (*it) *= b[i] * dt;
+                            lfsvn.vadd(rn,r0);
+                            apply_operator.clearAlphaSkeletonInvoked();
+                          }
+                      }
+
+                    // boundary term
+                    if (iit->boundary())
+                      {
+                        apply_operator.template conditional<do_alpha_boundary<SpatialOperator> >(InvokeAlphaBoundary<SpatialOperator,XL,RL>(xl,rl_a));
+                        apply_operator.template conditional<do_lambda_boundary<SpatialOperator> >(InvokeLambdaBoundary<SpatialOperator,RL>(rl_a));
+                      }
+                  }
+              }
+
+            if (doA)
+              {
+                apply_operator.template conditional<do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeAlphaVolumePostSkeleton<SpatialOperator,XL,RL>(xl,rl_a));
+                apply_operator.template conditional<do_lambda_volume_post_skeleton<SpatialOperator> >(InvokeLambdaVolumePostSkeleton<SpatialOperator,RL>(rl_a));
+
+                // accumulate result (note: r needs to be cleared outside)
+                for (auto it = rl_a.begin(); it != rl_a.end(); ++it)
+                  (*it) *= b[i] * dt;
+                lfsv.vadd(rl_a,r0);
+              }
+            if (doM)
+              {
+                for (auto it = rl_m.begin(); it != rl_m.end(); ++it)
+                  (*it) *= a[i];
+                lfsv.vadd(rl_m,r0);
+              }
+          }
+      }
+  }
+
   //! generic evaluation of residual
   /**
    * \param r residual (needs to be cleared before this method is called)
@@ -967,6 +1151,16 @@ public:
     operator_applier_all_data apply_operator(*this);
     apply_operator.setlfsu(lfsu);
     apply_operator.setlfsv(lfsv);
+
+    const TReal b_rr = method->b(stage,stage);
+    const TReal d_r = method->d(stage);
+    const bool implicit = method->implicit();
+
+    // set time in local operators for evaluation
+    apply_operator(SetTime(time+d_r*dt));
+
+    // copy constant part of residual
+    r = r0;
 
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
@@ -996,19 +1190,27 @@ public:
         typedef std::vector<typename X::ElementType> XL;
         XL xl(lfsu.size());
         typedef std::vector<typename R::ElementType> RL;
-        RL rl(lfsv.size(),0.0);
+        RL rl_a(lfsv.size(),0.0);
+        RL rl_m(lfsv.size(),0.0);
 
         // read coefficents
         lfsu.vread(x,xl);
 
         // volume evaluation
-        apply_operator.template conditional<do_alpha_volume>(InvokeAlphaVolume<XL,RL>(xl,rl));
-        apply_operator.template conditional<do_lambda_volume>(InvokeLambdaVolume<RL>(rl));
+        if (implicit)
+          {
+            apply_operator.template conditional<do_alpha_volume<SpatialOperator> >(InvokeAlphaVolume<SpatialOperator,XL,RL>(xl,rl_a));
+            apply_operator.template conditional<do_lambda_volume<SpatialOperator> >(InvokeLambdaVolume<SpatialOperator,RL>(rl_a));
+          }
+        apply_operator.template conditional<do_alpha_volume<TemporalOperator> >(InvokeAlphaVolume<TemporalOperator,XL,RL>(xl,rl_m));
+
 
         // skip if no intersection iterator is needed
-        if (any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_skeleton>::value ||
-            any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_boundary>::value ||
-            any_child<InstationaryMultiDomainGridOperatorSpace,do_lambda_boundary>::value)
+        if (implicit &&
+            (any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_skeleton<SpatialOperator> >::value ||
+             any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_boundary<SpatialOperator> >::value ||
+             any_child<InstationaryMultiDomainGridOperatorSpace,do_lambda_boundary<SpatialOperator> >::value)
+            )
           {
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
@@ -1048,14 +1250,16 @@ public:
                     lfsun.vread(x,xn);
 
                     // unique vist of intersection
-                    apply_operator.template conditional<do_alpha_skeleton_or_boundary>
-                      (InvokeAlphaSkeletonOrBoundary<XL,RL>(xl,xn,rl,rn,
-                                                            id > idn ||
-                                                            (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
-                                                            )
+                    apply_operator.template conditional<do_alpha_skeleton_or_boundary<SpatialOperator> >
+                      (InvokeAlphaSkeletonOrBoundary<SpatialOperator,XL,RL>(xl,xn,rl_a,rn,
+                                                                            id > idn ||
+                                                                            (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
+                                                                            )
                        );
                     if (apply_operator.alphaSkeletonInvoked())
                       {
+                        for(auto it = rn.begin(); it != rn.end(); ++it)
+                          (*it) *= b_rr * dt;
                         lfsvn.vadd(rn,r);
                         apply_operator.clearAlphaSkeletonInvoked();
                       }
@@ -1064,17 +1268,25 @@ public:
                 // boundary term
                 if (iit->boundary())
                   {
-                    apply_operator.template conditional<do_alpha_boundary>(InvokeAlphaBoundary<XL,RL>(xl,rl));
-                    apply_operator.template conditional<do_lambda_boundary>(InvokeLambdaBoundary<RL>(rl));
+                    apply_operator.template conditional<do_alpha_boundary<SpatialOperator> >(InvokeAlphaBoundary<SpatialOperator,XL,RL>(xl,rl_a));
+                    apply_operator.template conditional<do_lambda_boundary<SpatialOperator> >(InvokeLambdaBoundary<SpatialOperator,RL>(rl_a));
                   }
               }
           }
 
-        apply_operator.template conditional<do_alpha_volume_post_skeleton>(InvokeAlphaVolumePostSkeleton<XL,RL>(xl,rl));
-        apply_operator.template conditional<do_lambda_volume_post_skeleton>(InvokeLambdaVolumePostSkeleton<RL>(rl));
+        if (implicit)
+          {
+            apply_operator.template conditional<do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeAlphaVolumePostSkeleton<SpatialOperator,XL,RL>(xl,rl_a));
+            apply_operator.template conditional<do_lambda_volume_post_skeleton<SpatialOperator> >(InvokeLambdaVolumePostSkeleton<SpatialOperator,RL>(rl_a));
 
-        // accumulate result (note: r needs to be cleared outside)
-        lfsv.vadd(rl,r);
+            // accumulate result (note: r needs to be cleared outside)
+            for (auto it = rl_a.begin(); it != rl_a.end(); ++it)
+                   (*it) *= b_rr * dt;
+            lfsv.vadd(rl_a,r);
+          }
+
+        // scheme is normalized !
+        lfsv.vadd(rl_m,r);
       }
 
     // set residual to zero on constrained dofs

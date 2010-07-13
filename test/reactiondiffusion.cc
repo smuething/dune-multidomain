@@ -351,6 +351,29 @@ int main(int argc, char** argv) {
   Dune::PDELab::OneStepMethod<double,MultiGOS,PDESOLVER,V,V> osm(method,multigos,pdesolver);
   osm.setVerbosityLevel(2);
 
+  Dune::PDELab::FilenameHelper fn0("reactiondiffusion-c0");
+  {
+    typedef Dune::PDELab::DiscreteGridFunction<GFS0,V> U0DGF;
+    U0DGF u0dgf(gfs0,uold);
+    Dune::VTKWriter<MDGV> vtkwriter(mdgv,Dune::VTKOptions::conforming);
+    vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U0DGF>(u0dgf,"c0"));
+    vtkwriter.write(fn0.getName(),Dune::VTKOptions::binaryappended);
+    fn0.increment();
+  }
+  Dune::PDELab::FilenameHelper fn1("reactiondiffusion-c1");
+  {
+    typedef Dune::PDELab::DiscreteGridFunction<GFS1,GFS1::VectorContainer<R>::Type> U1DGF;
+    GFS1::VectorContainer<R>::Type utmp(gfs1);
+    for(int i = 0; i < gfs1.size(); ++i)
+      utmp[i] = uold[gfs0.size()+i];
+    U1DGF u1dgf(gfs1,utmp);
+    Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
+    vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U1DGF>(u1dgf,"c1"));
+    vtkwriter.write(fn1.getName(),Dune::VTKOptions::binaryappended);
+    fn1.increment();
+  }
+
+
   V unew(multigfs,0.0);
   unew = uold;
   double dt = dtstart;
@@ -361,5 +384,24 @@ int main(int argc, char** argv) {
       uold = unew;
       time += dt;
       if (dt<dtmax-1e-8) dt = std::min(dt*1.1,dtmax);
+      {
+        typedef Dune::PDELab::DiscreteGridFunction<GFS0,V> U0DGF;
+        U0DGF u0dgf(gfs0,uold);
+        Dune::VTKWriter<MDGV> vtkwriter(mdgv,Dune::VTKOptions::conforming);
+        vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U0DGF>(u0dgf,"c0"));
+        vtkwriter.write(fn0.getName(),Dune::VTKOptions::binaryappended);
+        fn0.increment();
+      }
+      {
+        typedef Dune::PDELab::DiscreteGridFunction<GFS1,GFS1::VectorContainer<R>::Type> U1DGF;
+        GFS1::VectorContainer<R>::Type utmp(gfs1);
+        for(int i = 0; i < gfs1.size(); ++i)
+          utmp[i] = uold[gfs0.size()+i];
+        U1DGF u1dgf(gfs1,utmp);
+        Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
+        vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U1DGF>(u1dgf,"c1"));
+        vtkwriter.write(fn1.getName(),Dune::VTKOptions::binaryappended);
+        fn1.increment();
+      }
     }
 }

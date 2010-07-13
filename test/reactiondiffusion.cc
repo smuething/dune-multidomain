@@ -327,7 +327,7 @@ int main(int argc, char** argv) {
   V uold(multigfs);
   uold = 0.0;
 
-  Dune::PDELab::MultiDomain::interpolate(multigfs,uold,u0initial,splfs0,uinitial,splfs1);
+  Dune::PDELab::MultiDomain::interpolate(multigfs,uold,f,splfs0,uinitial,splfs1);
 
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 

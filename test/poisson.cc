@@ -1,6 +1,7 @@
 #include "config.h"
 
 #include <dune/grid/sgrid.hh>
+#include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/finiteelementmap/q1fem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
@@ -96,10 +97,12 @@ int main(int argc, char** argv) {
   }
 
   const int dim = 2;
-  typedef Dune::SGrid<dim,dim> BaseGrid;
-  const int s[2] = {1,1};
-  const double h[2] = {1.0,1.0};
-  BaseGrid baseGrid(s,h);
+  //typedef Dune::SGrid<dim,dim> BaseGrid;
+  typedef Dune::YaspGrid<dim> BaseGrid;
+  const Dune::FieldVector<int,dim> s(1);
+  const Dune::FieldVector<double,dim> h(1.0);
+  const Dune::FieldVector<bool,dim> p(false);
+  BaseGrid baseGrid(h,s,p,0);
   baseGrid.globalRefine(atoi(argv[1]));
   typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;
   Grid grid(baseGrid,false);

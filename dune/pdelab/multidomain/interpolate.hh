@@ -39,6 +39,7 @@ struct interpolation_pairs<Function,SubProblemLFS,SubProblems...>
   {
     if (subProblemLFS.appliesTo(subDomainSet))
     {
+      subProblemLFS.bind();
       InterpolateVisitNodeMetaProgram<IB,Function,Function::isLeaf,SubProblemLFS,SubProblemLFS::isLeaf>
         ::interpolate(ib,f,subProblemLFS,xg,element);
     }

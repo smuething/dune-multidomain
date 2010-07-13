@@ -94,7 +94,7 @@ struct SubProblemLocalFunctionSpaceVisitChildMetaProgram // visit child of inner
   {
     typedef typename T::template Child<i>::Type C;
     const C& child = t.template getChild<i>();
-    for(int j = 0; j < child.size(); ++j, ++it)
+    for(unsigned int j = 0; j < child.size(); ++j, ++it)
         *it = child.globalIndex(j);
     NextChild::fill_indices(t,it);
   }

@@ -230,8 +230,8 @@ int main(int argc, char** argv) {
   grid.startSubDomainMarking();
   for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
     {
-      if (it->geometry().center()[0] > 0.5)
-        grid.addToSubDomain(1,*it);
+      if (it->geometry().center()[0] > 1.0+1e-8)
+        grid.addToSubDomain(0,*it);
       else
         grid.addToSubDomain(1,*it);
     }

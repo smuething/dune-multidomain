@@ -826,7 +826,7 @@ public:
 
   void setMethod(const TimeSteppingParameterInterface<TReal>& method_)
   {
-    method = method_;
+    method = &method_;
   }
 
   void preStep(const TimeSteppingParameterInterface<TReal>& method_, TReal time_, TReal dt_)

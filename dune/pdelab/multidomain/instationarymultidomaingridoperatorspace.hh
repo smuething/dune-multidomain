@@ -131,6 +131,25 @@ public:
 
   };
 
+  struct PreStage
+  {
+
+    PreStage(TReal t, StageType s) :
+      time(t),
+      stage(s)
+    {}
+
+    template<typename Data, typename Child>
+    void operator()(Data& data, Child& child)
+    {
+      child.preStage(time,stage);
+    }
+
+  private:
+    const TReal time;
+    const StageType stage;
+  };
+
   struct PostStage
   {
 

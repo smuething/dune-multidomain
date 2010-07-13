@@ -29,6 +29,7 @@ struct InstationarySubProblemTraits :
   typedef TOP TemporalOperator;
   typedef TReal TimeType;
   typedef unsigned int StepType;
+  typedef unsigned int StageType;
 
 };
 
@@ -75,6 +76,11 @@ public:
   void postStep() {
     this->localOperator().postStep();
     this->temporalOperator().postStep();
+  }
+
+  void preStage(TReal time, typename Traits::StageType stage) {
+    this->localOperator().preStage(time,stage);
+    this->temporalOperator().preStage(time,stage);
   }
 
   void postStage() {

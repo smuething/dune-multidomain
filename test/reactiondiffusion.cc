@@ -198,14 +198,14 @@ private:
 
 int main(int argc, char** argv) {
 
-  if (argc < 2) {
-    std::cerr << "Usage: " << argv[0] << " <refinement level>" << std::endl;
+  if (argc < 5) {
+    std::cerr << "Usage: " << argv[0] << " <refinement level> <dtstart> <dtmax> <tend>" << std::endl;
     return 1;
   }
 
-  const double dtstart = 1;
-  const double dtmax = 5;
-  const double tend = 50;
+  const double dtstart = atof(argv[2]);
+  const double dtmax = atof(argv[3]);
+  const double tend = atof(argv[4]);
 
   const int dim = 2;
   //typedef Dune::SGrid<dim,dim> BaseGrid;

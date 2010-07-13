@@ -9,7 +9,7 @@
 #include <dune/pdelab/finiteelementmap/q22dfem.hh>
 #include <dune/pdelab/multidomain/subproblemgridfunctionspace.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
-#include <dune/pdelab/multidomain/multidomaingridoperatorspace.hh>
+#include <dune/pdelab/multidomain/instationarymultidomaingridoperatorspace.hh>
 #include <dune/pdelab/multidomain/instationarysubproblem.hh>
 #include <dune/pdelab/finiteelementmap/conformingconstraints.hh>
 #include <dune/pdelab/multidomain/constraints.hh>
@@ -19,6 +19,8 @@
 #include <dune/pdelab/localoperator/diffusion.hh>
 #include <dune/pdelab/common/vtkexport.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
+#include<dune/pdelab/stationary/linearproblem.hh>
+#include<dune/pdelab/instationary/onestep.hh>
 
 #include<typeinfo>
 
@@ -130,6 +132,70 @@ SIMPLE_ANALYTIC_FUNCTION(J,x,y)
 END_SIMPLE_ANALYTIC_FUNCTION
 
 
+class SimpleTimeOperator
+  : public Dune::PDELab::NumericalJacobianApplyVolume<SimpleTimeOperator>,
+    public Dune::PDELab::NumericalJacobianVolume<SimpleTimeOperator>,
+    public Dune::PDELab::FullVolumePattern,
+    public Dune::PDELab::LocalOperatorDefaultFlags,
+    public Dune::PDELab::InstationaryLocalOperatorDefaultMethods<double>
+{
+public:
+  // pattern assembly flags
+  enum { doPatternVolume = true };
+
+  // residual assembly flags
+  enum { doAlphaVolume = true };
+
+  // constructor remembers parameters
+  SimpleTimeOperator (unsigned int intorder_=2)
+    : intorder(intorder_) {}
+
+  // volume integral depending on test and ansatz functions
+  template<typename EG, typename LFSU, typename X, typename LFSV, typename R>
+  void alpha_volume (const EG& eg, const LFSU& lfsu, const X& x, const LFSV& lfsv, R& r) const
+  {
+
+    // domain and range field type (assume both components have same RF)
+    typedef typename LFSU::Traits::LocalFiniteElementType::
+      Traits::LocalBasisType::Traits::DomainFieldType DF;
+    typedef typename LFSU::Traits::LocalFiniteElementType::
+      Traits::LocalBasisType::Traits::RangeFieldType RF;
+    typedef typename LFSU::Traits::LocalFiniteElementType::
+      Traits::LocalBasisType::Traits::JacobianType JacobianType;
+    typedef typename LFSU::Traits::LocalFiniteElementType::
+      Traits::LocalBasisType::Traits::RangeType RangeType;
+    typedef typename LFSU::Traits::SizeType size_type;
+
+    // dimensions
+    const int dim = EG::Geometry::dimension;
+
+    // select quadrature rule
+    Dune::GeometryType gt = eg.geometry().type();
+    const Dune::QuadratureRule<DF,dim>& rule = Dune::QuadratureRules<DF,dim>::rule(gt,intorder);
+
+    // loop over quadrature points
+    for (typename Dune::QuadratureRule<DF,dim>::const_iterator it=rule.begin(); it!=rule.end(); ++it)
+      {
+        // evaluate basis functions on reference element
+        std::vector<RangeType> phi(lfsu.size());
+        lfsu.localFiniteElement().localBasis().evaluateFunction(it->position(),phi);
+
+        // compute u_0, u_1 at integration point
+        RF u=0.0;
+        for (size_type i=0; i<lfsu.size(); i++) u += x[lfsu.localIndex(i)]*phi[i];
+
+        // integration
+        RF factor = it->weight() * eg.geometry().integrationElement(it->position());
+        for (size_type i=0; i<lfsu.size(); i++)
+          r[lfsu.localIndex(i)] += u*phi[i]*factor;
+      }
+  }
+private:
+  unsigned int intorder;
+};
+
+
+
 int main(int argc, char** argv) {
 
   if (argc < 2) {
@@ -137,11 +203,15 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  const double dtstart = 1;
+  const double dtmax = 5;
+  const double tend = 50;
+
   const int dim = 2;
   //typedef Dune::SGrid<dim,dim> BaseGrid;
   typedef Dune::YaspGrid<dim> BaseGrid;
   const Dune::FieldVector<int,dim> s(1);
-  const Dune::FieldVector<double,dim> h(1.0);
+  const Dune::FieldVector<double,dim> h(2.0);
   const Dune::FieldVector<bool,dim> p(false);
   BaseGrid baseGrid(h,s,p,0);
   baseGrid.globalRefine(atoi(argv[1]));
@@ -161,7 +231,7 @@ int main(int argc, char** argv) {
   for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
     {
       if (it->geometry().center()[0] > 0.5)
-        grid.addToSubDomain(0,*it);
+        grid.addToSubDomain(1,*it);
       else
         grid.addToSubDomain(1,*it);
     }
@@ -219,11 +289,14 @@ int main(int argc, char** argv) {
   typedef Dune::PDELab::Diffusion<KType,A0Type,FType,BType,JType> LOP0;
   LOP0 lop0(k,a0,f,b,j,2);
 
+  typedef SimpleTimeOperator TLOP0;
+  TLOP0 tlop0(2);
+
   typedef Example05LocalOperator LOP1;
   LOP1 lop1(d_0,d_1,lambda,sigma,kappa,2);
 
-  typedef Example05TimeLocalOperator TLOP;
-  TLOP tlop(tau,2);
+  typedef Example05TimeLocalOperator TLOP1;
+  TLOP1 tlop1(tau,2);
 
   typedef MDGV::IndexSet::SubDomainSet SDS;
   typedef Dune::PDELab::MultiDomain::EqualsSubDomains<SDS> EC;
@@ -233,10 +306,10 @@ int main(int argc, char** argv) {
 
   NOCON nocon;
 
-  typedef Dune::PDELab::MultiDomain::InstationarySubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP0,TLOP,EC,0> SubProblem0;
-  typedef Dune::PDELab::MultiDomain::InstationarySubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP1,TLOP,EC,0,1> SubProblem1;
-  SubProblem0 sp0(nocon,nocon,lop0,tlop,ec0);
-  SubProblem1 sp1(nocon,nocon,lop1,tlop,ec1);
+  typedef Dune::PDELab::MultiDomain::InstationarySubProblem<double,MultiGFS,NOCON,MultiGFS,NOCON,LOP0,TLOP0,EC,0> SubProblem0;
+  typedef Dune::PDELab::MultiDomain::InstationarySubProblem<double,MultiGFS,NOCON,MultiGFS,NOCON,LOP1,TLOP1,EC,0,1> SubProblem1;
+  SubProblem0 sp0(nocon,nocon,lop0,tlop0,ec0);
+  SubProblem1 sp1(nocon,nocon,lop1,tlop1,ec1);
 
   typedef U0Initial<MDGV,double> U0InitialType;
   U0InitialType u0initial(mdgv);
@@ -251,63 +324,42 @@ int main(int argc, char** argv) {
     splfs1(sp1,sp1.trialGridFunctionSpaceConstraints());
 
   typedef MultiGFS::VectorContainer<R>::Type V;
-  V x0(multigfs);
-  x0 = 0.0;
+  V uold(multigfs);
+  uold = 0.0;
 
-  Dune::PDELab::MultiDomain::interpolate(multigfs,x0,u0initial,splfs0,uinitial,splfs1);
+  Dune::PDELab::MultiDomain::interpolate(multigfs,uold,u0initial,splfs0,uinitial,splfs1);
 
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 
-  typedef Dune::PDELab::MultiDomain::MultiDomainGridOperatorSpace<MultiGFS,MultiGFS,MBE,SubProblem0,SubProblem1> MultiGOS;
+  typedef Dune::PDELab::MultiDomain::InstationaryMultiDomainGridOperatorSpace<double,V,MultiGFS,MultiGFS,MBE,SubProblem0,SubProblem1> MultiGOS;
 
   MultiGOS multigos(multigfs,multigfs,cg,cg,sp0,sp1);
-
-
-  typedef MultiGOS::MatrixContainer<R>::Type M;
-  M m(multigos);
-  m = 0.0;
-
-  for(int i = 0; i < m.base().N(); ++i) {
-    for(int j = 0; j < m.base().M(); ++j) {
-      std::cout << (m.base().exists(i,j) ? "X " : ". ");
-    }
-    std::cout << std::endl;
-  }
-
-  multigos.jacobian(x0,m);
-
-  V r(multigfs);
-
-  r = 0.0;
-
-  multigos.residual(x0,r);
 
   typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
   LS ls(5000,false);
 
   typedef Dune::PDELab::Newton<MultiGOS,LS,V> PDESOLVER;
-
   PDESOLVER pdesolver(multigos,ls);
-  pdesolver.setVerbosityLevel(4);
-  pdesolver.apply(x0);
-  /*
-  Dune::MatrixAdapter<M,V,V> opa(m);
-  Dune::SeqSSOR<M,V,V> ssor(m,1,1.0);
-  Dune::CGSolver<V> solver(opa,ssor,1e-10,5000,2);
-  Dune::InverseOperatorResult stat;
+  pdesolver.setReassembleThreshold(0.0);
+  pdesolver.setVerbosityLevel(2);
+  pdesolver.setReduction(1e-10);
+  pdesolver.setMinLinearReduction(1e-4);
+  pdesolver.setMaxIterations(25);
+  pdesolver.setLineSearchMaxIterations(10);
 
-  r *= -1.0;
+  Dune::PDELab::Alexander2Parameter<double> method;
+  Dune::PDELab::OneStepMethod<double,MultiGOS,PDESOLVER,V,V> osm(method,multigos,pdesolver);
+  osm.setVerbosityLevel(2);
 
-  V x(multigfs,0.0);
-  solver.apply(x,r,stat);
-
-  x += x0;
-
-  typedef Dune::PDELab::DiscreteGridFunction<GFS,V> DGF;
-  DGF dgf(gfs,x);
-
-  Dune::VTKWriter<MDGV> vtkwriter(mdgv,Dune::VTKOptions::conforming);
-  vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
-  vtkwriter.write("poisson.vtu",Dune::VTKOptions::ascii);
-  */
+  V unew(multigfs,0.0);
+  unew = uold;
+  double dt = dtstart;
+  double time = 0;
+  while(time<tend-1e-8)
+    {
+      osm.apply(time,dt,uold,unew);
+      uold = unew;
+      time += dt;
+      if (dt<dtmax-1e-8) dt = std::min(dt*1.1,dtmax);
+    }
 }

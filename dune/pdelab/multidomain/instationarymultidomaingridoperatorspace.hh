@@ -871,6 +871,14 @@ public:
     data::SkeletonInvocationTracker
     > operator_applier_all_data;
 
+  typedef operator_applier<
+    InstationaryMultiDomainGridOperatorSpace,
+    data::ElementData,
+    data::NeighborData,
+    data::IntersectionReference,
+    data::SkeletonInvocationTracker
+    > non_const_operator_applier_all_data;
+
   /**\brief Construct global sparsity pattern from local description
 
      This function can be called by the Matrix to get the sparsity pattern.

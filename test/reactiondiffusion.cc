@@ -378,6 +378,10 @@ int main(int argc, char** argv) {
   unew = uold;
   double dt = dtstart;
   double time = 0;
+  typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,0> SGFS0;
+  typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,1> SGFS1;
+  SGFS0 sgfs0(multigfs);
+  SGFS1 sgfs1(multigfs);
   while(time<tend-1e-8)
     {
       osm.apply(time,dt,uold,unew);
@@ -385,19 +389,16 @@ int main(int argc, char** argv) {
       time += dt;
       if (dt<dtmax-1e-8) dt = std::min(dt*1.1,dtmax);
       {
-        typedef Dune::PDELab::DiscreteGridFunction<GFS0,V> U0DGF;
-        U0DGF u0dgf(gfs0,uold);
+        typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> U0DGF;
+        U0DGF u0dgf(sgfs0,uold);
         Dune::VTKWriter<MDGV> vtkwriter(mdgv,Dune::VTKOptions::conforming);
         vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U0DGF>(u0dgf,"c0"));
         vtkwriter.write(fn0.getName(),Dune::VTKOptions::binaryappended);
         fn0.increment();
       }
       {
-        typedef Dune::PDELab::DiscreteGridFunction<GFS1,GFS1::VectorContainer<R>::Type> U1DGF;
-        GFS1::VectorContainer<R>::Type utmp(gfs1);
-        for(int i = 0; i < gfs1.size(); ++i)
-          utmp[i] = uold[gfs0.size()+i];
-        U1DGF u1dgf(gfs1,utmp);
+        typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> U1DGF;
+        U1DGF u1dgf(sgfs1,uold);
         Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
         vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U1DGF>(u1dgf,"c1"));
         vtkwriter.write(fn1.getName(),Dune::VTKOptions::binaryappended);

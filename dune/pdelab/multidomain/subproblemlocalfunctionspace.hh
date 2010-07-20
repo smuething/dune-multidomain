@@ -418,7 +418,7 @@ public:
   }
 
   const Constraints& constraints() const {
-    return _constraints();
+    return _constraints;
   }
 
   template<typename SubDomainSet>

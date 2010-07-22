@@ -532,6 +532,15 @@ struct do_alpha_skeleton_or_boundary
   };
 };
 
+template<typename Operator = CouplingOperator>
+struct do_alpha_coupling
+{
+  template<typename T>
+  struct test {
+    static const bool value = Operator::template ExtractType<T>::Type::doAlphaCoupling;
+  };
+};
+
 template<typename Operator = SpatialOperator>
 struct do_lambda_volume
 {

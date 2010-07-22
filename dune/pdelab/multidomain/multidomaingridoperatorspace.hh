@@ -294,6 +294,59 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
     RL& r;
   };
 
+  template<typename Operator, typename XL, typename RL>
+  struct InvokeAlphaCoupling
+  {
+
+    InvokeAlphaCoupling(const XL& xl, const XL& xn, RL& rl, RL& rn) :
+      _local_x(xl),
+      _remote_x(xn),
+      _local_r(rl),
+      _remote_r(rn)
+    {}
+
+    template<typename Data, typename Child>
+    void operator()(Data& data, const Child& child)
+    {
+      if (!child.appliesTo(data.elementSubDomains(),data.neighborSubDomains()))
+        return;
+      typedef typename Operator::template ExtractType<Child>::Type LOP;
+      typedef typename Child::Traits::LocalSubProblem LocalSubProblem;
+      typedef typename Child::Traits::RemoteSubProblem RemoteSubProblem;
+      typedef typename LocalSubProblem::TrialLocalFunctionSpace LocalLFSU;
+      typedef typename LocalSubProblem::TestLocalFunctionSpace LocalLFSV;
+      typedef typename RemoteSubProblem::TrialLocalFunctionSpace RemoteLFSU;
+      typedef typename RemoteSubProblem::TestLocalFunctionSpace RemoteLFSV;
+      const LocalSubProblem& localSubProblem = child.localSubProblem();
+      const RemoteSubProblem& remoteSubProblem = child.remoteSubProblem();
+      LocalLFSU local_lfsu(data.lfsu(),localSubProblem,localSubProblem.trialGridFunctionSpaceConstraints());
+      LocalLFSV local_lfsv(data.lfsv(),localSubProblem,localSubProblem.testGridFunctionSpaceConstraints());
+      local_lfsu.bind();
+      local_lfsv.bind();
+      RemoteLFSU remote_lfsu(data.lfsun(),remoteSubProblem,remoteSubProblem.trialGridFunctionSpaceConstraints());
+      RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
+      remote_lfsu.bind();
+      remote_lfsv.bind();
+      Operator::extract(child).alpha_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                                data.intersection_index),
+                                              local_lfsu,
+                                              _local_x,
+                                              local_lfsv,
+                                              remote_lfsu,
+                                              _remote_x,
+                                              remote_lfsv,
+                                              _local_r,
+                                              _remote_r);
+      if(LOP::doAlphaSkeleton)
+        data.setAlphaSkeletonInvoked();
+    }
+
+    const XL& _local_x;
+    const XL& _remote_x;
+    RL& _local_r;
+    RL& _remote_r;
+  };
+
   template<typename RL>
   struct InvokeLambdaBoundary
   {
@@ -478,6 +531,61 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
     YL& y;
   };
 
+
+  template<typename Operator, typename XL, typename YL>
+  struct InvokeJacobianApplyCoupling
+  {
+
+    InvokeJacobianApplyCoupling(const XL& xl, const XL& xn, YL& yl, YL& yn) :
+      _local_x(xl),
+      _remote_x(xn),
+      _local_y(yl),
+      _remote_y(yn)
+    {}
+
+    template<typename Data, typename Child>
+    void operator()(Data& data, const Child& child)
+    {
+      if (!child.appliesTo(data.elementSubDomains(),data.neighborSubDomains()))
+        return;
+      typedef typename Operator::template ExtractType<Child>::Type LOP;
+      typedef typename Child::Traits::LocalSubProblem LocalSubProblem;
+      typedef typename Child::Traits::RemoteSubProblem RemoteSubProblem;
+      typedef typename LocalSubProblem::TrialLocalFunctionSpace LocalLFSU;
+      typedef typename LocalSubProblem::TestLocalFunctionSpace LocalLFSV;
+      typedef typename RemoteSubProblem::TrialLocalFunctionSpace RemoteLFSU;
+      typedef typename RemoteSubProblem::TestLocalFunctionSpace RemoteLFSV;
+      const LocalSubProblem& localSubProblem = child.localSubProblem();
+      const RemoteSubProblem& remoteSubProblem = child.remoteSubProblem();
+      LocalLFSU local_lfsu(data.lfsu(),localSubProblem,localSubProblem.trialGridFunctionSpaceConstraints());
+      LocalLFSV local_lfsv(data.lfsv(),localSubProblem,localSubProblem.testGridFunctionSpaceConstraints());
+      local_lfsu.bind();
+      local_lfsv.bind();
+      RemoteLFSU remote_lfsu(data.lfsun(),remoteSubProblem,remoteSubProblem.trialGridFunctionSpaceConstraints());
+      RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
+      remote_lfsu.bind();
+      remote_lfsv.bind();
+      Operator::extract(child).jacobian_apply_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                                         data.intersection_index),
+                                                       local_lfsu,
+                                                       _local_x,
+                                                       local_lfsv,
+                                                       remote_lfsu,
+                                                       _remote_x,
+                                                       remote_lfsv,
+                                                       _local_y,
+                                                       _remote_y);
+      if(LOP::doAlphaSkeleton)
+        data.setAlphaSkeletonInvoked();
+    }
+
+    const XL& _local_x;
+    const XL& _remote_x;
+    YL& _local_y;
+    YL& _remote_y;
+  };
+
+
   template<typename XL, typename YL>
   struct InvokeJacobianApplyVolumePostSkeleton
   {
@@ -621,6 +729,66 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
     const XL& x;
     AL& a;
   };
+
+  template<typename Operator, typename XL, typename AL>
+  struct InvokeJacobianCoupling
+  {
+
+    InvokeJacobianCoupling(const XL& xl, const XL& xn, AL& al, AL& al_sn, AL& al_ns, AL& al_nn) :
+      _local_x(xl),
+      _remote_x(xn),
+      _local_a(al),
+      _local_to_remote_a(al_sn),
+      _remote_to_local_a(al_ns),
+      _remote_a(al_nn)
+    {}
+
+    template<typename Data, typename Child>
+    void operator()(Data& data, const Child& child)
+    {
+      if (!child.appliesTo(data.elementSubDomains(),data.neighborSubDomains()))
+        return;
+      typedef typename Operator::template ExtractType<Child>::Type LOP;
+      typedef typename Child::Traits::LocalSubProblem LocalSubProblem;
+      typedef typename Child::Traits::RemoteSubProblem RemoteSubProblem;
+      typedef typename LocalSubProblem::TrialLocalFunctionSpace LocalLFSU;
+      typedef typename LocalSubProblem::TestLocalFunctionSpace LocalLFSV;
+      typedef typename RemoteSubProblem::TrialLocalFunctionSpace RemoteLFSU;
+      typedef typename RemoteSubProblem::TestLocalFunctionSpace RemoteLFSV;
+      const LocalSubProblem& localSubProblem = child.localSubProblem();
+      const RemoteSubProblem& remoteSubProblem = child.remoteSubProblem();
+      LocalLFSU local_lfsu(data.lfsu(),localSubProblem,localSubProblem.trialGridFunctionSpaceConstraints());
+      LocalLFSV local_lfsv(data.lfsv(),localSubProblem,localSubProblem.testGridFunctionSpaceConstraints());
+      local_lfsu.bind();
+      local_lfsv.bind();
+      RemoteLFSU remote_lfsu(data.lfsun(),remoteSubProblem,remoteSubProblem.trialGridFunctionSpaceConstraints());
+      RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
+      remote_lfsu.bind();
+      remote_lfsv.bind();
+      Operator::extract(child).jacobian_apply_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                                         data.intersection_index),
+                                                       local_lfsu,
+                                                       _local_x,
+                                                       local_lfsv,
+                                                       remote_lfsu,
+                                                       _remote_x,
+                                                       remote_lfsv,
+                                                       _local_a,
+                                                       _local_to_remote_a,
+                                                       _remote_to_local_a,
+                                                       _remote_a);
+      if(LOP::doAlphaSkeleton)
+        data.setAlphaSkeletonInvoked();
+    }
+
+    const XL& _local_x;
+    const XL& _remote_x;
+    AL& _local_a;
+    AL& _local_to_remote_a;
+    AL& _remote_to_local_a;
+    AL& _remote_a;
+  };
+
 
   template<typename XL, typename AL>
   struct InvokeJacobianVolumePostSkeleton

@@ -31,6 +31,14 @@ public:
 
   typedef CouplingTraits<LocalSubProblem,RemoteSubProblem,CouplingOperator> Traits;
 
+  Coupling(const LocalSubProblem& localSubProblem,
+           const RemoteSubProblem& remoteSubProblem,
+           const CouplingOperator& couplingOperator)
+    : _localSubProblem(localSubProblem)
+    , _remoteSubProblem(remoteSubProblem)
+    , _operator(couplingOperator)
+  {}
+
   const CouplingOperator& couplingOperator() const {
     return _operator;
   }

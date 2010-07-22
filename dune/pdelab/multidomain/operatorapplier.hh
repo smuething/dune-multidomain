@@ -457,6 +457,26 @@ struct TemporalOperator
   }
 };
 
+struct CouplingOperator
+{
+
+  template<typename Coupling>
+  struct ExtractType
+  {
+    typedef typename Coupling::Traits::CouplingOperator Type;
+  };
+
+  template<typename Coupling>
+  static typename Coupling::Traits::CouplingOperator& extract(Coupling& coupling) {
+    return coupling.couplingOperator();
+  }
+
+  template<typename Coupling>
+  static const typename Coupling::Traits::CouplingOperator& extract(const Coupling& coupling) {
+    return coupling.couplingOperator();
+  }
+};
+
 
 template<typename Operator = SpatialOperator>
 struct do_pattern_skeleton

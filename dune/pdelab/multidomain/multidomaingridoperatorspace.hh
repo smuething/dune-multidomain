@@ -60,7 +60,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
 
   template<std::size_t k>
   const typename SubProblem<k>::Type& subProblem() const {
-    return this->template getChild<std::tuple_element<k,SubProblemList>::type::globalIndex>();
+    return this->template getChild<std::tuple_element<k,SubProblemList>::type::globalPos>();
   }
 
   template<std::size_t k>
@@ -70,7 +70,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
 
   template<std::size_t k>
   const typename Coupling<k>::Type& coupling() const {
-    return this->template getChild<std::tuple_element<k,CouplingList>::type::globalIndex>();
+    return this->template getChild<std::tuple_element<k,CouplingList>::type::globalPos>();
   }
 
   // extract useful types

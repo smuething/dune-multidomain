@@ -73,6 +73,47 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
     return this->template getChild<std::tuple_element<k,CouplingList>::type::globalPos>();
   }
 
+  struct SubProblems
+  {
+
+    static const std::size_t N = subProblemCount;
+
+    template<std::size_t k>
+    struct GetType
+    {
+      dune_static_assert(k < N, "subProblem index too large");
+      typedef typename SubProblem<k>::Type Type;
+    };
+
+    template<std::size_t k>
+    static const typename SubProblem<k>::Type& get(const MultiDomainGridOperatorSpace& mgos)
+    {
+      dune_static_assert(k < N, "subProblem index too large");
+      return mgos.template subProblem<k>();
+    }
+  };
+
+  struct Couplings
+  {
+
+    static const std::size_t N = couplingCount;
+
+    template<std::size_t k>
+    struct GetType
+    {
+      dune_static_assert(k < N, "coupling index too large");
+      typedef typename Coupling<k>::Type Type;
+    };
+
+    template<std::size_t k>
+    static const typename Coupling<k>::Type& get(const MultiDomainGridOperatorSpace& mgos)
+    {
+      dune_static_assert(k < N, "coupling index too large");
+      return mgos.template coupling<k>();
+    }
+  };
+
+
   // extract useful types
   typedef typename GFSU::Traits::GridType Grid;
   typedef typename Grid::LeafGridView GV;

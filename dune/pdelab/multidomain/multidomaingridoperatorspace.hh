@@ -994,7 +994,8 @@ public:
         // skip if no intersection iterator is needed
         if (any_child<MultiDomainGridOperatorSpace,do_alpha_skeleton<> >::value ||
             any_child<MultiDomainGridOperatorSpace,do_alpha_boundary<> >::value ||
-            any_child<MultiDomainGridOperatorSpace,do_lambda_boundary<> >::value)
+            any_child<MultiDomainGridOperatorSpace,do_lambda_boundary<> >::value ||
+            any_child<MultiDomainGridOperatorSpace,do_alpha_coupling<> >::value)
           {
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
@@ -1040,6 +1041,8 @@ public:
                                                             (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
                                                             )
                        );
+                    apply_operator.template conditional<do_alpha_coupling<> >
+                      (InvokeAlphaCoupling<CouplingOperator,XL,RL>(xl,xn,rl,rn));
                     if (apply_operator.alphaSkeletonInvoked())
                       {
                         lfsvn.vadd(rn,r);
@@ -1125,7 +1128,8 @@ public:
 
         // skeleton and boundary evaluation
         if (any_child<MultiDomainGridOperatorSpace,do_alpha_skeleton<> >::value ||
-            any_child<MultiDomainGridOperatorSpace,do_alpha_boundary<> >::value)
+            any_child<MultiDomainGridOperatorSpace,do_alpha_boundary<> >::value ||
+            any_child<MultiDomainGridOperatorSpace,do_alpha_coupling<> >::value)
           {
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
@@ -1170,6 +1174,8 @@ public:
                                                                     (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
                                                                     )
                        );
+                    apply_operator.template conditional<do_alpha_coupling<> >
+                      (InvokeJacobianApplyCoupling<CouplingOperator,XL,YL>(xl,xn,yl,yn));
                     if (apply_operator.alphaSkeletonInvoked())
                       {
                         lfsvn.vadd(yn,y);
@@ -1257,7 +1263,8 @@ public:
 
         // skeleton and boundary evaluation
         if (any_child<MultiDomainGridOperatorSpace,do_alpha_skeleton<> >::value ||
-            any_child<MultiDomainGridOperatorSpace,do_alpha_boundary<> >::value)
+            any_child<MultiDomainGridOperatorSpace,do_alpha_boundary<> >::value ||
+            any_child<MultiDomainGridOperatorSpace,do_alpha_coupling<> >::value)
           {
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
@@ -1305,6 +1312,8 @@ public:
                                                                     (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
                                                                     )
                        );
+                    apply_operator.template conditional<do_alpha_coupling<> >
+                      (InvokeJacobianCoupling<CouplingOperator,XL,AL>(xl,al,al_sn,al_ns,al_nn));
                     if (apply_operator.alphaSkeletonInvoked())
                       {
                         etadd(lfsv,lfsun,al_sn,a);

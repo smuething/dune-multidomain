@@ -123,8 +123,8 @@ struct CouplingEntry
   typedef T type;
   static const std::size_t globalPos = i;
   static const std::size_t localPos = j;
-  typedef typename get_map_entry<typename T::Traits::FirstSubProblem,SubProblems>::type FirstSubProblem;
-  typedef typename get_map_entry<typename T::Traits::SecondSubProblem,SubProblems>::type SecondSubProblem;
+  typedef typename get_map_entry<typename T::Traits::LocalSubProblem,SubProblems>::type LocalSubProblem;
+  typedef typename get_map_entry<typename T::Traits::RemoteSubProblem,SubProblems>::type RemoteSubProblem;
 
 };
 

@@ -7,16 +7,16 @@ namespace PDELab {
 
 namespace MultiDomain {
 
-template<typename MDGOS, typename Condition, template<bool,bool> class BooleanOp, bool start_value, std::size_t i, std::size_t n>
+template<typename MDGOS, typename Condition, template<bool,bool> class BooleanOp, bool start_value, typename Extractor, std::size_t i, std::size_t n>
 struct child_condition
 {
-  static const bool value = BooleanOp<Condition::template test<typename MDGOS::template Child<i>::Type>::value,
-                                      child_condition<MDGOS,Condition,BooleanOp,start_value,i+1,n>::value
+  static const bool value = BooleanOp<Condition::template test<typename Extractor::template GetType<i>::Type>::value,
+                                      child_condition<MDGOS,Condition,BooleanOp,start_value,Extractor,i+1,n>::value
                                      >::value;
 };
 
-template<typename MDGOS, typename Condition, template<bool,bool> class BooleanOp, bool start_value, std::size_t n>
-struct child_condition<MDGOS,Condition,BooleanOp,start_value,n,n>
+template<typename MDGOS, typename Condition, template<bool,bool> class BooleanOp, bool start_value, typename Extractor, std::size_t n>
+struct child_condition<MDGOS,Condition,BooleanOp,start_value,Extractor,n,n>
 {
   static const bool value = start_value;
 };
@@ -33,25 +33,25 @@ struct or_
   static const bool value = a || b;
 };
 
-template<typename MDGOS, typename Condition>
-struct all_childs : public child_condition<MDGOS,Condition,and_,true,0,MDGOS::CHILDREN> {};
+template<typename MDGOS, typename Extractor, typename Condition>
+struct all_childs : public child_condition<MDGOS,Condition,and_,true,Extractor,0,Extractor::N> {};
 
-template<typename MDGOS, typename Condition>
-struct any_child : public child_condition<MDGOS,Condition,or_,false,0,MDGOS::CHILDREN> {};
+template<typename MDGOS, typename Extractor, typename Condition>
+struct any_child : public child_condition<MDGOS,Condition,or_,false,Extractor,0,Extractor::N> {};
 
-template<typename Applier, typename Operator, std::size_t i, std::size_t n>
+template<typename Applier, typename Operator, typename Extractor, std::size_t i, std::size_t n>
 struct apply_operator_helper
 {
   static void apply(Applier& applier, Operator& op)
   {
-    op(applier,applier.gos().template getChild<i>());
-    apply_operator_helper<Applier,Operator,i+1,n>::apply(applier,op);
+    op(applier,Extractor::template get<i>(applier.gos()));
+    apply_operator_helper<Applier,Operator,Extractor,i+1,n>::apply(applier,op);
   }
 };
 
 // end of recursion
-template<typename Applier, typename Operator, std::size_t n>
-struct apply_operator_helper<Applier, Operator, n,n>
+template<typename Applier, typename Operator, typename Extractor, std::size_t n>
+struct apply_operator_helper<Applier, Operator, Extractor, n, n>
 {
   static void apply(Applier& applier, Operator& op)
   {
@@ -59,39 +59,39 @@ struct apply_operator_helper<Applier, Operator, n,n>
 };
 
 
-template<typename Applier, typename Operator, std::size_t i, bool do_apply>
+template<typename Applier, typename Operator, typename Extractor, std::size_t i, bool do_apply>
 struct conditional_apply;
 
-template<typename Applier, typename Operator, std::size_t i>
-struct conditional_apply<Applier,Operator,i,true>
+template<typename Applier, typename Operator, typename Extractor, std::size_t i>
+struct conditional_apply<Applier,Operator,Extractor,i,true>
 {
   static void apply(Applier& applier, Operator& op)
   {
-    op(applier,applier.gos().template getChild<i>());
+    op(applier,Extractor::template get<i>(applier.gos()));
   }
 };
 
-template<typename Applier, typename Operator, std::size_t i>
-struct conditional_apply<Applier,Operator,i,false>
+template<typename Applier, typename Operator, typename Extractor, std::size_t i>
+struct conditional_apply<Applier,Operator,Extractor,i,false>
 {
   static void apply(Applier& applier, Operator& op)
   {
   }
 };
 
-template<typename Applier, typename Condition, typename Operator, std::size_t i, std::size_t n>
+template<typename Applier, typename Condition, typename Operator, typename Extractor, std::size_t i, std::size_t n>
 struct conditional_apply_operator_helper
 {
   static void apply(Applier& applier, Operator& op)
   {
-    conditional_apply<Applier,Operator,i,Condition::template test<typename Applier::MDGOS::template Child<i>::Type>::value>::apply(applier,op);
-    conditional_apply_operator_helper<Applier,Condition,Operator,i+1,n>::apply(applier,op);
+    conditional_apply<Applier,Operator,Extractor,i,Condition::template test<typename Extractor::template GetType<i>::Type>::value>::apply(applier,op);
+    conditional_apply_operator_helper<Applier,Condition,Operator,Extractor,i+1,n>::apply(applier,op);
   }
 };
 
 // end of recursion
-template<typename Applier, typename Condition, typename Operator, std::size_t n>
-struct conditional_apply_operator_helper<Applier, Condition, Operator, n,n>
+template<typename Applier, typename Condition, typename Operator, typename Extractor, std::size_t n>
+struct conditional_apply_operator_helper<Applier, Condition, Operator, Extractor, n, n>
 {
   static void apply(Applier& applier, Operator& op)
   {
@@ -390,16 +390,16 @@ public:
     _mdgos(mdgos)
   {}
 
-  template<typename Operator>
-  void operator()(Operator&& op)
+  template<typename Extractor, typename Operator>
+  void apply(Operator&& op)
   {
-    apply_operator_helper<operator_applier,Operator,0,MDGOS::CHILDREN>::apply(*this,op);
+    apply_operator_helper<operator_applier,Operator,Extractor,0,Extractor::N>::apply(*this,op);
   }
 
-  template<typename Condition, typename Operator>
+  template<typename Extractor, typename Condition, typename Operator>
   void conditional(Operator&& op)
   {
-    conditional_apply_operator_helper<operator_applier,Condition,Operator,0,MDGOS::CHILDREN>::apply(*this,op);
+    conditional_apply_operator_helper<operator_applier,Condition,Operator,Extractor,0,Extractor::N>::apply(*this,op);
   }
 
   MDGOS& gos() {

@@ -48,7 +48,7 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
   typedef typename extract_couplings<SubProblemsAndCouplings...>::type CouplingList;
 
   static const std::size_t subProblemCount = std::tuple_size<SubProblemList>::value;
-  static const std::size_t couplingCount = std::tuple_size<SubProblemList>::value;
+  static const std::size_t couplingCount = std::tuple_size<CouplingList>::value;
 
   typedef typename GFSU::template ConstraintsContainer<double>::Type CU;
   typedef typename GFSV::template ConstraintsContainer<double>::Type CV;

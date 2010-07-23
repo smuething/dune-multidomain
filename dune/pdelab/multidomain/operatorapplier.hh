@@ -496,6 +496,15 @@ struct do_pattern_volume
   };
 };
 
+template<typename Operator = CouplingOperator>
+struct do_pattern_coupling
+{
+  template<typename T>
+  struct test {
+    static const bool value = Operator::template ExtractType<T>::Type::doPatternCoupling;
+  };
+};
+
 template<typename Operator = SpatialOperator>
 struct do_alpha_volume
 {

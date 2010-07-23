@@ -194,6 +194,58 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
     P& globalpattern;
   };
 
+  template<typename Operator, typename P>
+  struct BuildCouplingPattern
+  {
+    BuildCouplingPattern(P& gp) : globalpattern(gp) {}
+
+    template<typename Data, typename Child>
+    void operator()(Data& data, Child& child)
+    {
+      if (!child.appliesTo(data.elementSubDomains(),data.neighborSubDomains()))
+        return;
+      typedef typename Operator::template ExtractType<Child>::Type LOP;
+      typedef typename Child::Traits::LocalSubProblem LocalSubProblem;
+      typedef typename Child::Traits::RemoteSubProblem RemoteSubProblem;
+      typedef typename LocalSubProblem::Traits::TrialLocalFunctionSpace LocalLFSU;
+      typedef typename LocalSubProblem::Traits::TestLocalFunctionSpace LocalLFSV;
+      typedef typename RemoteSubProblem::Traits::TrialLocalFunctionSpace RemoteLFSU;
+      typedef typename RemoteSubProblem::Traits::TestLocalFunctionSpace RemoteLFSV;
+      const LocalSubProblem& localSubProblem = child.localSubProblem();
+      const RemoteSubProblem& remoteSubProblem = child.remoteSubProblem();
+      LocalLFSU local_lfsu(data.lfsu(),localSubProblem,localSubProblem.trialGridFunctionSpaceConstraints());
+      LocalLFSV local_lfsv(data.lfsv(),localSubProblem,localSubProblem.testGridFunctionSpaceConstraints());
+      local_lfsu.bind();
+      local_lfsv.bind();
+      RemoteLFSU remote_lfsu(data.lfsun(),remoteSubProblem,remoteSubProblem.trialGridFunctionSpaceConstraints());
+      RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
+      remote_lfsu.bind();
+      remote_lfsv.bind();
+      LocalSparsityPattern localpattern_sn, localpattern_ns;
+      Operator::extract(child).pattern_coupling(local_lfsu,local_lfsv,remote_lfsu,remote_lfsv,localpattern_sn,localpattern_ns);
+
+      // translate local to global indices and add to global pattern
+      // FIXME: this only works because of some kind of miracle!
+      for (size_t k=0; k<localpattern_sn.size(); ++k) {
+        std::cout << data.lfsv().localIndex(localpattern_sn[k].i()) << " / " << data.lfsv().globalIndex(data.lfsv().localIndex(localpattern_sn[k].i()));
+        std::cout << " -> ";
+        std::cout << data.lfsun().localIndex(localpattern_sn[k].j()) << " / " << data.lfsun().globalIndex(data.lfsun().localIndex(localpattern_sn[k].j()));
+        std::cout << std::endl;
+        data.gos().add_entry(globalpattern,
+                             data.lfsv().globalIndex(data.lfsv().localIndex(localpattern_sn[k].i())),
+                             data.lfsun().globalIndex(data.lfsun().localIndex(localpattern_sn[k].j()))
+                             );
+      }
+      for (size_t k=0; k<localpattern_ns.size(); ++k)
+        data.gos().add_entry(globalpattern,
+                             data.lfsvn().globalIndex(data.lfsvn().localIndex(localpattern_ns[k].i())),
+                             data.lfsu().globalIndex(data.lfsu().localIndex(localpattern_ns[k].j()))
+                             );
+    }
+
+    P& globalpattern;
+  };
+
   template<typename XL, typename RL>
   struct InvokeAlphaVolume
   {
@@ -943,7 +995,9 @@ public:
         apply_operator.template conditional<SubProblems,do_pattern_volume<> >(BuildVolumePattern<P>(globalpattern));
 
         // skeleton and boundary pattern
-        if (!any_child<MultiDomainGridOperatorSpace,SubProblems,do_pattern_skeleton<> >::value) continue;
+        if (!(any_child<MultiDomainGridOperatorSpace,SubProblems,do_pattern_skeleton<> >::value ||
+              any_child<MultiDomainGridOperatorSpace,Couplings,do_pattern_coupling<> >::value))
+          continue;
 
         // local function spaces in neighbor
         LFSU lfsun(gfsu);
@@ -964,6 +1018,7 @@ public:
 
             // get pattern
             apply_operator.template conditional<SubProblems,do_pattern_skeleton<> >(BuildSkeletonPattern<P>(globalpattern));
+            apply_operator.template conditional<Couplings,do_pattern_coupling<> >(BuildCouplingPattern<CouplingOperator,P>(globalpattern));
           }
       }
   }

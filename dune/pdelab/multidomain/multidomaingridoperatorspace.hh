@@ -102,6 +102,14 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
       dune_static_assert(k < N, "subProblem index too large");
       return mgos.template subProblem<k>();
     }
+
+    template<std::size_t k>
+    static typename SubProblem<k>::Type& get(MultiDomainGridOperatorSpace& mgos)
+    {
+      dune_static_assert(k < N, "subProblem index too large");
+      return mgos.template subProblem<k>();
+    }
+
   };
 
   struct Couplings
@@ -122,6 +130,41 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
       dune_static_assert(k < N, "coupling index too large");
       return mgos.template coupling<k>();
     }
+
+    template<std::size_t k>
+    static typename Coupling<k>::Type& get(MultiDomainGridOperatorSpace& mgos)
+    {
+      dune_static_assert(k < N, "coupling index too large");
+      return mgos.template coupling<k>();
+    }
+  };
+
+  struct AllChildren
+  {
+
+    static const std::size_t N = BaseT::CHILDREN;
+
+    template<std::size_t k>
+    struct GetType
+    {
+      dune_static_assert(k < N, "child index too large");
+      typedef typename BaseT::template Child<k>::Type Type;
+    };
+
+    template<std::size_t k>
+    static const typename BaseT::template Child<k>::Type& get(const MultiDomainGridOperatorSpace& mgos)
+    {
+      dune_static_assert(k < N, "child index too large");
+      return mgos.template getChild<k>();
+    }
+
+    template<std::size_t k>
+    static typename BaseT::template Child<k>::Type& get(MultiDomainGridOperatorSpace& mgos)
+    {
+      dune_static_assert(k < N, "child index too large");
+      return mgos.template getChild<k>();
+    }
+
   };
 
 

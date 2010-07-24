@@ -18,6 +18,7 @@
 #include <dune/pdelab/multidomain/operatorapplier.hh>
 
 #include <dune/pdelab/multidomain/multidomaingridoperatorspaceutilities.hh>
+#include <dune/pdelab/multidomain/multidomaingridoperatorspaceinvocationhelpers.hh>
 
 
 namespace Dune {
@@ -46,6 +47,18 @@ template<typename TReal,
          typename... SubProblemsAndCouplings>
 class InstationaryMultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePolicy,SubProblemsAndCouplings...>
 {
+
+  template<typename,typename>
+  friend struct BuildVolumePattern;
+
+  template<typename,typename>
+  friend struct BuildSkeletonPattern;
+
+  template<typename,typename>
+  friend struct BuildCouplingPattern;
+
+  friend struct PreStep;
+
   typedef VariadicCompositeNode<CopyStoragePolicy,SubProblemsAndCouplings...> BaseT;
 
   typedef typename extract_problems<SubProblemsAndCouplings...>::type SubProblemList;
@@ -53,7 +66,7 @@ class InstationaryMultiDomainGridOperatorSpace : public VariadicCompositeNode<Co
   typedef typename extract_couplings<SubProblemsAndCouplings...>::type CouplingList;
 
   static const std::size_t subProblemCount = std::tuple_size<SubProblemList>::value;
-  static const std::size_t couplingCount = std::tuple_size<SubProblemList>::value;
+  static const std::size_t couplingCount = std::tuple_size<CouplingList>::value;
 
   typedef typename GFSU::template ConstraintsContainer<double>::Type CU;
   typedef typename GFSV::template ConstraintsContainer<double>::Type CV;
@@ -65,7 +78,12 @@ class InstationaryMultiDomainGridOperatorSpace : public VariadicCompositeNode<Co
 
   template<std::size_t k>
   const typename SubProblem<k>::Type& subProblem() const {
-    return this->template getChild<std::tuple_element<k,SubProblemList>::type::globalIndex>();
+    return this->template getChild<std::tuple_element<k,SubProblemList>::type::globalPos>();
+  }
+
+  template<std::size_t k>
+  typename SubProblem<k>::Type& subProblem() {
+    return this->template getChild<std::tuple_element<k,SubProblemList>::type::globalPos>();
   }
 
   template<std::size_t k>
@@ -75,8 +93,96 @@ class InstationaryMultiDomainGridOperatorSpace : public VariadicCompositeNode<Co
 
   template<std::size_t k>
   const typename Coupling<k>::Type& coupling() const {
-    return this->template getChild<std::tuple_element<k,CouplingList>::type::globalIndex>();
+    return this->template getChild<std::tuple_element<k,CouplingList>::type::globalPos>();
   }
+
+  template<std::size_t k>
+  typename Coupling<k>::Type& coupling() {
+    return this->template getChild<std::tuple_element<k,CouplingList>::type::globalPos>();
+  }
+
+  struct SubProblems
+  {
+
+    static const std::size_t N = subProblemCount;
+
+    template<std::size_t k>
+    struct GetType
+    {
+      dune_static_assert(k < N, "subProblem index too large");
+      typedef typename SubProblem<k>::Type Type;
+    };
+
+    template<std::size_t k>
+    static const typename SubProblem<k>::Type& get(const InstationaryMultiDomainGridOperatorSpace& imgos)
+    {
+      dune_static_assert(k < N, "subProblem index too large");
+      return imgos.template subProblem<k>();
+    }
+
+    template<std::size_t k>
+    static typename SubProblem<k>::Type& get(InstationaryMultiDomainGridOperatorSpace& imgos)
+    {
+      dune_static_assert(k < N, "subProblem index too large");
+      return imgos.template subProblem<k>();
+    }
+
+  };
+
+  struct Couplings
+  {
+
+    static const std::size_t N = couplingCount;
+
+    template<std::size_t k>
+    struct GetType
+    {
+      dune_static_assert(k < N, "coupling index too large");
+      typedef typename Coupling<k>::Type Type;
+    };
+
+    template<std::size_t k>
+    static const typename Coupling<k>::Type& get(const InstationaryMultiDomainGridOperatorSpace& imgos)
+    {
+      dune_static_assert(k < N, "coupling index too large");
+      return imgos.template coupling<k>();
+    }
+
+    template<std::size_t k>
+    static typename Coupling<k>::Type& get(InstationaryMultiDomainGridOperatorSpace& imgos)
+    {
+      dune_static_assert(k < N, "coupling index too large");
+      return imgos.template coupling<k>();
+    }
+  };
+
+  struct AllChildren
+  {
+
+    static const std::size_t N = BaseT::CHILDREN;
+
+    template<std::size_t k>
+    struct GetType
+    {
+      dune_static_assert(k < N, "child index too large");
+      typedef typename BaseT::template Child<k>::Type Type;
+    };
+
+    template<std::size_t k>
+    static const typename BaseT::template Child<k>::Type& get(const InstationaryMultiDomainGridOperatorSpace& imgos)
+    {
+      dune_static_assert(k < N, "child index too large");
+      return imgos.template getChild<k>();
+    }
+
+    template<std::size_t k>
+    static typename BaseT::template Child<k>::Type& get(InstationaryMultiDomainGridOperatorSpace& imgos)
+    {
+      dune_static_assert(k < N, "child index too large");
+      return imgos.template getChild<k>();
+    }
+
+  };
 
 public:
 
@@ -89,777 +195,6 @@ public:
   typedef typename GV::Traits::template Codim<0>::Entity Element;
   typedef typename GV::IntersectionIterator IntersectionIterator;
   typedef typename IntersectionIterator::Intersection Intersection;
-
-
-  struct SetTime
-  {
-
-    SetTime(TReal t) :
-      time(t)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, Child& child)
-    {
-      child.setTime(time);
-    }
-
-  private:
-    const TReal time;
-  };
-
-  struct PreStep
-  {
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, Child& child)
-    {
-      const typename Data::GOS& gos = data.gos();
-      child.preStep(gos.time,gos.dt,gos.method->s());
-    }
-
-  };
-
-  struct PostStep
-  {
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, Child& child)
-    {
-      child.postStep();
-    }
-
-  };
-
-  struct PreStage
-  {
-
-    PreStage(TReal t, StageType s) :
-      time(t),
-      stage(s)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, Child& child)
-    {
-      child.preStage(time,stage);
-    }
-
-  private:
-    const TReal time;
-    const StageType stage;
-  };
-
-  struct PostStage
-  {
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, Child& child)
-    {
-      child.postStage();
-    }
-
-  };
-
-  struct SuggestTimestep
-  {
-
-    SuggestTimestep(TReal dt) :
-      _dt(dt),
-      _suggested_dt(std::numeric_limits<TReal>::max())
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, Child& child)
-    {
-      _suggested_dt = std::min(_suggested_dt,child.suggestTimestep(_dt));
-    }
-
-    TReal value() const {
-      return _suggested_dt;
-    }
-
-  private:
-    const TReal _dt;
-    TReal _suggested_dt;
-
-  };
-
-
-  template<typename Operator, typename P>
-  struct BuildVolumePattern
-  {
-    BuildVolumePattern(P& gp) : globalpattern(gp) {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsu.bind();
-      lfsv.bind();
-      LocalSparsityPattern localpattern;
-      Operator::extract(child).pattern_volume(lfsu,lfsv,localpattern);
-
-      // translate local to global indices and add to global pattern
-      for (size_t k=0; k<localpattern.size(); ++k)
-        // TODO: Figure out if we really need the localIndex() call
-        data.gos().add_entry(globalpattern,
-                             lfsv.globalIndex(lfsv.localIndex(localpattern[k].i())),
-                             lfsu.globalIndex(lfsu.localIndex(localpattern[k].j()))
-                             );
-    }
-
-    P& globalpattern;
-  };
-
-  template<typename Operator, typename P>
-  struct BuildSkeletonPattern
-  {
-    BuildSkeletonPattern(P& gp) : globalpattern(gp) {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, Child& child)
-    {
-      // skip subdomain borders that do not coincide with the overall domain border
-      if (!(child.appliesTo(data.elementSubDomains()) && child.appliesTo(data.neighborSubDomains())))
-        return;
-      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsu.bind();
-      lfsv.bind();
-      LFSU lfsun(data.lfsun(),child,child.trialGridFunctionSpaceConstraints());
-      LFSV lfsvn(data.lfsvn(),child,child.testGridFunctionSpaceConstraints());
-      lfsun.bind();
-      lfsvn.bind();
-      LocalSparsityPattern localpattern_sn, localpattern_ns;
-      Operator::extract(child).pattern_skeleton(lfsu,lfsv,lfsun,lfsvn,localpattern_sn,localpattern_ns);
-
-      // translate local to global indices and add to global pattern
-      for (size_t k=0; k<localpattern_sn.size(); ++k)
-        data.gos().add_entry(globalpattern,
-                             data.lfsv().globalIndex(data.lfsv().localIndex(localpattern_sn[k].i())),
-                             data.lfsun().globalIndex(data.lfsun().localIndex(localpattern_sn[k].j()))
-                             );
-
-      for (size_t k=0; k<localpattern_ns.size(); ++k)
-        data.gos().add_entry(globalpattern,
-                             data.lfsvn().globalIndex(data.lfsvn().localIndex(localpattern_ns[k].i())),
-                             data.lfsu().globalIndex(data.lfsu().localIndex(localpattern_ns[k].j()))
-                             );
-    }
-
-    P& globalpattern;
-  };
-
-  template<typename Operator, typename XL, typename RL>
-  struct InvokeAlphaVolume
-  {
-
-    InvokeAlphaVolume(const XL& xl, RL& rl) :
-      x(xl),
-      r(rl)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsu.bind();
-      lfsv.bind();
-      Operator::extract(child).alpha_volume(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,r);
-    }
-
-    const XL& x;
-    RL& r;
-  };
-
-  template<typename Operator, typename RL>
-  struct InvokeLambdaVolume
-  {
-
-    InvokeLambdaVolume(RL& rl) :
-      r(rl)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsv.bind();
-      Operator::extract(child).lambda_volume(ElementGeometry<typename Data::Element>(data.element()),lfsv,r);
-    }
-
-    RL& r;
-  };
-
-
-  template<typename Operator, typename XL, typename RL>
-  struct InvokeAlphaSkeletonOrBoundary
-  {
-
-    InvokeAlphaSkeletonOrBoundary(const XL& xl, const XL& xn, RL& rl, RL& rn, bool applyOneSided) :
-      _xl(xl),
-      _xn(xn),
-      _rl(rl),
-      _rn(rn),
-      _applyOneSided(applyOneSided)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Operator::template ExtractType<Child>::Type LOP;
-      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsu.bind();
-      lfsv.bind();
-      if (child.appliesTo(data.neighborSubDomains()))
-        {
-          if (_applyOneSided || LOP::doSkeletonTwoSided)
-            {
-              LFSU lfsun(data.lfsun(),child,child.trialGridFunctionSpaceConstraints());
-              LFSV lfsvn(data.lfsvn(),child,child.testGridFunctionSpaceConstraints());
-              lfsun.bind();
-              lfsvn.bind();
-              LocalAssemblerCallSwitch<Child,LOP::doAlphaSkeleton>::
-                alpha_skeleton(Operator::extract(child),
-                               IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                 data.intersection_index),
-                               lfsu,_xl,lfsv,lfsun,_xn,lfsvn,_rl,_rn);
-              if(LOP::doAlphaSkeleton)
-                data.setAlphaSkeletonInvoked();
-            }
-        }
-      else
-        {
-          LocalAssemblerCallSwitch<LOP,LOP::doAlphaBoundary>::
-            alpha_boundary(Operator::extract(child),
-                           IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                             data.intersection_index),
-                           lfsu,_xl,lfsv,_rl);
-          LocalAssemblerCallSwitch<LOP,LOP::doLambdaBoundary>::
-            lambda_boundary(Operator::extract(child),
-                            IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                              data.intersection_index),
-                            lfsv,_rl);
-        }
-    }
-
-    const XL& _xl;
-    const XL& _xn;
-    RL& _rl;
-    RL& _rn;
-    const bool _applyOneSided;
-  };
-
-
-  template<typename Operator, typename XL, typename RL>
-  struct InvokeAlphaBoundary
-  {
-
-    InvokeAlphaBoundary(const XL& xl, RL& rl) :
-      x(xl),
-      r(rl)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsu.bind();
-      lfsv.bind();
-      Operator::extract(child).alpha_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,r);
-    }
-
-    const XL& x;
-    RL& r;
-  };
-
-
-  template<typename Operator, typename XL, typename RL>
-  struct InvokeAlphaCoupling
-  {
-
-    InvokeAlphaCoupling(const XL& xl, const XL& xn, RL& rl, RL& rn) :
-      _local_x(xl),
-      _remote_x(xn),
-      _local_r(rl),
-      _remote_r(rn)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains(),data.neighborSubDomains()))
-        return;
-      typedef typename Operator::template ExtractType<Child>::Type LOP;
-      typedef typename Child::Traits::LocalSubProblem LocalSubProblem;
-      typedef typename Child::Traits::RemoteSubProblem RemoteSubProblem;
-      typedef typename LocalSubProblem::TrialLocalFunctionSpace LocalLFSU;
-      typedef typename LocalSubProblem::TestLocalFunctionSpace LocalLFSV;
-      typedef typename RemoteSubProblem::TrialLocalFunctionSpace RemoteLFSU;
-      typedef typename RemoteSubProblem::TestLocalFunctionSpace RemoteLFSV;
-      const LocalSubProblem& localSubProblem = child.localSubProblem();
-      const RemoteSubProblem& remoteSubProblem = child.remoteSubProblem();
-      LocalLFSU local_lfsu(data.lfsu(),localSubProblem,localSubProblem.trialGridFunctionSpaceConstraints());
-      LocalLFSV local_lfsv(data.lfsv(),localSubProblem,localSubProblem.testGridFunctionSpaceConstraints());
-      local_lfsu.bind();
-      local_lfsv.bind();
-      RemoteLFSU remote_lfsu(data.lfsun(),remoteSubProblem,remoteSubProblem.trialGridFunctionSpaceConstraints());
-      RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
-      remote_lfsu.bind();
-      remote_lfsv.bind();
-      Operator::extract(child).alpha_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                                data.intersection_index),
-                                              local_lfsu,
-                                              _local_x,
-                                              local_lfsv,
-                                              remote_lfsu,
-                                              _remote_x,
-                                              remote_lfsv,
-                                              _local_r,
-                                              _remote_r);
-      if(LOP::doAlphaSkeleton)
-        data.setAlphaSkeletonInvoked();
-    }
-
-    const XL& _local_x;
-    const XL& _remote_x;
-    RL& _local_r;
-    RL& _remote_r;
-  };
-
-  template<typename Operator, typename RL>
-  struct InvokeLambdaBoundary
-  {
-
-    InvokeLambdaBoundary(RL& rl) :
-      r(rl)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsv.bind();
-      Operator::extract(child).lambda_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsv,r);
-    }
-
-    RL& r;
-  };
-
-
-  template<typename Operator, typename XL, typename RL>
-  struct InvokeAlphaVolumePostSkeleton
-  {
-
-    InvokeAlphaVolumePostSkeleton(const XL& xl, RL& rl) :
-      x(xl),
-      r(rl)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsu.bind();
-      lfsv.bind();
-      Operator::extract(child).alpha_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,r);
-    }
-
-    const XL& x;
-    RL& r;
-  };
-
-  template<typename Operator, typename RL>
-  struct InvokeLambdaVolumePostSkeleton
-  {
-
-    InvokeLambdaVolumePostSkeleton(RL& rl) :
-      r(rl)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsv.bind();
-      Operator::extract(child).lambda_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsv,r);
-    }
-
-    RL& r;
-  };
-
-  template<typename Operator, typename XL, typename YL>
-  struct InvokeJacobianApplyVolume
-  {
-
-    InvokeJacobianApplyVolume(const XL& xl, YL& yl) :
-      x(xl),
-      y(yl)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsu.bind();
-      lfsv.bind();
-      Operator::extract(child).jacobian_apply_volume(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,y);
-    }
-
-    const XL& x;
-    YL& y;
-  };
-
-  template<typename Operator, typename XL, typename YL>
-  struct InvokeJacobianApplySkeletonOrBoundary
-  {
-
-    InvokeJacobianApplySkeletonOrBoundary(const XL& xl, const XL& xn, YL& yl, YL& yn, bool applyOneSided) :
-      _xl(xl),
-      _xn(xn),
-      _yl(yl),
-      _yn(yn),
-      _applyOneSided(applyOneSided)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Operator::template ExtractType<Child>::Type LOP;
-      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsu.bind();
-      lfsv.bind();
-      if (child.appliesTo(data.neighborSubDomains()))
-        {
-          if (_applyOneSided || LOP::doSkeletonTwoSided)
-            {
-              LFSU lfsun(data.lfsun(),child,child.trialGridFunctionSpaceConstraints());
-              LFSV lfsvn(data.lfsvn(),child,child.testGridFunctionSpaceConstraints());
-              lfsun.bind();
-              lfsvn.bind();
-              LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
-                jacobian_apply_skeleton(Operator::extract(child),
-                                        IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                          data.intersection_index),
-                                        lfsu,_xl,lfsv,lfsun,_xn,lfsvn,_yl,_yn);
-              if(LOP::doAlphaSkeleton)
-                data.setAlphaSkeletonInvoked();
-            }
-        }
-      else
-        {
-          LocalAssemblerCallSwitch<LOP,LOP::doAlphaBoundary>::
-            jacobian_apply_boundary(Operator::extract(child),
-                                    IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                      data.intersection_index),
-                                    lfsu,_xl,lfsv,_yl);
-        }
-    }
-
-    const XL& _xl;
-    const XL& _xn;
-    YL& _yl;
-    YL& _yn;
-    const bool _applyOneSided;
-  };
-
-  template<typename Operator, typename XL, typename YL>
-  struct InvokeJacobianApplyBoundary
-  {
-
-    InvokeJacobianApplyBoundary(const XL& xl, YL& yl) :
-      x(xl),
-      y(yl)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsu.bind();
-      lfsv.bind();
-      Operator::extract(child).jacobian_apply_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,y);
-    }
-
-    const XL& x;
-    YL& y;
-  };
-
-  template<typename Operator, typename XL, typename YL>
-  struct InvokeJacobianApplyCoupling
-  {
-
-    InvokeJacobianApplyCoupling(const XL& xl, const XL& xn, YL& yl, YL& yn) :
-      _local_x(xl),
-      _remote_x(xn),
-      _local_y(yl),
-      _remote_y(yn)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains(),data.neighborSubDomains()))
-        return;
-      typedef typename Operator::template ExtractType<Child>::Type LOP;
-      typedef typename Child::Traits::LocalSubProblem LocalSubProblem;
-      typedef typename Child::Traits::RemoteSubProblem RemoteSubProblem;
-      typedef typename LocalSubProblem::TrialLocalFunctionSpace LocalLFSU;
-      typedef typename LocalSubProblem::TestLocalFunctionSpace LocalLFSV;
-      typedef typename RemoteSubProblem::TrialLocalFunctionSpace RemoteLFSU;
-      typedef typename RemoteSubProblem::TestLocalFunctionSpace RemoteLFSV;
-      const LocalSubProblem& localSubProblem = child.localSubProblem();
-      const RemoteSubProblem& remoteSubProblem = child.remoteSubProblem();
-      LocalLFSU local_lfsu(data.lfsu(),localSubProblem,localSubProblem.trialGridFunctionSpaceConstraints());
-      LocalLFSV local_lfsv(data.lfsv(),localSubProblem,localSubProblem.testGridFunctionSpaceConstraints());
-      local_lfsu.bind();
-      local_lfsv.bind();
-      RemoteLFSU remote_lfsu(data.lfsun(),remoteSubProblem,remoteSubProblem.trialGridFunctionSpaceConstraints());
-      RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
-      remote_lfsu.bind();
-      remote_lfsv.bind();
-      Operator::extract(child).jacobian_apply_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                                         data.intersection_index),
-                                                       local_lfsu,
-                                                       _local_x,
-                                                       local_lfsv,
-                                                       remote_lfsu,
-                                                       _remote_x,
-                                                       remote_lfsv,
-                                                       _local_y,
-                                                       _remote_y);
-      if(LOP::doAlphaSkeleton)
-        data.setAlphaSkeletonInvoked();
-    }
-
-    const XL& _local_x;
-    const XL& _remote_x;
-    YL& _local_y;
-    YL& _remote_y;
-  };
-
-
-  template<typename Operator, typename XL, typename YL>
-  struct InvokeJacobianApplyVolumePostSkeleton
-  {
-
-    InvokeJacobianApplyVolumePostSkeleton(const XL& xl, YL& yl) :
-      x(xl),
-      y(yl)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsu.bind();
-      lfsv.bind();
-      Operator::extract(child).jacobian_apply_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,y);
-    }
-
-    const XL& x;
-    YL& y;
-  };
-
-
-  template<typename Operator, typename XL, typename AL>
-  struct InvokeJacobianVolume
-  {
-
-    InvokeJacobianVolume(const XL& xl, AL& al) :
-      x(xl),
-      a(al)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Child::Traits::LocalTrialFunctionSpace LFSU;
-      typedef typename Child::Traits::LocalTestFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsu.bind();
-      lfsv.bind();
-      Operator::extract(child).jacobian_volume(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,a);
-    }
-
-    const XL& x;
-    AL& a;
-  };
-
-  template<typename Operator, typename XL, typename AL>
-  struct InvokeJacobianCoupling
-  {
-
-    InvokeJacobianCoupling(const XL& xl, const XL& xn, AL& al, AL& al_sn, AL& al_ns, AL& al_nn) :
-      _local_x(xl),
-      _remote_x(xn),
-      _local_a(al),
-      _local_to_remote_a(al_sn),
-      _remote_to_local_a(al_ns),
-      _remote_a(al_nn),
-      _applyOneSided(applyOneSided)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains(),data.neighborSubDomains()))
-        return;
-      typedef typename Operator::template ExtractType<Child>::Type LOP;
-      typedef typename Child::Traits::LocalSubProblem LocalSubProblem;
-      typedef typename Child::Traits::RemoteSubProblem RemoteSubProblem;
-      typedef typename LocalSubProblem::TrialLocalFunctionSpace LocalLFSU;
-      typedef typename LocalSubProblem::TestLocalFunctionSpace LocalLFSV;
-      typedef typename RemoteSubProblem::TrialLocalFunctionSpace RemoteLFSU;
-      typedef typename RemoteSubProblem::TestLocalFunctionSpace RemoteLFSV;
-      const LocalSubProblem& localSubProblem = child.localSubProblem();
-      const RemoteSubProblem& remoteSubProblem = child.remoteSubProblem();
-      LocalLFSU local_lfsu(data.lfsu(),localSubProblem,localSubProblem.trialGridFunctionSpaceConstraints());
-      LocalLFSV local_lfsv(data.lfsv(),localSubProblem,localSubProblem.testGridFunctionSpaceConstraints());
-      local_lfsu.bind();
-      local_lfsv.bind();
-      RemoteLFSU remote_lfsu(data.lfsun(),remoteSubProblem,remoteSubProblem.trialGridFunctionSpaceConstraints());
-      RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
-      remote_lfsu.bind();
-      remote_lfsv.bind();
-      Operator::extract(child).jacobian_apply_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                                         data.intersection_index),
-                                                       local_lfsu,
-                                                       _local_x,
-                                                       local_lfsv,
-                                                       remote_lfsu,
-                                                       _remote_x,
-                                                       remote_lfsv,
-                                                       _local_a,
-                                                       _local_to_remote_a,
-                                                       _remote_to_local_a,
-                                                       _remote_a);
-      if(LOP::doAlphaSkeleton)
-        data.setAlphaSkeletonInvoked();
-    }
-
-    const XL& _xl;
-    const XL& _xn;
-    AL& _local_a;
-    AL& _local_to_remote_a;
-    AL& _remote_to_local_a;
-    AL& _remote_a;
-  };
-
-
-  template<typename Operator, typename XL, typename AL>
-  struct InvokeJacobianBoundary
-  {
-
-    InvokeJacobianBoundary(const XL& xl, AL& al) :
-      x(xl),
-      a(al)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsu.bind();
-      lfsv.bind();
-      Operator::extract(child).jacobian_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,a);
-    }
-
-    const XL& x;
-    AL& a;
-  };
-
-  template<typename Operator, typename XL, typename AL>
-  struct InvokeJacobianVolumePostSkeleton
-  {
-
-    InvokeJacobianVolumePostSkeleton(const XL& xl, AL& al) :
-      x(xl),
-      a(al)
-    {}
-
-    template<typename Data, typename Child>
-    void operator()(Data& data, const Child& child)
-    {
-      if (!child.appliesTo(data.elementSubDomains()))
-        return;
-      typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-      typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-      LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-      LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-      lfsu.bind();
-      lfsv.bind();
-      Operator::extract(child).jacobian_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,a);
-    }
-
-    const XL& x;
-    AL& a;
-  };
 
 
 public:
@@ -947,26 +282,26 @@ public:
     time = time_;
     dt = dt_;
     operator_applier<InstationaryMultiDomainGridOperatorSpace> apply_function(*this);
-    apply_function(PreStep());
+    apply_function.template apply<AllChildren>(PreStep());
   }
 
   void postStep()
   {
     operator_applier<InstationaryMultiDomainGridOperatorSpace> apply_function(*this);
-    apply_function(PostStep());
+    apply_function.template apply<AllChildren>(PostStep());
   }
 
   void postStage()
   {
     operator_applier<InstationaryMultiDomainGridOperatorSpace> apply_function(*this);
-    apply_function(PostStage());
+    apply_function.template apply<AllChildren>(PostStage());
   }
 
   TReal suggestTimestep(TReal dt) const
   {
     operator_applier<const InstationaryMultiDomainGridOperatorSpace> apply_function(*this);
-    SuggestTimestep suggested_dt(dt);
-    apply_function(suggested_dt);
+    SuggestTimestep<TReal> suggested_dt(dt);
+    apply_function.template apply<AllChildren>(suggested_dt);
     return suggested_dt.value();
   }
 
@@ -1018,13 +353,13 @@ public:
         apply_operator.setElementSubDomains(gfsu.gridview().indexSet().subDomains(*it));
 
         if (method->implicit())
-          apply_operator.template conditional<do_pattern_volume<SpatialOperator> >(BuildVolumePattern<SpatialOperator,P>(globalpattern));
-        apply_operator.template conditional<do_pattern_volume<TemporalOperator> >(BuildVolumePattern<TemporalOperator,P>(globalpattern));
+          apply_operator.template conditional<SubProblems,do_pattern_volume<SpatialOperator> >(BuildVolumePattern<P,SpatialOperator>(globalpattern));
+        apply_operator.template conditional<SubProblems,do_pattern_volume<TemporalOperator> >(BuildVolumePattern<P,TemporalOperator>(globalpattern));
 
 
         // skeleton and boundary pattern
-        if (!(any_child<InstationaryMultiDomainGridOperatorSpace,do_pattern_skeleton<TemporalOperator> >::value ||
-              (any_child<InstationaryMultiDomainGridOperatorSpace,do_pattern_skeleton<SpatialOperator> >::value && method->implicit()))) continue;
+        if (!(any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_pattern_skeleton<TemporalOperator> >::value ||
+              (any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_pattern_skeleton<SpatialOperator> >::value && method->implicit()))) continue;
 
         // local function spaces in neighbor
         LFSU lfsun(gfsu);
@@ -1045,8 +380,8 @@ public:
 
             // get pattern
             if (method->implicit())
-              apply_operator.template conditional<do_pattern_skeleton<SpatialOperator> >(BuildSkeletonPattern<SpatialOperator,P>(globalpattern));
-            apply_operator.template conditional<do_pattern_skeleton<TemporalOperator> >(BuildSkeletonPattern<TemporalOperator,P>(globalpattern));
+              apply_operator.template conditional<SubProblems,do_pattern_skeleton<SpatialOperator> >(BuildSkeletonPattern<P,SpatialOperator>(globalpattern));
+            apply_operator.template conditional<SubProblems,do_pattern_skeleton<TemporalOperator> >(BuildSkeletonPattern<P,TemporalOperator>(globalpattern));
           }
       }
   }
@@ -1086,15 +421,15 @@ public:
     apply_operator.setlfsv(lfsv);
 
     // prepare local operators for stage
-    apply_operator(PreStage(time+method->d(stage)*dt,stage));
+    apply_operator.template apply<AllChildren>(PreStage<TReal,StageType>(time+method->d(stage)*dt,stage));
 
     // clear constant part residual before assembling
     r0 = 0.0;
 
     const bool needsSkeleton =
-      any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_skeleton<SpatialOperator> >::value ||
-      any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_boundary<SpatialOperator> >::value ||
-      any_child<InstationaryMultiDomainGridOperatorSpace,do_lambda_boundary<SpatialOperator> >::value;
+      any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_alpha_skeleton<SpatialOperator> >::value ||
+      any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_alpha_boundary<SpatialOperator> >::value ||
+      any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_lambda_boundary<SpatialOperator> >::value;
 
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
@@ -1125,7 +460,7 @@ public:
         for(StageType i = 0; i < stage; ++i)
           {
             // set time in local operators for evaluation
-            apply_operator(SetTime(time+d[i]*dt));
+            apply_operator.template apply<AllChildren>(SetTime<TReal>(time+d[i]*dt));
 
             // allocate local data container
             typedef std::vector<typename X::ElementType> XL;
@@ -1143,12 +478,12 @@ public:
             // volume evaluation
             if (doA)
               {
-                apply_operator.template conditional<do_alpha_volume<SpatialOperator> >(InvokeAlphaVolume<SpatialOperator,XL,RL>(xl,rl_a));
-                apply_operator.template conditional<do_lambda_volume<SpatialOperator> >(InvokeLambdaVolume<SpatialOperator,RL>(rl_a));
+                apply_operator.template conditional<SubProblems,do_alpha_volume<SpatialOperator> >(InvokeAlphaVolume<XL,RL,SpatialOperator>(xl,rl_a));
+                apply_operator.template conditional<SubProblems,do_lambda_volume<SpatialOperator> >(InvokeLambdaVolume<RL,SpatialOperator>(rl_a));
               }
             if (doM)
               {
-                apply_operator.template conditional<do_alpha_volume<TemporalOperator> >(InvokeAlphaVolume<TemporalOperator,XL,RL>(xl,rl_m));
+                apply_operator.template conditional<SubProblems,do_alpha_volume<TemporalOperator> >(InvokeAlphaVolume<XL,RL,TemporalOperator>(xl,rl_m));
               }
 
             // skip if no intersection iterator is needed
@@ -1192,8 +527,8 @@ public:
                         lfsun.vread(*x[i],xn);
 
                         // unique vist of intersection
-                        apply_operator.template conditional<do_alpha_skeleton_or_boundary<SpatialOperator> >
-                          (InvokeAlphaSkeletonOrBoundary<SpatialOperator,XL,RL>(xl,xn,rl_a,rn,
+                        apply_operator.template conditional<SubProblems,do_alpha_skeleton_or_boundary<SpatialOperator> >
+                          (InvokeAlphaSkeletonOrBoundary<XL,RL,SpatialOperator>(xl,xn,rl_a,rn,
                                                                                 id > idn ||
                                                                                 (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
                                                                                 )
@@ -1210,16 +545,16 @@ public:
                     // boundary term
                     if (iit->boundary())
                       {
-                        apply_operator.template conditional<do_alpha_boundary<SpatialOperator> >(InvokeAlphaBoundary<SpatialOperator,XL,RL>(xl,rl_a));
-                        apply_operator.template conditional<do_lambda_boundary<SpatialOperator> >(InvokeLambdaBoundary<SpatialOperator,RL>(rl_a));
+                        apply_operator.template conditional<SubProblems,do_alpha_boundary<SpatialOperator> >(InvokeAlphaBoundary<XL,RL,SpatialOperator>(xl,rl_a));
+                        apply_operator.template conditional<SubProblems,do_lambda_boundary<SpatialOperator> >(InvokeLambdaBoundary<RL,SpatialOperator>(rl_a));
                       }
                   }
               }
 
             if (doA)
               {
-                apply_operator.template conditional<do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeAlphaVolumePostSkeleton<SpatialOperator,XL,RL>(xl,rl_a));
-                apply_operator.template conditional<do_lambda_volume_post_skeleton<SpatialOperator> >(InvokeLambdaVolumePostSkeleton<SpatialOperator,RL>(rl_a));
+                apply_operator.template conditional<SubProblems,do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeAlphaVolumePostSkeleton<XL,RL,SpatialOperator>(xl,rl_a));
+                apply_operator.template conditional<SubProblems,do_lambda_volume_post_skeleton<SpatialOperator> >(InvokeLambdaVolumePostSkeleton<RL,SpatialOperator>(rl_a));
 
                 // accumulate result (note: r needs to be cleared outside)
                 for (auto it = rl_a.begin(); it != rl_a.end(); ++it)
@@ -1275,15 +610,15 @@ public:
     apply_operator.setlfsv(lfsv);
 
     // prepare local operators for stage
-    apply_operator(PreStage(time+method->d(stage)*dt,stage));
+    apply_operator.template apply<AllChildren>(PreStage<TReal,StageType>(time+method->d(stage)*dt,stage));
 
     // clear constant part residual before assembling
     r0 = 0.0;
 
     const bool needsSkeleton =
-      any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_skeleton<SpatialOperator> >::value ||
-      any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_boundary<SpatialOperator> >::value ||
-      any_child<InstationaryMultiDomainGridOperatorSpace,do_lambda_boundary<SpatialOperator> >::value;
+      any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_alpha_skeleton<SpatialOperator> >::value ||
+      any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_alpha_boundary<SpatialOperator> >::value ||
+      any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_lambda_boundary<SpatialOperator> >::value;
 
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
@@ -1314,7 +649,7 @@ public:
         for(StageType i = 0; i < stage; ++i)
           {
             // set time in local operators for evaluation
-            apply_operator(SetTime(time+d[i]*dt));
+            apply_operator.template apply<AllChildren>(SetTime<TReal>(time+d[i]*dt));
 
             // allocate local data container
             typedef std::vector<typename X::ElementType> XL;
@@ -1332,12 +667,12 @@ public:
             // volume evaluation
             if (doA)
               {
-                apply_operator.template conditional<do_alpha_volume<SpatialOperator> >(InvokeAlphaVolume<SpatialOperator,XL,RL>(xl,rl_a));
-                apply_operator.template conditional<do_lambda_volume<SpatialOperator> >(InvokeLambdaVolume<SpatialOperator,RL>(rl_a));
+                apply_operator.template conditional<SubProblems,do_alpha_volume<SpatialOperator> >(InvokeAlphaVolume<XL,RL,SpatialOperator>(xl,rl_a));
+                apply_operator.template conditional<SubProblems,do_lambda_volume<SpatialOperator> >(InvokeLambdaVolume<RL,SpatialOperator>(rl_a));
               }
             if (doM)
               {
-                apply_operator.template conditional<do_alpha_volume<TemporalOperator> >(InvokeAlphaVolume<TemporalOperator,XL,RL>(xl,rl_m));
+                apply_operator.template conditional<SubProblems,do_alpha_volume<TemporalOperator> >(InvokeAlphaVolume<XL,RL,TemporalOperator>(xl,rl_m));
               }
 
             // skip if no intersection iterator is needed
@@ -1381,8 +716,8 @@ public:
                         lfsun.vread(*x[i],xn);
 
                         // unique vist of intersection
-                        apply_operator.template conditional<do_alpha_skeleton_or_boundary<SpatialOperator> >
-                          (InvokeAlphaSkeletonOrBoundary<SpatialOperator,XL,RL>(xl,xn,rl_a,rn,
+                        apply_operator.template conditional<SubProblems,do_alpha_skeleton_or_boundary<SpatialOperator> >
+                          (InvokeAlphaSkeletonOrBoundary<XL,RL,SpatialOperator>(xl,xn,rl_a,rn,
                                                                                 id > idn ||
                                                                                 (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
                                                                                 )
@@ -1399,16 +734,16 @@ public:
                     // boundary term
                     if (iit->boundary())
                       {
-                        apply_operator.template conditional<do_alpha_boundary<SpatialOperator> >(InvokeAlphaBoundary<SpatialOperator,XL,RL>(xl,rl_a));
-                        apply_operator.template conditional<do_lambda_boundary<SpatialOperator> >(InvokeLambdaBoundary<SpatialOperator,RL>(rl_a));
+                        apply_operator.template conditional<SubProblems,do_alpha_boundary<SpatialOperator> >(InvokeAlphaBoundary<XL,RL,SpatialOperator>(xl,rl_a));
+                        apply_operator.template conditional<SubProblems,do_lambda_boundary<SpatialOperator> >(InvokeLambdaBoundary<RL,SpatialOperator>(rl_a));
                       }
                   }
               }
 
             if (doA)
               {
-                apply_operator.template conditional<do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeAlphaVolumePostSkeleton<SpatialOperator,XL,RL>(xl,rl_a));
-                apply_operator.template conditional<do_lambda_volume_post_skeleton<SpatialOperator> >(InvokeLambdaVolumePostSkeleton<SpatialOperator,RL>(rl_a));
+                apply_operator.template conditional<SubProblems,do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeAlphaVolumePostSkeleton<XL,RL,SpatialOperator>(xl,rl_a));
+                apply_operator.template conditional<SubProblems,do_lambda_volume_post_skeleton<SpatialOperator> >(InvokeLambdaVolumePostSkeleton<RL,SpatialOperator>(rl_a));
 
                 // accumulate result (note: r needs to be cleared outside)
                 for (auto it = rl_a.begin(); it != rl_a.end(); ++it)
@@ -1435,14 +770,14 @@ public:
         AL ml(lfsv.size(),lfsu.size(),0.0);
 
         // set time in local operator for evaluation
-        apply_operator(SetTime(time+d_r*dt));
+        apply_operator.template apply<AllChildren>(SetTime<TReal>(time+d_r*dt));
 
         // read coefficents; this is only a dummy since Jacobian should not depend on solution !
         // but of course it is required to give this parameter
         lfsu.vread(*x[stage],xl);
 
         // compute local jacobian
-        apply_operator.template conditional<do_alpha_volume<TemporalOperator> >(InvokeJacobianVolume<TemporalOperator,XL,AL>(xl,ml));
+        apply_operator.template conditional<SubProblems,do_alpha_volume<TemporalOperator> >(InvokeJacobianVolume<XL,AL,TemporalOperator>(xl,ml));
 
         // accumulate to global matrix
         etadd(lfsv,lfsu,ml,mat);
@@ -1489,7 +824,7 @@ public:
     const bool implicit = method->implicit();
 
     // set time in local operators for evaluation
-    apply_operator(SetTime(time+d_r*dt));
+    apply_operator.template apply<AllChildren>(SetTime<TReal>(time+d_r*dt));
 
     // copy constant part of residual
     r = r0;
@@ -1531,17 +866,17 @@ public:
         // volume evaluation
         if (implicit)
           {
-            apply_operator.template conditional<do_alpha_volume<SpatialOperator> >(InvokeAlphaVolume<SpatialOperator,XL,RL>(xl,rl_a));
-            apply_operator.template conditional<do_lambda_volume<SpatialOperator> >(InvokeLambdaVolume<SpatialOperator,RL>(rl_a));
+            apply_operator.template conditional<SubProblems,do_alpha_volume<SpatialOperator> >(InvokeAlphaVolume<XL,RL,SpatialOperator>(xl,rl_a));
+            apply_operator.template conditional<SubProblems,do_lambda_volume<SpatialOperator> >(InvokeLambdaVolume<RL,SpatialOperator>(rl_a));
           }
-        apply_operator.template conditional<do_alpha_volume<TemporalOperator> >(InvokeAlphaVolume<TemporalOperator,XL,RL>(xl,rl_m));
+        apply_operator.template conditional<SubProblems,do_alpha_volume<TemporalOperator> >(InvokeAlphaVolume<XL,RL,TemporalOperator>(xl,rl_m));
 
 
         // skip if no intersection iterator is needed
         if (implicit &&
-            (any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_skeleton<SpatialOperator> >::value ||
-             any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_boundary<SpatialOperator> >::value ||
-             any_child<InstationaryMultiDomainGridOperatorSpace,do_lambda_boundary<SpatialOperator> >::value)
+            (any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_alpha_skeleton<SpatialOperator> >::value ||
+             any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_alpha_boundary<SpatialOperator> >::value ||
+             any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_lambda_boundary<SpatialOperator> >::value)
             )
           {
             // local function spaces in neighbor
@@ -1582,8 +917,8 @@ public:
                     lfsun.vread(x,xn);
 
                     // unique vist of intersection
-                    apply_operator.template conditional<do_alpha_skeleton_or_boundary<SpatialOperator> >
-                      (InvokeAlphaSkeletonOrBoundary<SpatialOperator,XL,RL>(xl,xn,rl_a,rn,
+                    apply_operator.template conditional<SubProblems,do_alpha_skeleton_or_boundary<SpatialOperator> >
+                      (InvokeAlphaSkeletonOrBoundary<XL,RL,SpatialOperator>(xl,xn,rl_a,rn,
                                                                             id > idn ||
                                                                             (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
                                                                             )
@@ -1600,16 +935,16 @@ public:
                 // boundary term
                 if (iit->boundary())
                   {
-                    apply_operator.template conditional<do_alpha_boundary<SpatialOperator> >(InvokeAlphaBoundary<SpatialOperator,XL,RL>(xl,rl_a));
-                    apply_operator.template conditional<do_lambda_boundary<SpatialOperator> >(InvokeLambdaBoundary<SpatialOperator,RL>(rl_a));
+                    apply_operator.template conditional<SubProblems,do_alpha_boundary<SpatialOperator> >(InvokeAlphaBoundary<XL,RL,SpatialOperator>(xl,rl_a));
+                    apply_operator.template conditional<SubProblems,do_lambda_boundary<SpatialOperator> >(InvokeLambdaBoundary<RL,SpatialOperator>(rl_a));
                   }
               }
           }
 
         if (implicit)
           {
-            apply_operator.template conditional<do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeAlphaVolumePostSkeleton<SpatialOperator,XL,RL>(xl,rl_a));
-            apply_operator.template conditional<do_lambda_volume_post_skeleton<SpatialOperator> >(InvokeLambdaVolumePostSkeleton<SpatialOperator,RL>(rl_a));
+            apply_operator.template conditional<SubProblems,do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeAlphaVolumePostSkeleton<XL,RL,SpatialOperator>(xl,rl_a));
+            apply_operator.template conditional<SubProblems,do_lambda_volume_post_skeleton<SpatialOperator> >(InvokeLambdaVolumePostSkeleton<RL,SpatialOperator>(rl_a));
 
             // accumulate result (note: r needs to be cleared outside)
             for (auto it = rl_a.begin(); it != rl_a.end(); ++it)
@@ -1650,7 +985,7 @@ public:
     const bool implicit = method->implicit();
 
     // set time in local operators for evaluation
-    apply_operator(SetTime(time+d_r*dt));
+    apply_operator.template apply<AllChildren>(SetTime<TReal>(time+d_r*dt));
 
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
@@ -1689,12 +1024,12 @@ public:
 
         // volume evaluation
         if (implicit)
-          apply_operator.template conditional<do_alpha_volume<SpatialOperator> >(InvokeJacobianApplyVolume<SpatialOperator,XL,YL>(xl,yl_a));
-        apply_operator.template conditional<do_alpha_volume<TemporalOperator> >(InvokeJacobianApplyVolume<TemporalOperator,XL,YL>(xl,yl_m));
+          apply_operator.template conditional<SubProblems,do_alpha_volume<SpatialOperator> >(InvokeJacobianApplyVolume<XL,YL,SpatialOperator>(xl,yl_a));
+        apply_operator.template conditional<SubProblems,do_alpha_volume<TemporalOperator> >(InvokeJacobianApplyVolume<XL,YL,TemporalOperator>(xl,yl_m));
 
         // skeleton and boundary evaluation
-        if (implicit && (any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_skeleton<SpatialOperator> >::value ||
-                         any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_boundary<SpatialOperator> >::value))
+        if (implicit && (any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_alpha_skeleton<SpatialOperator> >::value ||
+                         any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_alpha_boundary<SpatialOperator> >::value))
           {
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
@@ -1733,8 +1068,8 @@ public:
                     // read coefficents
                     lfsun.vread(x,xn);
 
-                    apply_operator.template conditional<do_alpha_skeleton_or_boundary<SpatialOperator> >
-                      (InvokeJacobianApplySkeletonOrBoundary<SpatialOperator,XL,YL>(xl,xn,yl_a,yn_a,
+                    apply_operator.template conditional<SubProblems,do_alpha_skeleton_or_boundary<SpatialOperator> >
+                      (InvokeJacobianApplySkeletonOrBoundary<XL,YL,SpatialOperator>(xl,xn,yl_a,yn_a,
                                                                                     id > idn ||
                                                                                     (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
                                                                                     )
@@ -1751,14 +1086,14 @@ public:
                 // boundary term
                 if (iit->boundary())
                   {
-                    apply_operator.template conditional<do_alpha_boundary<SpatialOperator> >(InvokeJacobianApplyBoundary<SpatialOperator,XL,YL>(xl,yl_a));
+                    apply_operator.template conditional<SubProblems,do_alpha_boundary<SpatialOperator> >(InvokeJacobianApplyBoundary<XL,YL,SpatialOperator>(xl,yl_a));
                   }
               }
           }
 
         if (implicit)
           {
-            apply_operator.template conditional<do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeJacobianApplyVolumePostSkeleton<SpatialOperator,XL,YL>(xl,yl_a));
+            apply_operator.template conditional<SubProblems,do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeJacobianApplyVolumePostSkeleton<XL,YL,SpatialOperator>(xl,yl_a));
             for(auto it = yl_a.begin(); it != yl_a.end(); ++it)
               (*it) *= b_rr*dt;
             // accumulate result (note: r needs to be cleared outside)
@@ -1800,7 +1135,7 @@ public:
     const bool implicit = method->implicit();
 
     // set time in local operators for evaluation
-    apply_operator(SetTime(time+d_r*dt));
+    apply_operator.template apply<AllChildren>(SetTime<TReal>(time+d_r*dt));
 
     // traverse grid view
     for (ElementIterator it = gfsu.gridview().template begin<0>();
@@ -1838,13 +1173,13 @@ public:
 
         // volume evaluation
         if (implicit)
-          apply_operator.template conditional<do_alpha_volume<SpatialOperator> >(InvokeJacobianVolume<SpatialOperator,XL,AL>(xl,al));
-        apply_operator.template conditional<do_alpha_volume<TemporalOperator> >(InvokeJacobianVolume<TemporalOperator,XL,AL>(xl,ml));
+          apply_operator.template conditional<SubProblems,do_alpha_volume<SpatialOperator> >(InvokeJacobianVolume<XL,AL,SpatialOperator>(xl,al));
+        apply_operator.template conditional<SubProblems,do_alpha_volume<TemporalOperator> >(InvokeJacobianVolume<XL,AL,TemporalOperator>(xl,ml));
 
 
         // skeleton and boundary evaluation
-        if (implicit && (any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_skeleton<SpatialOperator> >::value ||
-                         any_child<InstationaryMultiDomainGridOperatorSpace,do_alpha_boundary<SpatialOperator> >::value))
+        if (implicit && (any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_alpha_skeleton<SpatialOperator> >::value ||
+                         any_child<InstationaryMultiDomainGridOperatorSpace,SubProblems,do_alpha_boundary<SpatialOperator> >::value))
           {
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
@@ -1886,8 +1221,8 @@ public:
                     // read coefficents
                     lfsun.vread(x,xn);
 
-                    apply_operator.template conditional<do_alpha_skeleton_or_boundary<SpatialOperator> >
-                      (InvokeJacobianSkeletonOrBoundary<SpatialOperator,XL,AL>(xl,xn,al,al_sn,al_ns,al_nn,
+                    apply_operator.template conditional<SubProblems,do_alpha_skeleton_or_boundary<SpatialOperator> >
+                      (InvokeJacobianSkeletonOrBoundary<XL,AL,SpatialOperator>(xl,xn,al,al_sn,al_ns,al_nn,
                                                                                id > idn ||
                                                                                (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
                                                                                )
@@ -1907,13 +1242,13 @@ public:
                 // boundary term
                 if (iit->boundary())
                   {
-                    apply_operator.template conditional<do_alpha_boundary<SpatialOperator> >(InvokeJacobianBoundary<SpatialOperator,XL,AL>(xl,al));
+                    apply_operator.template conditional<SubProblems,do_alpha_boundary<SpatialOperator> >(InvokeJacobianBoundary<XL,AL,SpatialOperator>(xl,al));
                   }
               }
           }
 
         if (implicit) {
-          apply_operator.template conditional<do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeJacobianVolumePostSkeleton<SpatialOperator,XL,AL>(xl,al));
+          apply_operator.template conditional<SubProblems,do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeJacobianVolumePostSkeleton<XL,AL,SpatialOperator>(xl,al));
           al *= b_rr*dt;
           etadd(lfsv,lfsu,al,a);
         }

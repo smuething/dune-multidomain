@@ -6,7 +6,7 @@ AM_LDFLAGS += $(ALL_PKG_LDFLAGS)
 AM_LIBS = $(ALL_PKG_LIBS)
 CXXFLAGS += -g3
 
-check_PROGRAMS = testmultidomaingridfunctionspace poisson reactiondiffusion
+check_PROGRAMS = testmultidomaingridfunctionspace poisson reactiondiffusion explicitlycoupledpoisson
 
 testmultidomaingridfunctionspace_SOURCES = testmultidomaingridfunctionspace.cc
 #testmultidomaingridfunctionspace_CXXFLAGS = $(AM_CXXFLAGS) $(ALL_PKG_CPPFLAGS) $(BOOST_CPPFLAGS)
@@ -17,3 +17,5 @@ poisson_SOURCES = poisson.cc
 
 
 reactiondiffusion_SOURCES = reactiondiffusion.cc
+
+explicitlycoupledpoisson_SOURCES = explicitlycoupledpoisson.cc

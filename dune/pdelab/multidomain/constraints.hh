@@ -16,7 +16,7 @@ struct constraints_pairs<BoundaryConditionTypeFunction,SubProblemLFS,SubProblemB
 {
   typedef constraints_pairs<SubProblemBoundaries...> next_pair;
 
-  dune_static_assert(((tag<typename SubProblemLFS::Traits::SubProblem>::value == true)), "subproblem local function space parameter invalid");
+  dune_static_assert(((is_subproblem<typename SubProblemLFS::Traits::SubProblem>::value == true)), "subproblem local function space parameter invalid");
 
   template<typename LFS>
   static void setupLFS(const LFS& lfs,

@@ -62,6 +62,16 @@ private:
   const CouplingOperator& _operator;
 };
 
+template<
+  typename LocalSubProblem,
+  typename RemoteSubProblem,
+  typename CouplingOperator
+  >
+struct is_coupling<Coupling<LocalSubProblem,RemoteSubProblem,CouplingOperator> >
+{
+  static const bool value = true;
+};
+
 } // namespace MultiDomain
 } // namespace PDELab
 } // namespace Dune

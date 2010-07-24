@@ -121,7 +121,7 @@ template<
   typename Condition,
   std::size_t... Indices
   >
-struct tag<SubProblem<GFSU,CONU,GFSV,CONV,LocalOperator,Condition,Indices...> >
+struct is_subproblem<SubProblem<GFSU,CONU,GFSV,CONV,LocalOperator,Condition,Indices...> >
 {
   static const bool value = true;
 };

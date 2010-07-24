@@ -15,7 +15,7 @@ struct interpolation_pairs<Function,SubProblemLFS,SubProblems...>
 {
   typedef interpolation_pairs<SubProblems...> next_pair;
 
-  dune_static_assert(((tag<typename SubProblemLFS::Traits::SubProblem>::value == true)), "subproblem local function space parameter invalid");
+  dune_static_assert(((is_subproblem<typename SubProblemLFS::Traits::SubProblem>::value == true)), "subproblem local function space parameter invalid");
 
   template<typename LFS>
   static void setupLFS(const LFS& lfs,

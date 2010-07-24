@@ -113,7 +113,7 @@ template<
   typename Condition,
   std::size_t... Indices
   >
-struct tag<InstationarySubProblem<TReal,GFSU,CONU,GFSV,CONV,LocalOperator,TemporalOperator,Condition,Indices...> >
+struct is_subproblem<InstationarySubProblem<TReal,GFSU,CONU,GFSV,CONV,LocalOperator,TemporalOperator,Condition,Indices...> >
 {
   static const bool value = true;
 };

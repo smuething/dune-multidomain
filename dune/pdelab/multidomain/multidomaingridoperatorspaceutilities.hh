@@ -34,15 +34,15 @@ struct MultiDomainGridOperatorSpaceTraits
 };
 
 template<typename T>
-struct tag
+struct is_subproblem
 {
   static const bool value = false;
 };
 
-template<>
-struct tag<int>
+template<typename T>
+struct is_coupling
 {
-  static const bool value = true;
+  static const bool value = false;
 };
 
 template<typename T, std::size_t i, std::size_t j>
@@ -57,7 +57,7 @@ struct SubProblemEntry
 template<std::size_t i, std::size_t j, typename... ProblemsAndCouplings>
 struct extract_problems_helper;
 
-template<std::size_t i, std::size_t j, bool is_subproblem, typename T, typename... ProblemsAndCouplings>
+template<std::size_t i, std::size_t j, bool is_subproblem_, typename T, typename... ProblemsAndCouplings>
 struct extract_problem_switch;
 
 template<std::size_t i, std::size_t j, typename T, typename... ProblemsAndCouplings>
@@ -88,8 +88,8 @@ struct extract_problems_helper<i,j,T,ProblemsAndCouplings...>
   template<typename... Problems>
   struct result
   {
-    typedef typename extract_problem_switch<i,j,tag<T>::value,T,ProblemsAndCouplings...>::template result<Problems...>::type type;
-    typedef typename extract_problem_switch<i,j,tag<T>::value,T,ProblemsAndCouplings...>::template result<Problems...>::map_type map_type;
+    typedef typename extract_problem_switch<i,j,is_subproblem<T>::value,T,ProblemsAndCouplings...>::template result<Problems...>::type type;
+    typedef typename extract_problem_switch<i,j,is_subproblem<T>::value,T,ProblemsAndCouplings...>::template result<Problems...>::map_type map_type;
   };
 };
 
@@ -131,7 +131,7 @@ struct CouplingEntry
 template<typename SubProblems, std::size_t i, std::size_t j, typename... ProblemsAndCouplings>
 struct extract_couplings_helper;
 
-template<typename SubProblems, std::size_t i, std::size_t j, bool is_coupling, typename T, typename... ProblemsAndCouplings>
+template<typename SubProblems, std::size_t i, std::size_t j, bool is_coupling_, typename T, typename... ProblemsAndCouplings>
 struct extract_coupling_switch;
 
 template<typename SubProblems, std::size_t i, std::size_t j, typename T, typename... ProblemsAndCouplings>
@@ -160,7 +160,7 @@ struct extract_couplings_helper<SubProblems,i,j,T,ProblemsAndCouplings...>
   template<typename... Couplings>
   struct result
   {
-    typedef typename extract_coupling_switch<SubProblems,i,j,!tag<T>::value,T,ProblemsAndCouplings...>::template result<Couplings...>::type type;
+    typedef typename extract_coupling_switch<SubProblems,i,j,is_coupling<T>::value,T,ProblemsAndCouplings...>::template result<Couplings...>::type type;
   };
 };
 

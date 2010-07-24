@@ -226,16 +226,11 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
 
       // translate local to global indices and add to global pattern
       // FIXME: this only works because of some kind of miracle!
-      for (size_t k=0; k<localpattern_sn.size(); ++k) {
-        std::cout << data.lfsv().localIndex(localpattern_sn[k].i()) << " / " << data.lfsv().globalIndex(data.lfsv().localIndex(localpattern_sn[k].i()));
-        std::cout << " -> ";
-        std::cout << data.lfsun().localIndex(localpattern_sn[k].j()) << " / " << data.lfsun().globalIndex(data.lfsun().localIndex(localpattern_sn[k].j()));
-        std::cout << std::endl;
+      for (size_t k=0; k<localpattern_sn.size(); ++k)
         data.gos().add_entry(globalpattern,
                              data.lfsv().globalIndex(data.lfsv().localIndex(localpattern_sn[k].i())),
                              data.lfsun().globalIndex(data.lfsun().localIndex(localpattern_sn[k].j()))
                              );
-      }
       for (size_t k=0; k<localpattern_ns.size(); ++k)
         data.gos().add_entry(globalpattern,
                              data.lfsvn().globalIndex(data.lfsvn().localIndex(localpattern_ns[k].i())),

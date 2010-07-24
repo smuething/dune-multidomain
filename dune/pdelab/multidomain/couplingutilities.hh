@@ -8,6 +8,27 @@ namespace PDELab {
 namespace MultiDomain {
 
 
+class FullCouplingPattern
+{
+
+public:
+
+  template<typename LFSU1, typename LFSV1, typename LFSU2, typename LFSV2>
+  void pattern_coupling (const LFSU1& lfsu_s, const LFSV1& lfsv_s, const LFSU2& lfsu_n, const LFSV2& lfsv_n,
+                         Dune::PDELab::LocalSparsityPattern& pattern_sn,
+                         Dune::PDELab::LocalSparsityPattern& pattern_ns) const
+  {
+    for (unsigned int i=0; i<lfsv_s.size(); ++i)
+      for (unsigned int j=0; j<lfsu_n.size(); ++j)
+          pattern_sn.push_back(Dune::PDELab::SparsityLink(i,j));
+    for (unsigned int i=0; i<lfsv_n.size(); ++i)
+      for (unsigned int j=0; j<lfsu_s.size(); ++j)
+          pattern_ns.push_back(Dune::PDELab::SparsityLink(i,j));
+  }
+
+};
+
+
 //! Implement jacobian_skeleton() based on alpha_skeleton()
 /**
  * Derive from this class to add numerical jacobian for skeleton.  The

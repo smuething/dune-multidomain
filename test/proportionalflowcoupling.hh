@@ -4,11 +4,13 @@
 
 #include <dune/pdelab/multidomain/couplingutilities.hh>
 #include <dune/pdelab/localoperator/pattern.hh>
+#include <dune/pdelab/localoperator/idefault.hh>
 
 class ProportionalFlowCoupling :
   public Dune::PDELab::MultiDomain::NumericalJacobianCoupling<ProportionalFlowCoupling>,
   public Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<ProportionalFlowCoupling>,
-  public Dune::PDELab::MultiDomain::FullCouplingPattern
+  public Dune::PDELab::MultiDomain::FullCouplingPattern,
+  public Dune::PDELab::InstationaryLocalOperatorDefaultMethods<double>
 {
 
 public:

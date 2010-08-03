@@ -129,13 +129,6 @@ struct is_subproblem<SubProblem<GFSU,CONU,GFSV,CONV,LocalOperator,Condition,Indi
 };
 
 
-template<typename MultiGFS, typename ChildGFS>
-struct get_subproblem_index
-{
-  static const std::size_t value = MultiGFS::template IndexForChild<ChildGFS>::value;
-};
-
-
 template<
   typename GFSU,
   typename CONU,

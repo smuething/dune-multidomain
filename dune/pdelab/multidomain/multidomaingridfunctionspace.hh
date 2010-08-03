@@ -392,6 +392,13 @@ private:
 };
 
 
+template<typename MultiGFS, typename ChildGFS>
+struct get_subproblem_index
+{
+  static const std::size_t value = MultiGFS::template IndexForChild<ChildGFS>::value;
+};
+
+
 } // namespace MultiDomain
 
 } // namespace PDELab

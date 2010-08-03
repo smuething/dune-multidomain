@@ -209,8 +209,8 @@ int main(int argc, char** argv) {
   EC ec0(0);
   EC ec1(1);
 
-  typedef Dune::PDELab::MultiDomain::InstationarySubProblem<double,MultiGFS,CON,MultiGFS,CON,LOP0,TOP,EC,0> SubProblem0;
-  typedef Dune::PDELab::MultiDomain::InstationarySubProblem<double,MultiGFS,CON,MultiGFS,CON,LOP1,TOP,EC,1> SubProblem1;
+  typedef Dune::PDELab::MultiDomain::TypeBasedInstationarySubProblem<double,MultiGFS,CON,MultiGFS,CON,LOP0,TOP,EC,GFS0> SubProblem0;
+  typedef Dune::PDELab::MultiDomain::TypeBasedInstationarySubProblem<double,MultiGFS,CON,MultiGFS,CON,LOP1,TOP,EC,GFS1> SubProblem1;
   SubProblem0 sp0(con,con,lop0,top0,ec0);
   SubProblem1 sp1(con,con,lop1,top1,ec1);
 

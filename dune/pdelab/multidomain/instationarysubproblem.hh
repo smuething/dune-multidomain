@@ -118,6 +118,67 @@ struct is_subproblem<InstationarySubProblem<TReal,GFSU,CONU,GFSV,CONV,LocalOpera
   static const bool value = true;
 };
 
+
+template<
+  typename TReal,
+  typename GFSU,
+  typename CONU,
+  typename GFSV,
+  typename CONV,
+  typename LocalOperator,
+  typename TemporalOperator,
+  typename Condition,
+  typename... GridFunctionSpaces
+  >
+class TypeBasedInstationarySubProblem
+  : public InstationarySubProblem<TReal,
+                                  GFSU,
+                                  CONU,
+                                  GFSV,
+                                  CONV,
+                                  LocalOperator,
+                                  TemporalOperator,
+                                  Condition,
+                                  get_subproblem_index<GFSU,GridFunctionSpaces>::value...>
+{
+
+  typedef InstationarySubProblem<TReal,
+                                 GFSU,
+                                 CONU,
+                                 GFSV,
+                                 CONV,
+                                 LocalOperator,
+                                 TemporalOperator,
+                                 Condition,
+                                 get_subproblem_index<GFSU,GridFunctionSpaces>::value...
+                                 > BaseT;
+
+public:
+
+  typedef typename BaseT::Traits Traits;
+
+  TypeBasedInstationarySubProblem(const CONU& conu, const CONV& conv, LocalOperator& lop, TemporalOperator& top, const Condition& condition) :
+    BaseT(conu,conv,lop,top,condition)
+  {}
+
+};
+
+template<
+  typename TReal,
+  typename GFSU,
+  typename CONU,
+  typename GFSV,
+  typename CONV,
+  typename LocalOperator,
+  typename TemporalOperator,
+  typename Condition,
+  typename... GridFunctionSpaces
+  >
+struct is_subproblem<TypeBasedInstationarySubProblem<TReal,GFSU,CONU,GFSV,CONV,LocalOperator,TemporalOperator,Condition,GridFunctionSpaces...> >
+{
+  static const bool value = true;
+};
+
 } // namespace MultiDomain
 } // namespace PDELab
 } // namespace Dune

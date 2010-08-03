@@ -42,6 +42,39 @@ struct transform {
   typedef typename replace<Args...>::template with<Transform>::type type;
 };
 
+/**
+ * TMP for deriving storage types in VariadicCompositeNode
+ */
+template<std::size_t i, typename... OArgs>
+struct indexed_replace;
+
+template<std::size_t i, typename OHead, typename... OTail>
+struct indexed_replace<i,OHead,OTail...> {
+  template<typename Transform, typename... SArgs>
+  struct with {
+    typedef typename indexed_replace<i+1,OTail...>::template with<Transform,SArgs...,typename Transform::template transform<i,OHead>::type>::type type;
+  };
+};
+
+/**
+ * End of recursion - export the transformed argument list as a tuple
+ */
+template<std::size_t i>
+struct indexed_replace<i> {
+  template<typename Transform, typename... SArgs>
+  struct with {
+    typedef typename Transform::template container<SArgs...>::type type;
+  };
+};
+
+/**
+ * wrapper to simplify calling the TMP
+ */
+template<typename Transform, typename... Args>
+struct indexed_transform {
+  typedef typename indexed_replace<0,Args...>::template with<Transform>::type type;
+};
+
 
 /**
  * VariadicCompositeNode

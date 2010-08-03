@@ -1,6 +1,8 @@
 #ifndef DUNE_MULTIDOMAIN_SUBPROBLEM_HH
 #define DUNE_MULTIDOMAIN_SUBPROBLEM_HH
 
+#include <dune/pdelab/multidomain/subdomainset.hh>
+
 namespace Dune {
 
 namespace PDELab {
@@ -122,6 +124,66 @@ template<
   std::size_t... Indices
   >
 struct is_subproblem<SubProblem<GFSU,CONU,GFSV,CONV,LocalOperator,Condition,Indices...> >
+{
+  static const bool value = true;
+};
+
+
+template<typename MultiGFS, typename ChildGFS>
+struct get_subproblem_index
+{
+  static const std::size_t value = MultiGFS::template IndexForChild<ChildGFS>::value;
+};
+
+
+template<
+  typename GFSU,
+  typename CONU,
+  typename GFSV,
+  typename CONV,
+  typename LocalOperator,
+  typename Condition,
+  typename... GridFunctionSpaces
+  >
+class TypeBasedSubProblem
+  : public SubProblem<GFSU,
+                      CONU,
+                      GFSV,
+                      CONV,
+                      LocalOperator,
+                      Condition,
+                      get_subproblem_index<GFSU,GridFunctionSpaces>::value...>
+{
+
+  typedef SubProblem<GFSU,
+                     CONU,
+                     GFSV,
+                     CONV,
+                     LocalOperator,
+                     Condition,
+                     get_subproblem_index<GFSU,GridFunctionSpaces>::value...
+                     > BaseT;
+
+public:
+
+  typedef typename BaseT::Traits Traits;
+
+  TypeBasedSubProblem(const CONU& conu, const CONV& conv, LocalOperator& lop, const Condition& condition) :
+    BaseT(conu,conv,lop,condition)
+  {}
+
+};
+
+template<
+  typename GFSU,
+  typename CONU,
+  typename GFSV,
+  typename CONV,
+  typename LocalOperator,
+  typename Condition,
+  typename... GridFunctionSpaces
+  >
+struct is_subproblem<TypeBasedSubProblem<GFSU,CONU,GFSV,CONV,LocalOperator,Condition,GridFunctionSpaces...> >
 {
   static const bool value = true;
 };

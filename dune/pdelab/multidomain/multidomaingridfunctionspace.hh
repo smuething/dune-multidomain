@@ -210,20 +210,27 @@ public:
   template<typename T>
   struct IndexForChild
   {
+    dune_static_assert(Traits::supportsMapAccess,"This MultiDomainGridFunctionSpace does not support accessing children by type - " \
+                                                 "it probably contains two child grid function spaces with identical type. " \
+                                                 "Select your function spaces by index instead.");
     static const std::size_t value = get_map_entry<T,ChildEntryMap>::type::index;
   };
 
   template<typename T>
   const T& childByType() const
   {
-    dune_static_assert(Traits::supportsMapAccess,"This MultiDomainGridFunctionSpace does not support accessing children by type");
+    dune_static_assert(Traits::supportsMapAccess,"This MultiDomainGridFunctionSpace does not support accessing children by type - " \
+                                                 "it probably contains two child grid function spaces with identical type. " \
+                                                 "Select your function spaces by index instead.");
     return this->template getChild<get_map_entry<T,ChildEntryMap>::type::index>();
   }
 
   template<typename T>
   T& childByType()
   {
-    dune_static_assert(Traits::supportsMapAccess,"This MultiDomainGridFunctionSpace does not support accessing children by type");
+    dune_static_assert(Traits::supportsMapAccess,"This MultiDomainGridFunctionSpace does not support accessing children by type - " \
+                                                 "it probably contains two child grid function spaces with identical type. " \
+                                                 "Select your function spaces by index instead.");
     return this->template getChild<get_map_entry<T,ChildEntryMap>::type::index>();
   }
 

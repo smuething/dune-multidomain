@@ -28,32 +28,6 @@ struct map_key {};
 
 struct no_key {};
 
-struct empty_type_map
-{
-  template<typename T>
-  no_key lookup(map_key<T>);
-};
-
-template<typename key, typename value, typename tail = empty_type_map>
-struct map_entry : public tail
-{
-  using tail::lookup;
-
-  value lookup(map_key<key>);
-
-};
-
-}
-
-/**
- * Adds a key-value pair to the given map.
- */
-template<typename key, typename value, typename map>
-struct add_map_entry
-{
-  typedef map_entry<key,value,map> type;
-};
-
 /**
  * Retrieves the mapped value for the given key from the map.
  *
@@ -74,6 +48,37 @@ template<typename key, typename map>
 struct map_contains
 {
   static const bool value = !std::is_same<decltype(map().lookup(map_key<key>())),no_key>::value;
+};
+
+struct empty_type_map
+{
+
+  static const bool has_duplicate_entries = false;
+
+  template<typename T>
+  no_key lookup(map_key<T>);
+};
+
+template<typename key, typename value, typename tail = empty_type_map>
+struct map_entry : public tail
+{
+  using tail::lookup;
+
+  static const bool has_duplicate_entries = tail::has_duplicate_entries || map_contains<key,tail>::value;
+
+  value lookup(map_key<key>);
+
+};
+
+}
+
+/**
+ * Adds a key-value pair to the given map.
+ */
+template<typename key, typename value, typename map>
+struct add_map_entry
+{
+  typedef map_entry<key,value,map> type;
 };
 
 namespace {

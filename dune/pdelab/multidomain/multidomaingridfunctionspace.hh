@@ -399,6 +399,20 @@ struct get_subproblem_index
 };
 
 
+template<typename MultiGFS, typename ChildGFS>
+class TypeBasedGridFunctionSubSpace
+  : public GridFunctionSubSpace<MultiGFS,get_subproblem_index<MultiGFS,ChildGFS>::value>
+{
+
+  typedef GridFunctionSubSpace<MultiGFS,get_subproblem_index<MultiGFS,ChildGFS>::value> BaseT;
+
+public:
+  TypeBasedGridFunctionSubSpace(const MultiGFS& gfs)
+    : BaseT(gfs)
+  {}
+};
+
+
 } // namespace MultiDomain
 
 } // namespace PDELab

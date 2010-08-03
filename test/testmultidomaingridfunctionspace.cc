@@ -4,7 +4,6 @@
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include<dune/pdelab/finiteelementmap/q1fem.hh>
 #include<dune/pdelab/backend/istlvectorbackend.hh>
-#include <dune/pdelab/multidomain/subproblemgridfunctionspace.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 
 int main(int argc, char** argv) {

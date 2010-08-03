@@ -3,6 +3,7 @@
 #define DUNE_MULTIDOMAIN_SUBPROBLEMLOCALFUNCTIONSPACE_HH
 
 #include <vector>
+#include <dune/pdelab/multidomain/utility.hh>
 #include <dune/pdelab/multidomain/variadiccompositenode.hh>
 #include <dune/pdelab/gridfunctionspace/localfunctionspace.hh>
 #include <dune/grid/multidomaingrid.hh>

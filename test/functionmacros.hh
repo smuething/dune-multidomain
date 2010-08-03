@@ -47,4 +47,32 @@ public: \
   } \
 };
 
+#define INSTATIONARY_ANALYTIC_FUNCTION(_NAME_,_POINT_,_VALUE_)  \
+  template<typename GV, typename RF, typename TReal>                           \
+class _NAME_ \
+  : public Dune::PDELab::AnalyticGridFunctionBase<Dune::PDELab::AnalyticGridFunctionTraits<GV,RF,1>, \
+                                                  _NAME_<GV,RF,TReal> >      \
+{ \
+  TReal _time; \
+\
+public: \
+  typedef Dune::PDELab::AnalyticGridFunctionTraits<GV,RF,1> Traits; \
+  typedef Dune::PDELab::AnalyticGridFunctionBase<Traits,_NAME_<GV,RF,TReal> > BaseT; \
+\
+  void setTime(TReal time) \
+  { \
+    _time = time; \
+  } \
+\
+  TReal time() const \
+  { \
+    return _time; \
+  } \
+\
+  _NAME_ (const GV& gv) : BaseT(gv) {} \
+  inline void evaluateGlobal (const typename Traits::DomainType& _POINT_, \
+                              typename Traits::RangeType& _VALUE_) const
+
+#define END_INSTATIONARY_ANALYTIC_FUNCTION };
+
 #endif // DUNE_MULTIDOMAIN_FUNCTIONMACROS_HH

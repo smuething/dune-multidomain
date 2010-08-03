@@ -542,7 +542,7 @@ public:
                           (InvokeAlphaCoupling<XL,RL,CouplingOperator>(xl,xn,rl_a,rn));
                         if (apply_operator.alphaSkeletonInvoked())
                           {
-                            for(auto it = rn.begin(); it != rn.end(); ++it)
+                            for(typename RL::iterator it = rn.begin(); it != rn.end(); ++it)
                               (*it) *= b[i] * dt;
                             lfsvn.vadd(rn,r0);
                             apply_operator.clearAlphaSkeletonInvoked();
@@ -564,13 +564,13 @@ public:
                 apply_operator.template conditional<SubProblems,do_lambda_volume_post_skeleton<SpatialOperator> >(InvokeLambdaVolumePostSkeleton<RL,SpatialOperator>(rl_a));
 
                 // accumulate result (note: r needs to be cleared outside)
-                for (auto it = rl_a.begin(); it != rl_a.end(); ++it)
+                for (typename RL::iterator it = rl_a.begin(); it != rl_a.end(); ++it)
                   (*it) *= b[i] * dt;
                 lfsv.vadd(rl_a,r0);
               }
             if (doM)
               {
-                for (auto it = rl_m.begin(); it != rl_m.end(); ++it)
+                for (typename RL::iterator it = rl_m.begin(); it != rl_m.end(); ++it)
                   (*it) *= a[i];
                 lfsv.vadd(rl_m,r0);
               }
@@ -734,7 +734,7 @@ public:
                           (InvokeAlphaCoupling<XL,RL,CouplingOperator>(xl,xn,rl_a,rn));
                         if (apply_operator.alphaSkeletonInvoked())
                           {
-                            for(auto it = rn.begin(); it != rn.end(); ++it)
+                            for(typename RL::iterator it = rn.begin(); it != rn.end(); ++it)
                               (*it) *= -b[i];
                             lfsvn.vadd(rn,beta);
                             apply_operator.clearAlphaSkeletonInvoked();
@@ -756,13 +756,13 @@ public:
                 apply_operator.template conditional<SubProblems,do_lambda_volume_post_skeleton<SpatialOperator> >(InvokeLambdaVolumePostSkeleton<RL,SpatialOperator>(rl_a));
 
                 // accumulate result (note: r needs to be cleared outside)
-                for (auto it = rl_a.begin(); it != rl_a.end(); ++it)
+                for (typename RL::iterator it = rl_a.begin(); it != rl_a.end(); ++it)
                   (*it) *= -b[i];
                 lfsv.vadd(rl_a,beta);
               }
             if (doM)
               {
-                for (auto it = rl_m.begin(); it != rl_m.end(); ++it)
+                for (typename RL::iterator it = rl_m.begin(); it != rl_m.end(); ++it)
                   (*it) *= -a[i];
                 lfsv.vadd(rl_m,alpha);
               }
@@ -938,7 +938,7 @@ public:
                       (InvokeAlphaCoupling<XL,RL,CouplingOperator>(xl,xn,rl_a,rn));
                     if (apply_operator.alphaSkeletonInvoked())
                       {
-                        for(auto it = rn.begin(); it != rn.end(); ++it)
+                        for(typename RL::iterator it = rn.begin(); it != rn.end(); ++it)
                           (*it) *= b_rr * dt;
                         lfsvn.vadd(rn,r);
                         apply_operator.clearAlphaSkeletonInvoked();
@@ -960,7 +960,7 @@ public:
             apply_operator.template conditional<SubProblems,do_lambda_volume_post_skeleton<SpatialOperator> >(InvokeLambdaVolumePostSkeleton<RL,SpatialOperator>(rl_a));
 
             // accumulate result (note: r needs to be cleared outside)
-            for (auto it = rl_a.begin(); it != rl_a.end(); ++it)
+            for (typename RL::iterator it = rl_a.begin(); it != rl_a.end(); ++it)
                    (*it) *= b_rr * dt;
             lfsv.vadd(rl_a,r);
           }
@@ -1092,7 +1092,7 @@ public:
                       (InvokeJacobianCoupling<XL,YL,CouplingOperator>(xl,xn,yl_a,yn_a));
                     if (apply_operator.alphaSkeletonInvoked())
                       {
-                        for(auto it = yn_a.begin(); it != yn_a.end(); ++it)
+                        for(typename YL::iterator it = yn_a.begin(); it != yn_a.end(); ++it)
                           (*it) *= b_rr*dt;
                         lfsvn.vadd(yn_a,y);
                         apply_operator.clearAlphaSkeletonInvoked();
@@ -1110,7 +1110,7 @@ public:
         if (implicit)
           {
             apply_operator.template conditional<SubProblems,do_alpha_volume_post_skeleton<SpatialOperator> >(InvokeJacobianApplyVolumePostSkeleton<XL,YL,SpatialOperator>(xl,yl_a));
-            for(auto it = yl_a.begin(); it != yl_a.end(); ++it)
+            for(typename YL::iterator it = yl_a.begin(); it != yl_a.end(); ++it)
               (*it) *= b_rr*dt;
             // accumulate result (note: r needs to be cleared outside)
             lfsv.vadd(yl_a,y);

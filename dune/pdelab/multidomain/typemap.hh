@@ -28,6 +28,8 @@ struct map_key {};
 
 struct no_key {};
 
+}
+
 /**
  * Retrieves the mapped value for the given key from the map.
  *
@@ -49,6 +51,8 @@ struct map_contains
 {
   static const bool value = !std::is_same<decltype(map().lookup(map_key<key>())),no_key>::value;
 };
+
+namespace {
 
 struct empty_type_map
 {

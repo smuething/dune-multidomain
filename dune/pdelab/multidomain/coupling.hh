@@ -33,7 +33,7 @@ public:
 
   Coupling(const LocalSubProblem& localSubProblem,
            const RemoteSubProblem& remoteSubProblem,
-           const CouplingOperator& couplingOperator)
+           CouplingOperator& couplingOperator)
     : _localSubProblem(localSubProblem)
     , _remoteSubProblem(remoteSubProblem)
     , _operator(couplingOperator)
@@ -59,7 +59,9 @@ public:
 private:
   const LocalSubProblem& _localSubProblem;
   const RemoteSubProblem& _remoteSubProblem;
-  const CouplingOperator& _operator;
+
+protected:
+  CouplingOperator& _operator;
 };
 
 template<

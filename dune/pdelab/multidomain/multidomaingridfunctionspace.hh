@@ -7,6 +7,7 @@
 #include <dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
 #include <dune/pdelab/multidomain/variadiccompositenode.hh>
 #include <dune/pdelab/multidomain/multidomainlocalfunctionspace.hh>
+#include <dune/pdelab/multidomain/typemap.hh>
 #include <dune/grid/multidomaingrid.hh>
 #include <utility>
 
@@ -16,7 +17,7 @@ namespace PDELab {
 
 namespace MultiDomain {
 
-template<typename G, typename B, typename M, int k>
+template<typename G, typename B, typename M, bool supportMapAccess, int k>
 struct MultiDomainGridFunctionSpaceTraits
 {
   enum{
@@ -37,6 +38,9 @@ struct MultiDomainGridFunctionSpaceTraits
 
   //! \brief short cut for size type exported by Backend
   typedef typename B::size_type SizeType;
+
+  static const bool supportsMapAccess = supportMapAccess;
+
 };
 
 template<typename T, int n, int i>
@@ -155,29 +159,43 @@ class MultiDomainGridFunctionSpace : public Countable, public VariadicCompositeN
   typedef VariadicCompositeNode<CopyStoragePolicy,Children...> BaseT;
   typedef MultiDomainGridFunctionSpaceVisitChildMetaProgram<MultiDomainGridFunctionSpace,sizeof...(Children),0> VisitChildTMP;
 
-  template<typename Grid>
+  template<typename T, std::size_t i, bool definedOnSubDomain_>
+  struct GFSChild
+  {
+    static const std::size_t index = i;
+    typedef T type;
+    typedef T key;
+    static const bool definedOnSubDomain = definedOnSubDomain_;
+  };
+
+  template<typename Grid, template<typename...> class Container>
   struct tagger
   {
 
-    template<typename T>
+    template<std::size_t i, typename T>
     struct transform {
-      typedef Dune::SelectType<std::is_same<Grid,typename std::remove_const<typename T::Traits::GridViewType::Grid>::type>::value,MultiDomainTag,SubDomainTag> type;
+      typedef GFSChild<T,
+                       i,
+                       std::is_same<Grid,typename std::remove_const<typename T::Traits::GridViewType::Grid>::type>::value
+                       > type;
     };
 
     template<typename... Args>
     struct container {
-      typedef std::tuple<Args...> type;
+      typedef Container<Args...> type;
     };
   };
+
+  typedef typename indexed_transform<tagger<G,std::tuple>,Children...>::type ChildEntries;
+
+  typedef typename indexed_transform<tagger<G,embedded_key_map>,Children...>::type ChildEntryMap;
 
   template<int i>
   struct DefinedOnSubDomain
   {
     dune_static_assert((0 <= i) && (i < BaseT::CHILDREN),"invalid child index");
 
-    typedef typename transform<tagger<G>,Children...>::type ChildTags;
-
-    static const bool value = std::is_same<typename std::tuple_element<i,ChildTags>::type,SubDomainTag>::value;
+    static const bool value = std::tuple_element<i,ChildEntries>::type::definedOnSubDomain;
   };
 
 public:
@@ -185,8 +203,29 @@ public:
   typedef MultiDomainGridFunctionSpaceTraits<G,
                                              typename BaseT::template Child<0>::Type::Traits::BackendType,
                                              CopyStoragePolicy,
+                                             !ChildEntryMap::has_duplicate_entries, // duplicate entries would lead to ambiguous type lookups
                                              sizeof...(Children)>
   Traits;
+
+  template<typename T>
+  struct IndexForChild
+  {
+    static const std::size_t value = get_map_entry<T,ChildEntryMap>::type::index;
+  };
+
+  template<typename T>
+  const T& childByType() const
+  {
+    dune_static_assert(Traits::supportsMapAccess,"This MultiDomainGridFunctionSpace does not support accessing children by type");
+    return this->template getChild<get_map_entry<T,ChildEntryMap>::type::index>();
+  }
+
+  template<typename T>
+  T& childByType()
+  {
+    dune_static_assert(Traits::supportsMapAccess,"This MultiDomainGridFunctionSpace does not support accessing children by type");
+    return this->template getChild<get_map_entry<T,ChildEntryMap>::type::index>();
+  }
 
   //! extract type of container storing Es
   template<typename E>

@@ -232,8 +232,8 @@ int main(int argc, char** argv) {
   std::cout << x0.size() << " dof total, " << cg.size() << " dof constrained" << std::endl;
   timer.reset();
 
-  typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,0> SGFS0;
-  typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,1> SGFS1;
+  typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,GFS0> SGFS0;
+  typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,GFS1> SGFS1;
   SGFS0 sgfs0(multigfs);
   SGFS1 sgfs1(multigfs);
 

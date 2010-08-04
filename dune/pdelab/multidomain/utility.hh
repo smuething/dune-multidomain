@@ -37,6 +37,23 @@ struct check_indices<N>
   static const bool value = true;
 };
 
+
+/*
+ * tags for testing whether a given type is a subproblem / coupling
+ */
+
+template<typename T>
+struct is_subproblem
+{
+  static const bool value = false;
+};
+
+template<typename T>
+struct is_coupling
+{
+  static const bool value = false;
+};
+
 } // namespace MultiDomain
 
 } // namespace PDELab

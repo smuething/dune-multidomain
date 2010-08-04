@@ -6,6 +6,7 @@
 #include<tuple>
 
 #include<dune/common/exceptions.hh>
+#include <dune/pdelab/multidomain/utility.hh>
 #include <dune/pdelab/multidomain/typemap.hh>
 
 namespace Dune {
@@ -33,17 +34,6 @@ struct MultiDomainGridOperatorSpaceTraits
   typedef typename B::size_type SizeType;
 };
 
-template<typename T>
-struct is_subproblem
-{
-  static const bool value = false;
-};
-
-template<typename T>
-struct is_coupling
-{
-  static const bool value = false;
-};
 
 template<typename T, std::size_t i, std::size_t j>
 struct SubProblemEntry

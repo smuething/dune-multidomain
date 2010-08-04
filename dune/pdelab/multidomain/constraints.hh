@@ -272,6 +272,27 @@ void constraints(const F& f, const GFS& gfs, CG& cg, const SubProblemBoundaries&
 
 } // constraints
 
+
+/**
+ * Construct constraints on the trial grid function space.
+ */
+template<typename F, typename GFS, typename CG, typename... SubProblemBoundaries>
+void trialSpaceConstraints(const F& f, const GFS& gfs, CG& cg, const SubProblemBoundaries&... subProblemBoundaries)
+{
+  constraints(f,gfs,cg,extract_trial_lfs(subProblemBoundaries)...);
+}
+
+
+/**
+ * Construct constraints on the test grid function space.
+ */
+template<typename F, typename GFS, typename CG, typename... SubProblemBoundaries>
+void testSpaceConstraints(const F& f, const GFS& gfs, CG& cg, const SubProblemBoundaries&... subProblemBoundaries)
+{
+  constraints(f,gfs,cg,extract_test_lfs(subProblemBoundaries)...);
+}
+
+
 } // namespace MultiDomain
 } // namespace PDELab
 } // namespace Dune

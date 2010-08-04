@@ -2,6 +2,7 @@
 #define DUNE_MULTIDOMAIN_INTERPOLATE_HH
 
 #include <dune/pdelab/gridfunctionspace/interpolate.hh>
+#include <dune/pdelab/multidomain/utility.hh>
 
 namespace Dune {
 namespace PDELab {
@@ -108,6 +109,19 @@ void interpolate(const GFS& gfs, XG& xg, const SubProblems&... subProblems)
 }
 
 
+template<typename GFS, typename XG, typename... SubProblems>
+void interpolateOnTrialSpace(const GFS& gfs, XG& xg, const SubProblems&... subProblems)
+{
+  interpolate(gfs,xg,extract_trial_lfs(subProblems)...);
+}
+
+template<typename GFS, typename XG, typename... SubProblems>
+void interpolateOnTestSpace(const GFS& gfs, XG& xg, const SubProblems&... subProblems)
+{
+  interpolate(gfs,xg,extract_test_lfs(subProblems)...);
+}
+
+
 // interpolation from a given grid function, using the global interface of the local finite element
 template<typename GFS, typename XG, typename... SubProblems>
 void interpolateGlobal(const GFS& gfs, XG& xg, const SubProblems&... subProblems)
@@ -141,6 +155,18 @@ void interpolateGlobal(const GFS& gfs, XG& xg, const SubProblems&... subProblems
     }
 }
 
+
+template<typename GFS, typename XG, typename... SubProblems>
+void interpolateGlobalOnTrialSpace(const GFS& gfs, XG& xg, const SubProblems&... subProblems)
+{
+  interpolateGlobal(gfs,xg,extract_trial_lfs(subProblems)...);
+}
+
+template<typename GFS, typename XG, typename... SubProblems>
+void interpolateGlobalOnTestSpace(const GFS& gfs, XG& xg, const SubProblems&... subProblems)
+{
+  interpolateGlobal(gfs,xg,extract_test_lfs(subProblems)...);
+}
 
 } // namespace MultiDomain
 } // namespace PDELab

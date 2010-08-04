@@ -190,16 +190,15 @@ int main(int argc, char** argv) {
   typedef Dune::PDELab::Poisson<FType,BType,JType,2> LOP;
   LOP lop(f,b,j);
 
-  typedef MDGV::IndexSet::SubDomainSet SDS;
-  typedef Dune::PDELab::MultiDomain::EqualsSubDomains<SDS> EC;
+  typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> Condition;
 
-  EC ec0(0);
-  EC ec1(1);
+  Condition c0(0);
+  Condition c1(1);
 
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,CON,MultiGFS,CON,LOP,EC,GFS0> SubProblem0;
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,CON,MultiGFS,CON,LOP,EC,GFS1> SubProblem1;
-  SubProblem0 sp0(con,con,lop,ec0);
-  SubProblem1 sp1(con,con,lop,ec1);
+  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,CON,MultiGFS,CON,LOP,Condition,GFS0> SubProblem0;
+  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,CON,MultiGFS,CON,LOP,Condition,GFS1> SubProblem1;
+  SubProblem0 sp0(con,con,lop,c0);
+  SubProblem1 sp1(con,con,lop,c1);
 
   SubProblem0::Traits::LocalTrialFunctionSpace
     splfs0(sp0,sp0.trialGridFunctionSpaceConstraints());

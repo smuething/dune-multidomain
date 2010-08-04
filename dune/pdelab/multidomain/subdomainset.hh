@@ -19,13 +19,13 @@ void initSubDomainSet(SubDomainSet& subDomainSet, typename SubDomainSet::DomainT
   initSubDomainSet(subDomainSet,subDomains...);
 }
 
-template<typename SubDomainSet>
+template<typename MultiDomainGrid>
 class SubDomainSetHolder
 {
 
 public:
 
-  typedef SubDomainSet SubDomainSetType;
+  typedef typename MultiDomainGrid::LeafGridView::IndexSet::SubDomainSet SubDomainSet;
   typedef typename SubDomainSet::DomainType SubDomainType;
 
   template<typename... T>
@@ -44,19 +44,17 @@ private:
 };
 
 
-template<typename SubDomainSet>
-class IncludesSubDomains : public SubDomainSetHolder<SubDomainSet>
+template<typename MultiDomainGrid>
+class SubDomainSupersetCondition : public SubDomainSetHolder<MultiDomainGrid>
 {
 
-  typedef SubDomainSetHolder<SubDomainSet> BaseT;
+  typedef SubDomainSetHolder<MultiDomainGrid> BaseT;
+  typedef typename BaseT::SubDomainSet SubDomainSet;
 
 public:
 
-  using BaseT::SubDomainSetType;
-  using BaseT::SubDomainType;
-
   template<typename... T>
-  IncludesSubDomains(T... subDomains) :
+  SubDomainSupersetCondition(T... subDomains) :
     BaseT(subDomains...)
   {
   }
@@ -68,19 +66,17 @@ public:
 };
 
 
-template<typename SubDomainSet>
-class EqualsSubDomains : public SubDomainSetHolder<SubDomainSet>
+template<typename MultiDomainGrid>
+class SubDomainEqualityCondition : public SubDomainSetHolder<MultiDomainGrid>
 {
 
-  typedef SubDomainSetHolder<SubDomainSet> BaseT;
+  typedef SubDomainSetHolder<MultiDomainGrid> BaseT;
+  typedef typename BaseT::SubDomainSet SubDomainSet;
 
 public:
 
-  using BaseT::SubDomainSetType;
-  using BaseT::SubDomainType;
-
   template<typename... T>
-  EqualsSubDomains(T... subDomains) :
+  SubDomainEqualityCondition(T... subDomains) :
     BaseT(subDomains...)
   {
   }

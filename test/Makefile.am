@@ -10,6 +10,7 @@ check_PROGRAMS = testmultidomaingridfunctionspace \
 	poisson \
 	reactiondiffusion \
 	explicitlycoupledpoisson \
+	instationarypoisson \
 	instationaryexplicitlycoupledpoisson
 
 testmultidomaingridfunctionspace_SOURCES = testmultidomaingridfunctionspace.cc
@@ -23,5 +24,7 @@ poisson_SOURCES = poisson.cc
 reactiondiffusion_SOURCES = reactiondiffusion.cc
 
 explicitlycoupledpoisson_SOURCES = explicitlycoupledpoisson.cc
+
+instationarypoisson_SOURCES = instationarypoisson.cc
 
 instationaryexplicitlycoupledpoisson_SOURCES = instationaryexplicitlycoupledpoisson.cc

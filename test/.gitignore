@@ -2,4 +2,5 @@
 reactiondiffusion
 poisson
 explicitlycoupledpoisson
+instationarypoisson
 instationaryexplicitlycoupledpoisson

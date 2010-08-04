@@ -110,7 +110,7 @@ struct constraints_pairs<BoundaryConditionTypeFunction,SubProblemLFS,SubProblemB
 template<typename UnpairedParameter>
 struct constraints_pairs<UnpairedParameter>
 {
-  dune_static_assert(AlwaysFalse<UnpairedParameter>::value, "incomplete BoundaryTypeFunction/SubProblemLFS pair in constraints()");
+  dune_static_assert((AlwaysFalse<UnpairedParameter>::value), "incomplete BoundaryTypeFunction/SubProblemLFS pair in constraints()");
 };
 
 template<>

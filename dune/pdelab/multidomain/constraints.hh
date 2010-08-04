@@ -1,8 +1,9 @@
 #ifndef DUNE_MULTIDOMAIN_CONSTRAINTS_HH
 #define DUNE_MULTIDOMAIN_CONSTRAINTS_HH
 
+#include <map>
 #include <dune/pdelab/gridfunctionspace/constraints.hh>
-#include <type_traits>
+#include <dune/pdelab/multidomain/utility.hh>
 
 namespace Dune {
 namespace PDELab {

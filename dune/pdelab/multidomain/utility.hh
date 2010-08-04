@@ -1,6 +1,8 @@
 #ifndef DUNE_MULTIDOMAIN_UTILITY_HH
 #define DUNE_MULTIDOMAIN_UTILITY_HH
 
+#include <type_traits> // for enable_if
+
 namespace Dune {
 
 namespace PDELab {
@@ -53,6 +55,43 @@ struct is_coupling
 {
   static const bool value = false;
 };
+
+
+/*
+ * helper functions for the convenience versions of constraints() and interpolate().
+ * These functions leave any non-subproblem parameter alone,
+ * but replace a subproblem by the correct local function space
+ * (either trial or test).
+ */
+
+template<typename NoSubProblem>
+typename std::enable_if<!is_subproblem<NoSubProblem>::value,const NoSubProblem&>::type
+extract_trial_lfs(const NoSubProblem& noSubProblem)
+{
+  return noSubProblem;
+}
+
+template<typename SubProblem>
+typename std::enable_if<is_subproblem<SubProblem>::value,typename SubProblem::Traits::LocalTrialFunctionSpace>::type
+extract_trial_lfs(const SubProblem& subProblem)
+{
+  return typename SubProblem::Traits::LocalTrialFunctionSpace(subProblem,subProblem.trialGridFunctionSpaceConstraints());
+}
+
+
+template<typename NoSubProblem>
+typename std::enable_if<!is_subproblem<NoSubProblem>::value,const NoSubProblem&>::type
+extract_test_lfs(const NoSubProblem& noSubProblem)
+{
+  return noSubProblem;
+}
+
+template<typename SubProblem>
+typename std::enable_if<is_subproblem<SubProblem>::value,typename SubProblem::Traits::LocalTestFunctionSpace>::type
+extract_test_lfs(const SubProblem& subProblem)
+{
+  return typename SubProblem::Traits::LocalTestFunctionSpace(subProblem,subProblem.testGridFunctionSpaceConstraints());
+}
 
 } // namespace MultiDomain
 

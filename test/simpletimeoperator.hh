@@ -1,6 +1,8 @@
 #ifndef SIMPLETIMEOPERATOR_HH
 #define SIMPLETIMEOPERATOR_HH
 
+#include <dune/pdelab/localoperator/idefault.hh>
+
 class SimpleTimeOperator
   : public Dune::PDELab::NumericalJacobianApplyVolume<SimpleTimeOperator>,
     public Dune::PDELab::NumericalJacobianVolume<SimpleTimeOperator>,

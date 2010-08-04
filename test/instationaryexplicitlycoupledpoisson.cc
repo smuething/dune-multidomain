@@ -23,8 +23,6 @@
 #include<dune/pdelab/instationary/onestep.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 
-#include<typeinfo>
-
 #include "functionmacros.hh"
 #include "proportionalflowcoupling.hh"
 #include "simpletimeoperator.hh"
@@ -102,226 +100,358 @@ int main(int argc, char** argv) {
 
   try {
 
-  if (argc < 3) {
-    std::cerr << "Usage: " << argv[0] << " <refinement level> <coupling intensity>" << std::endl;
-    return 1;
-  }
-
-  Dune::Timer timer;
-  Dune::Timer totalTimer;
-  timer.start();
-  const int dim = 2;
-  //typedef Dune::SGrid<dim,dim> BaseGrid;
-  typedef Dune::YaspGrid<dim> BaseGrid;
-  const Dune::FieldVector<int,dim> s(1);
-  const Dune::FieldVector<double,dim> h(1.0);
-  const Dune::FieldVector<bool,dim> p(false);
-  BaseGrid baseGrid(h,s,p,0);
-  baseGrid.globalRefine(atoi(argv[1]));
-  typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;
-  Grid grid(baseGrid,false);
-  typedef Grid::SubDomainGrid SubDomainGrid;
-  SubDomainGrid& sdg0 = grid.subDomain(0);
-  SubDomainGrid& sdg1 = grid.subDomain(1);
-  typedef Grid::ctype ctype;
-  typedef Grid::LeafGridView MDGV;
-  typedef SubDomainGrid::LeafGridView SDGV;
-  MDGV mdgv = grid.leafView();
-  SDGV sdgv0 = sdg0.leafView();
-  SDGV sdgv1 = sdg1.leafView();
-  sdg0.hostEntityPointer(*sdgv0.begin<0>());
-  grid.startSubDomainMarking();
-  for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
-    {
-      if (it->geometry().center()[0] > 0.5)
-        grid.addToSubDomain(0,*it);
-      else
-        grid.addToSubDomain(1,*it);
+    if (argc < 3) {
+      std::cerr << "Usage: " << argv[0] << " <refinement level> <coupling intensity>" << std::endl;
+      return 1;
     }
-  grid.preUpdateSubDomains();
-  grid.updateSubDomains();
-  grid.postUpdateSubDomains();
 
-  std::cout << "grid setup: " << timer.elapsed() << " sec" << std::endl;
-  timer.reset();
+    Dune::Timer timer;
+    Dune::Timer totalTimer;
 
-  typedef MDGV::Grid::ctype DF;
+    const int dim = 2;
 
-  typedef Dune::PDELab::Q22DLocalFiniteElementMap<ctype,double> FEM0;
-  typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM1;
+    /*
+     * Create underlying grid
+     */
 
-  typedef FEM0::Traits::LocalFiniteElementType::Traits::
-  LocalBasisType::Traits::RangeFieldType R;
+    typedef Dune::YaspGrid<dim> BaseGrid;
+    const Dune::FieldVector<int,dim> s(1);
+    const Dune::FieldVector<double,dim> h(1.0);
+    const Dune::FieldVector<bool,dim> p(false);
+    BaseGrid baseGrid(h,s,p,0);
+    baseGrid.globalRefine(atoi(argv[1]));
 
-  FEM0 fem0;
-  FEM1 fem1;
-  typedef Dune::PDELab::NoConstraints NOCON;
-  typedef Dune::PDELab::ConformingDirichletConstraints CON;
-  typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
+    /*
+     * Create MultiDomainGrid and obtain references to SubDomainGrids
+     * Get leaf views for all grids
+     */
 
-  CON con;
+    typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;
+    typedef Grid::SubDomainGrid SubDomainGrid;
+    typedef Grid::ctype ctype;
+    typedef Grid::LeafGridView MDGV;
+    typedef SubDomainGrid::LeafGridView SDGV;
 
-  typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,NOCON,
-    Dune::PDELab::ISTLVectorBackend<1> > GFS0;
+    Grid grid(baseGrid,false);
+    SubDomainGrid& sdg0 = grid.subDomain(0);
+    SubDomainGrid& sdg1 = grid.subDomain(1);
 
-  typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,NOCON,
-    Dune::PDELab::ISTLVectorBackend<1> > GFS1;
+    MDGV mdgv = grid.leafView();
+    SDGV sdgv0 = sdg0.leafView();
+    SDGV sdgv1 = sdg1.leafView();
 
-  typedef GFS0::ConstraintsContainer<R>::Type C;
-  C cg;
+    /*
+     * Initialize subdomains. The right half of the domain is assigned to
+     * subdomain 0, the left half to subdomain 1.
+     */
 
-  GFS0 gfs0(sdgv0,fem0);
-  GFS1 gfs1(sdgv1,fem1);
+    grid.startSubDomainMarking();
+    for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
+      {
+        if (it->geometry().center()[0] > 0.5)
+          grid.addToSubDomain(0,*it);
+        else
+          grid.addToSubDomain(1,*it);
+      }
+    grid.preUpdateSubDomains();
+    grid.updateSubDomains();
+    grid.postUpdateSubDomains();
 
-  typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS0,GFS1> MultiGFS;
+    std::cout << "grid setup: " << timer.elapsed() << " sec" << std::endl;
+    timer.reset();
 
-  MultiGFS multigfs(grid,gfs0,gfs1);
+    /*
+     * Finite Element Map Setup
+     * FEM0 will be for the right subdomain, FEM1 for the left
+     */
 
-  std::cout << "function space setup: " << timer.elapsed() << " sec" << std::endl;
-  timer.reset();
+    typedef ctype DF;
+    typedef double RF;
+    typedef double TReal;
 
-  typedef B<MDGV> BType;
-  BType b(mdgv);
+    typedef Dune::PDELab::Q22DLocalFiniteElementMap<DF,RF> FEM0;
+    typedef Dune::PDELab::Q1LocalFiniteElementMap<DF,RF,dim> FEM1;
 
-  typedef F<MDGV,R,double> FType;
-  FType f(mdgv);
+    typedef FEM0::Traits::LocalFiniteElementType::Traits::
+      LocalBasisType::Traits::RangeFieldType R;
 
-  typedef G<MDGV,R,double> GType;
-  GType g(mdgv);
+    FEM0 fem0;
+    FEM1 fem1;
 
-  typedef J<MDGV,R,double> JType;
-  JType j(mdgv);
+    /*
+     * Constraints Setup
+     * The empty constraints will be used for the underlying grid function spaces, as
+     * we place the actual constraints on the subproblems.
+     */
 
-  // different integration order
-  typedef InstationaryPoisson<FType,BType,JType,4> LOP0;
-  LOP0 lop0(f,b,j);
-  typedef InstationaryPoisson<FType,BType,JType,2> LOP1;
-  LOP1 lop1(f,b,j);
+    typedef Dune::PDELab::NoConstraints NOCON;
+    typedef Dune::PDELab::ConformingDirichletConstraints CON;
+
+    CON con;
+
+    /*
+     * Grid Function Space Setup
+     * Both grid function space are only defined on the part of the grid assigned
+     * to the SubDomainGrid they are given at construction time
+     */
+
+    typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
+
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,NOCON,
+                                            Dune::PDELab::ISTLVectorBackend<1> > GFS0;
+
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,NOCON,
+                                            Dune::PDELab::ISTLVectorBackend<1> > GFS1;
+
+    GFS0 gfs0(sdgv0,fem0);
+    GFS1 gfs1(sdgv1,fem1);
+
+    /*
+     * The MultiDomainGridFunctionSpace needs to be parameterized on the underlying
+     * MultiDomainGrid and the (basic PDELab) GridFunctionSpaces it should contain.
+     * It does in general behave similar to a CompositeGridFunctionSpace.
+     */
+
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS0,GFS1> MultiGFS;
+
+    MultiGFS multigfs(grid,gfs0,gfs1);
+
+    std::cout << "function space setup: " << timer.elapsed() << " sec" << std::endl;
+    timer.reset();
+
+    /*
+     * Parameter functions for the Poisson problem
+     */
+
+    typedef B<MDGV> BType;
+    BType b(mdgv);
+
+    typedef F<MDGV,R,double> FType;
+    FType f(mdgv);
+
+    typedef G<MDGV,R,double> GType;
+    GType g(mdgv);
+
+    typedef J<MDGV,R,double> JType;
+    JType j(mdgv);
+
+    /*
+     * The local Poisson operators for the two subproblems.
+     * In principle, these two are identical, but since we
+     * are using different discretizations on the two subdomains,
+     * they differ in their integration order.
+     *
+     * The temporal operator takes the integration order in its
+     * constructor.
+     */
+
+    typedef InstationaryPoisson<FType,BType,JType,4> LOP0;
+    LOP0 lop0(f,b,j);
+    typedef InstationaryPoisson<FType,BType,JType,2> LOP1;
+    LOP1 lop1(f,b,j);
+
+    typedef SimpleTimeOperator TOP;
+    TOP top0(4);
+    TOP top1(2);
+
+    /*
+     * SubProblem Setup
+     * The subproblems delegate the decision of whether or not they
+     * apply to a given cell of the grid to a 'condition class'.
+     * Currently there are two such classes: SubDomainEqualityCondition
+     * and SubDomainSupersetCondition. They are simply passed a number
+     * of subdomain identifiers at construction time.
+     */
+
+    typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> Condition;
+
+    Condition c0(0);
+    Condition c1(1);
+
+    /*
+     * The actual SubProblems are typed on the (ansatz and test) MultiDomainGridFunctionSpaces
+     * that they are based on along with corresponding constraints assemblers, their local
+     * operator(s), the condition class that defines the subdomain of the grid the problems apply
+     * to and finally the components of the MultiDomainGridFunctionSpaces where the corresponding
+     * functions are defined.
+     * There are two ways of specifying those components:
+     * - The TypeBased... variants can be passed the type of the component spaces. Obviously, this
+     *   will only work if all component spaces have a distinct type.
+     * - The basic variants (without TypeBased...) take the child indices of the components within
+     *   the MultiDomainGridFunctionSpace. This always works, but may be prone to hard-to-find errors.
+     * The ordering of the component function spaces is important, as it will be identical to the ordering
+     * of the local function spaces in the local operator.
+     */
+
+    typedef Dune::PDELab::MultiDomain::TypeBasedInstationarySubProblem<TReal,MultiGFS,CON,MultiGFS,CON,LOP0,TOP,Condition,GFS0> SubProblem0;
+    typedef Dune::PDELab::MultiDomain::TypeBasedInstationarySubProblem<TReal,MultiGFS,CON,MultiGFS,CON,LOP1,TOP,Condition,GFS1> SubProblem1;
+    SubProblem0 sp0(con,con,lop0,top0,c0);
+    SubProblem1 sp1(con,con,lop1,top1,c1);
+
+    /*
+     * The local operator coupling the two subproblems. This operator only defines a method
+     * alphaCoupling() that will be called for all intersections on the interface between the
+     * two subproblems.
+     */
+
+    ProportionalFlowCoupling proportionalFlowCoupling(atof(argv[2]));
+
+    /*
+     * The class defining the coupling of the two subproblems. It gets passed the two subproblems
+     * and the local operator for calculating the coupling term. Note that the system will enforce
+     * the subproblem ordering specified here: The local operator will always be called with the
+     * first subproblem defined on the inside of the intersection and the second subproblem on its
+     * outside.
+     */
+
+    typedef Dune::PDELab::MultiDomain::InstationaryCoupling<TReal,SubProblem0,SubProblem1,ProportionalFlowCoupling> Coupling;
+    Coupling coupling(sp0,sp1,proportionalFlowCoupling);
+
+    std::cout << "subproblem / coupling setup: " << timer.elapsed() << " sec" << std::endl;
+    timer.reset();
 
 
-  typedef SimpleTimeOperator TOP;
-  TOP top0(4);
-  TOP top1(2);
+    /*
+     * Constraints Evaluation
+     * We have a Galerkin scheme, so it is sufficient to only evaluate
+     * the constraints on the trial space and reuse them on the test space.
+     * The extended constraints() function takes a boundary condition type
+     * function for the MultiDomainGridFunctionSpace, the corresponding
+     * MultiDomainGridFunctionSpace, the container in which to save the resulting
+     * constraints, followed by pairs of boundary condition type functions and
+     * their associated subproblems.
+     */
 
-  typedef MDGV::IndexSet::SubDomainSet SDS;
-  typedef Dune::PDELab::MultiDomain::EqualsSubDomains<SDS> EC;
+    typedef GFS0::ConstraintsContainer<R>::Type C;
+    C cg;
 
-  EC ec0(0);
-  EC ec1(1);
+    Dune::PDELab::MultiDomain::trialSpaceConstraints(b,multigfs,cg,b,sp0,b,sp1);
 
-  typedef Dune::PDELab::MultiDomain::TypeBasedInstationarySubProblem<double,MultiGFS,CON,MultiGFS,CON,LOP0,TOP,EC,GFS0> SubProblem0;
-  typedef Dune::PDELab::MultiDomain::TypeBasedInstationarySubProblem<double,MultiGFS,CON,MultiGFS,CON,LOP1,TOP,EC,GFS1> SubProblem1;
-  SubProblem0 sp0(con,con,lop0,top0,ec0);
-  SubProblem1 sp1(con,con,lop1,top1,ec1);
+    std::cout << "constraints evaluation: " << timer.elapsed() << " sec" << std::endl;
+    timer.reset();
 
-  SubProblem0::Traits::LocalTrialFunctionSpace
-    splfs0(sp0,sp0.trialGridFunctionSpaceConstraints());
-  SubProblem1::Traits::LocalTrialFunctionSpace
-    splfs1(sp1,sp1.trialGridFunctionSpaceConstraints());
+    /*
+     * Interpolation of initial guess
+     */
 
-  ProportionalFlowCoupling proportionalFlowCoupling(atof(argv[2]));
+    typedef MultiGFS::VectorContainer<R>::Type V;
+    V xold(multigfs);
+    xold = 0.0;
+    Dune::PDELab::MultiDomain::interpolateOnTrialSpace(multigfs,xold,g,sp0,g,sp1);
 
-  typedef Dune::PDELab::MultiDomain::InstationaryCoupling<double,SubProblem0,SubProblem1,ProportionalFlowCoupling> Coupling;
-  Coupling coupling(sp0,sp1,proportionalFlowCoupling);
+    std::cout << "interpolation: " << timer.elapsed() << " sec" << std::endl;
+    std::cout << xold.size() << " dof total, " << cg.size() << " dof constrained" << std::endl;
+    timer.reset();
 
-  std::cout << "subproblem / coupling setup: " << timer.elapsed() << " sec" << std::endl;
-  timer.reset();
+    /*
+     * MultiDomainGridOperatorSpace Setup
+     * Just like the basic InstationaryGridOperatorSpace, the
+     * InstationaryMultiDomainGridOperatorSpace takes the type representing time values,
+     * the type for storing residuals, the trial and test function spaces and
+     * the matrix backend. After those basic parameters, you simply list all of the
+     * subproblems and couplings to include in the calculations.
+     */
 
-  constraints(b,multigfs,cg,b,splfs0,b,splfs1);
+    typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 
-  std::cout << "constraints evaluation: " << timer.elapsed() << " sec" << std::endl;
-  timer.reset();
+    typedef Dune::PDELab::MultiDomain::InstationaryMultiDomainGridOperatorSpace<TReal,V,MultiGFS,MultiGFS,MBE,SubProblem0,SubProblem1,Coupling> MultiGOS;
 
-  // make coefficent Vector and initialize it from a function
-  typedef MultiGFS::VectorContainer<R>::Type V;
-  V xold(multigfs);
-  xold = 0.0;
-  Dune::PDELab::MultiDomain::interpolate(multigfs,xold,g,splfs0,g,splfs1);
+    MultiGOS multigos(multigfs,multigfs,cg,cg,sp0,sp1,coupling);
 
-  std::cout << "interpolation: " << timer.elapsed() << " sec" << std::endl;
-  std::cout << xold.size() << " dof total, " << cg.size() << " dof constrained" << std::endl;
-  timer.reset();
+    std::cout << "operator space setup: " << timer.elapsed() << " sec" << std::endl;
+    timer.reset();
 
-  typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,0> SGFS0;
-  typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,1> SGFS1;
-  SGFS0 sgfs0(multigfs);
-  SGFS1 sgfs1(multigfs);
+    /*
+     * Time Stepping Method Setup
+     * This is identical to standard PDELab.
+     */
 
-  typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
+    typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
+    LS ls(5000,false);
 
-  typedef Dune::PDELab::MultiDomain::InstationaryMultiDomainGridOperatorSpace<double,V,MultiGFS,MultiGFS,MBE,SubProblem0,SubProblem1,Coupling> MultiGOS;
+    typedef Dune::PDELab::StationaryLinearProblemSolver<MultiGOS,LS,V> PDESOLVER;
+    PDESOLVER pdesolver(multigos,ls,1e-10);
 
-  MultiGOS multigos(multigfs,multigfs,cg,cg,sp0,sp1,coupling);
+    Dune::PDELab::Alexander2Parameter<double> method;
+    Dune::PDELab::OneStepMethod<double,MultiGOS,PDESOLVER,V,V> osm(method,multigos,pdesolver);
+    osm.setVerbosityLevel(2);
 
-  std::cout << "operator space setup: " << timer.elapsed() << " sec" << std::endl;
-  timer.reset();
+    /*
+     * Grid function sub spaces for VTK output
+     * As for the subproblems, there is an enhanced version of the sub space
+     * which allows specifying the child by type instead of by index (the same
+     * restrictions apply).
+     */
 
-  typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
-  LS ls(5000,false);
+    typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,GFS0> SGFS0;
+    typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,GFS1> SGFS1;
+    SGFS0 sgfs0(multigfs);
+    SGFS1 sgfs1(multigfs);
 
-  typedef Dune::PDELab::StationaryLinearProblemSolver<MultiGOS,LS,V> PDESOLVER;
-  PDESOLVER pdesolver(multigos,ls,1e-10);
+    /*
+     * Output initial guess
+     */
 
-  Dune::PDELab::Alexander2Parameter<double> method;
-  Dune::PDELab::OneStepMethod<double,MultiGOS,PDESOLVER,V,V> osm(method,multigos,pdesolver);
-  osm.setVerbosityLevel(2);
-
-  Dune::PDELab::FilenameHelper fn0("instationaryexplicitlycoupledpoisson-right");
-  {
-    typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> U0DGF;
-    U0DGF u0dgf(sgfs0,xold);
-    Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv0,2);
-    vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U0DGF>(u0dgf,"c0"));
-    vtkwriter.write(fn0.getName(),Dune::VTKOptions::binaryappended);
-    fn0.increment();
-  }
-  Dune::PDELab::FilenameHelper fn1("instationaryexplicitlycoupledpoisson-left");
-  {
-    typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> U1DGF;
-    U1DGF u1dgf(sgfs1,xold);
-    Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
-    vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U1DGF>(u1dgf,"c1"));
-    vtkwriter.write(fn1.getName(),Dune::VTKOptions::binaryappended);
-    fn1.increment();
-  }
-
-  V xnew(xold);
-  double time = 0;
-  double dt = 1.0;
-
-  for (int i = 0; i < 100; ++i)
+    Dune::PDELab::FilenameHelper fn0("instationaryexplicitlycoupledpoisson-right");
     {
-      osm.apply(time,dt,xold,xnew);
-      xold = xnew;
-      time += dt;
-
-      {
-        typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> U0DGF;
-        U0DGF u0dgf(sgfs0,xold);
-        Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv0,2);
-        vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U0DGF>(u0dgf,"c0"));
-        vtkwriter.write(fn0.getName(),Dune::VTKOptions::binaryappended);
-        fn0.increment();
-      }
-
-      {
-        typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> U1DGF;
-        U1DGF u1dgf(sgfs1,xold);
-        Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
-        vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U1DGF>(u1dgf,"c1"));
-        vtkwriter.write(fn1.getName(),Dune::VTKOptions::binaryappended);
-        fn1.increment();
-      }
+      typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> U0DGF;
+      U0DGF u0dgf(sgfs0,xold);
+      Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv0,2);
+      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U0DGF>(u0dgf,"c0"));
+      vtkwriter.write(fn0.getName(),Dune::VTKOptions::binaryappended);
+      fn0.increment();
     }
+    Dune::PDELab::FilenameHelper fn1("instationaryexplicitlycoupledpoisson-left");
+    {
+      typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> U1DGF;
+      U1DGF u1dgf(sgfs1,xold);
+      Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
+      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U1DGF>(u1dgf,"c1"));
+      vtkwriter.write(fn1.getName(),Dune::VTKOptions::binaryappended);
+      fn1.increment();
+    }
+
+    /*
+     * Time stepping - also identical to standard PDELab version.
+     */
+
+    V xnew(xold);
+    double time = 0;
+    double dt = 1.0;
+
+    for (int i = 0; i < 100; ++i)
+      {
+        osm.apply(time,dt,xold,xnew);
+        xold = xnew;
+        time += dt;
+
+        {
+          typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> U0DGF;
+          U0DGF u0dgf(sgfs0,xold);
+          Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv0,2);
+          vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U0DGF>(u0dgf,"c0"));
+          vtkwriter.write(fn0.getName(),Dune::VTKOptions::binaryappended);
+          fn0.increment();
+        }
+
+        {
+          typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> U1DGF;
+          U1DGF u1dgf(sgfs1,xold);
+          Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
+          vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U1DGF>(u1dgf,"c1"));
+          vtkwriter.write(fn1.getName(),Dune::VTKOptions::binaryappended);
+          fn1.increment();
+        }
+      }
 
   }
   catch (Dune::Exception &e){
     std::cerr << "Dune reported error: " << e << std::endl;
-	return 1;
+    return 1;
   }
   catch (...){
     std::cerr << "Unknown exception thrown!" << std::endl;
-	return 1;
+    return 1;
   }
 
 }

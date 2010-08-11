@@ -312,10 +312,10 @@ struct InvokeAlphaSkeletonOrBoundary
             LFSV lfsvn(data.lfsvn(),child,child.testGridFunctionSpaceConstraints());
             lfsun.bind();
             lfsvn.bind();
-            LocalAssemblerCallSwitch<Child,LOP::doAlphaSkeleton>::
+            LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
               alpha_skeleton(Operator::extract(child),
                              IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                               data.intersection_index),
+                                                                               data.intersectionIndex()),
                              lfsu,_xl,lfsv,lfsun,_xn,lfsvn,_rl,_rn);
             if(LOP::doAlphaSkeleton)
               data.setAlphaSkeletonInvoked();
@@ -326,12 +326,12 @@ struct InvokeAlphaSkeletonOrBoundary
         LocalAssemblerCallSwitch<LOP,LOP::doAlphaBoundary>::
           alpha_boundary(Operator::extract(child),
                          IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                           data.intersection_index),
+                                                                           data.intersectionIndex()),
                          lfsu,_xl,lfsv,_rl);
         LocalAssemblerCallSwitch<LOP,LOP::doLambdaBoundary>::
           lambda_boundary(Operator::extract(child),
                           IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                            data.intersection_index),
+                                                                            data.intersectionIndex()),
                           lfsv,_rl);
       }
   }

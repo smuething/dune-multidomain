@@ -294,7 +294,8 @@ int main(int argc, char** argv) {
      * two subproblems.
      */
 
-    ProportionalFlowCoupling proportionalFlowCoupling(atof(argv[2]));
+    typedef ContinuousValueContinuousFlowCoupling<TReal> COP;
+    COP cop(4,atof(argv[2]));
 
     /*
      * The class defining the coupling of the two subproblems. It gets passed the two subproblems
@@ -304,8 +305,8 @@ int main(int argc, char** argv) {
      * outside.
      */
 
-    typedef Dune::PDELab::MultiDomain::InstationaryCoupling<TReal,SubProblem0,SubProblem1,ProportionalFlowCoupling> Coupling;
-    Coupling coupling(sp0,sp1,proportionalFlowCoupling);
+    typedef Dune::PDELab::MultiDomain::InstationaryCoupling<TReal,SubProblem1,SubProblem0,COP> Coupling;
+    Coupling coupling(sp1,sp0,cop);
 
     std::cout << "subproblem / coupling setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();

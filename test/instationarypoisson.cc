@@ -101,8 +101,8 @@ int main(int argc, char** argv) {
 
   try {
 
-    if (argc < 3) {
-      std::cerr << "Usage: " << argv[0] << " <refinement level> <coupling intensity>" << std::endl;
+    if (argc < 4) {
+      std::cerr << "Usage: " << argv[0] << " <refinement level> <dt> <tmax>" << std::endl;
       return 1;
     }
 
@@ -381,9 +381,10 @@ int main(int argc, char** argv) {
 
     V xnew(xold);
     double time = 0;
-    double dt = 1.0;
+    const double dt = atof(argv[2]);
+    const double tend = atof(argv[3]);
 
-    for (int i = 0; i < 100; ++i)
+    while (time < tend)
       {
         osm.apply(time,dt,xold,xnew);
         xold = xnew;

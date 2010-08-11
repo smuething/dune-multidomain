@@ -1,10 +1,11 @@
 #include "config.h"
 
-#include <dune/grid/sgrid.hh>
+#include <dune/grid/uggrid.hh>
 #include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/finiteelementmap/q1fem.hh>
 #include <dune/pdelab/finiteelementmap/q22dfem.hh>
+#include <dune/pdelab/finiteelementmap/pk2dfem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/backend/istlmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
@@ -22,6 +23,7 @@
 #include<dune/pdelab/stationary/linearproblem.hh>
 #include<dune/pdelab/instationary/onestep.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
+#include <dune/grid/io/file/gmshreader.hh>
 
 #include "functionmacros.hh"
 #include "simpletimeoperator.hh"
@@ -112,13 +114,21 @@ int main(int argc, char** argv) {
     /*
      * Create underlying grid
      */
-
+    /*
     typedef Dune::YaspGrid<dim> BaseGrid;
     const Dune::FieldVector<int,dim> s(1);
     const Dune::FieldVector<double,dim> h(1.0);
     const Dune::FieldVector<bool,dim> p(false);
     BaseGrid baseGrid(h,s,p,0);
     baseGrid.globalRefine(atoi(argv[1]));
+    */
+
+    typedef Dune::UGGrid<dim> BaseGrid;
+    BaseGrid baseGrid;
+    std::vector<int> boundaryIndexToPhysicalGroup, elementIndexToPhysicalGroup;
+    Dune::GmshReader<BaseGrid> gmshreader;
+    gmshreader.read(baseGrid,"gmshtest.msh",boundaryIndexToPhysicalGroup,elementIndexToPhysicalGroup,true,false);
+
 
     /*
      * Create MultiDomainGrid and obtain references to SubDomainGrids
@@ -147,10 +157,13 @@ int main(int argc, char** argv) {
     grid.startSubDomainMarking();
     for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
       {
+        /*
         if (it->geometry().center()[0] > 0.5)
           grid.addToSubDomain(0,*it);
         else
           grid.addToSubDomain(1,*it);
+        */
+        grid.addToSubDomain(elementIndexToPhysicalGroup[mdgv.indexSet().index(*it)],*it);
       }
     grid.preUpdateSubDomains();
     grid.updateSubDomains();
@@ -168,12 +181,13 @@ int main(int argc, char** argv) {
     typedef double RF;
     typedef double TReal;
 
-    typedef Dune::PDELab::Q1LocalFiniteElementMap<DF,RF,dim> FEM;
+    typedef Dune::PDELab::Pk2DLocalFiniteElementMap<MDGV,DF,RF,1> FEM;
+    //typedef Dune::PDELab::Q1LocalFiniteElementMap<DF,RF,dim> FEM;
 
     typedef FEM::Traits::LocalFiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
 
-    FEM fem;
+    FEM fem(mdgv);
 
     /*
      * Constraints Setup

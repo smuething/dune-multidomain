@@ -90,143 +90,155 @@ END_SIMPLE_ANALYTIC_FUNCTION
 
 int main(int argc, char** argv) {
 
-  if (argc < 2) {
-    std::cerr << "Usage: " << argv[0] << " <refinement level>" << std::endl;
+  try {
+
+    if (argc < 2) {
+      std::cerr << "Usage: " << argv[0] << " <refinement level>" << std::endl;
+      return 1;
+    }
+
+    Dune::MPIHelper::instance(argc,argv);
+
+    const int dim = 2;
+    //typedef Dune::SGrid<dim,dim> BaseGrid;
+    typedef Dune::YaspGrid<dim> BaseGrid;
+    const Dune::FieldVector<int,dim> s(1);
+    const Dune::FieldVector<double,dim> h(1.0);
+    const Dune::FieldVector<bool,dim> p(false);
+    BaseGrid baseGrid(h,s,p,0);
+    baseGrid.globalRefine(atoi(argv[1]));
+    typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;
+    Grid grid(baseGrid,false);
+    typedef Grid::SubDomainGrid SubDomainGrid;
+    SubDomainGrid& sdg0 = grid.subDomain(0);
+    SubDomainGrid& sdg1 = grid.subDomain(1);
+    typedef Grid::ctype ctype;
+    typedef Grid::LeafGridView MDGV;
+    typedef SubDomainGrid::LeafGridView SDGV;
+    MDGV mdgv = grid.leafView();
+    SDGV sdgv0 = sdg0.leafView();
+    SDGV sdgv1 = sdg1.leafView();
+    sdg0.hostEntityPointer(*sdgv0.begin<0>());
+    grid.startSubDomainMarking();
+    for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
+      {
+        if (it->geometry().center()[0] > 0.5)
+          grid.addToSubDomain(0,*it);
+        else
+          grid.addToSubDomain(1,*it);
+      }
+    grid.preUpdateSubDomains();
+    grid.updateSubDomains();
+    grid.postUpdateSubDomains();
+
+    typedef MDGV::Grid::ctype DF;
+
+    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM;
+
+    typedef FEM::Traits::LocalFiniteElementType::Traits::
+      LocalBasisType::Traits::RangeFieldType R;
+
+    FEM fem;
+    typedef Dune::PDELab::NoConstraints NOCON;
+    typedef Dune::PDELab::ConformingDirichletConstraints CON;
+    typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
+
+    CON con;
+
+    typedef Dune::PDELab::GridFunctionSpace<MDGV,FEM,NOCON,
+                                            Dune::PDELab::ISTLVectorBackend<1> > GFS;
+
+    typedef GFS::ConstraintsContainer<R>::Type C;
+    C cg;
+
+    GFS gfs(mdgv,fem);
+
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS> MultiGFS;
+
+    MultiGFS multigfs(grid,gfs);
+
+    typedef B<MDGV> BType;
+    BType b(mdgv);
+
+    typedef F<MDGV,R> FType;
+    FType f(mdgv);
+
+    typedef G<MDGV,R> GType;
+    GType g(mdgv);
+
+    typedef J<MDGV,R> JType;
+    JType j(mdgv);
+
+    typedef Dune::PDELab::Poisson<FType,BType,JType,2> LOP;
+    LOP lop(f,b,j);
+
+    typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> Condition;
+
+    Condition c0(0);
+    Condition c1(1);
+
+    typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,CON,MultiGFS,CON,LOP,Condition,0> SubProblem;
+    SubProblem sp0(con,con,lop,c0);
+    SubProblem sp1(con,con,lop,c1);
+
+    SubProblem::Traits::LocalTrialFunctionSpace
+      splfs0(sp0,sp0.trialGridFunctionSpaceConstraints()),
+      splfs1(sp1,sp1.trialGridFunctionSpaceConstraints());
+
+    constraints(b,multigfs,cg,b,splfs0,b,splfs1);
+
+    // make coefficent Vector and initialize it from a function
+    typedef MultiGFS::VectorContainer<R>::Type V;
+    V x0(multigfs);
+    x0 = 0.0;
+    Dune::PDELab::MultiDomain::interpolate(multigfs,x0,g,splfs0,g,splfs1);
+    Dune::PDELab::set_shifted_dofs(cg,0.0,x0);
+
+    typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
+
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridOperatorSpace<MultiGFS,MultiGFS,MBE,SubProblem,SubProblem> MultiGOS;
+
+    MultiGOS multigos(multigfs,multigfs,cg,cg,sp0,sp1);
+
+    typedef MultiGOS::MatrixContainer<R>::Type M;
+    M m(multigos);
+    m = 0.0;
+
+    multigos.jacobian(x0,m);
+
+    V r(multigfs);
+
+    r = 0.0;
+
+    multigos.residual(x0,r);
+
+    Dune::MatrixAdapter<M,V,V> opa(m);
+    Dune::SeqSSOR<M,V,V> ssor(m,1,1.0);
+    Dune::CGSolver<V> solver(opa,ssor,1e-10,5000,2);
+    Dune::InverseOperatorResult stat;
+
+    r *= -1.0;
+
+    V x(multigfs,0.0);
+    solver.apply(x,r,stat);
+
+    x += x0;
+
+    typedef Dune::PDELab::DiscreteGridFunction<GFS,V> DGF;
+    DGF dgf(gfs,x);
+
+    Dune::VTKWriter<MDGV> vtkwriter(mdgv,Dune::VTKOptions::conforming);
+    vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
+    vtkwriter.write("poisson.vtu",Dune::VTKOptions::ascii);
+
+  }
+  catch (Dune::Exception &e){
+    std::cerr << "Dune reported error: " << e << std::endl;
     return 1;
   }
-
-  Dune::MPIHelper::instance(argc,argv);
-
-  const int dim = 2;
-  //typedef Dune::SGrid<dim,dim> BaseGrid;
-  typedef Dune::YaspGrid<dim> BaseGrid;
-  const Dune::FieldVector<int,dim> s(1);
-  const Dune::FieldVector<double,dim> h(1.0);
-  const Dune::FieldVector<bool,dim> p(false);
-  BaseGrid baseGrid(h,s,p,0);
-  baseGrid.globalRefine(atoi(argv[1]));
-  typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;
-  Grid grid(baseGrid,false);
-  typedef Grid::SubDomainGrid SubDomainGrid;
-  SubDomainGrid& sdg0 = grid.subDomain(0);
-  SubDomainGrid& sdg1 = grid.subDomain(1);
-  typedef Grid::ctype ctype;
-  typedef Grid::LeafGridView MDGV;
-  typedef SubDomainGrid::LeafGridView SDGV;
-  MDGV mdgv = grid.leafView();
-  SDGV sdgv0 = sdg0.leafView();
-  SDGV sdgv1 = sdg1.leafView();
-  sdg0.hostEntityPointer(*sdgv0.begin<0>());
-  grid.startSubDomainMarking();
-  for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
-    {
-      if (it->geometry().center()[0] > 0.5)
-        grid.addToSubDomain(0,*it);
-      else
-        grid.addToSubDomain(1,*it);
-    }
-  grid.preUpdateSubDomains();
-  grid.updateSubDomains();
-  grid.postUpdateSubDomains();
-
-  typedef MDGV::Grid::ctype DF;
-
-  typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM;
-
-  typedef FEM::Traits::LocalFiniteElementType::Traits::
-    LocalBasisType::Traits::RangeFieldType R;
-
-  FEM fem;
-  typedef Dune::PDELab::NoConstraints NOCON;
-  typedef Dune::PDELab::ConformingDirichletConstraints CON;
-  typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
-
-  CON con;
-
-  typedef Dune::PDELab::GridFunctionSpace<MDGV,FEM,NOCON,
-    Dune::PDELab::ISTLVectorBackend<1> > GFS;
-
-  typedef GFS::ConstraintsContainer<R>::Type C;
-  C cg;
-
-  GFS gfs(mdgv,fem);
-
-  typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS> MultiGFS;
-
-  MultiGFS multigfs(grid,gfs);
-
-  typedef B<MDGV> BType;
-  BType b(mdgv);
-
-  typedef F<MDGV,R> FType;
-  FType f(mdgv);
-
-  typedef G<MDGV,R> GType;
-  GType g(mdgv);
-
-  typedef J<MDGV,R> JType;
-  JType j(mdgv);
-
-  typedef Dune::PDELab::Poisson<FType,BType,JType,2> LOP;
-  LOP lop(f,b,j);
-
-  typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> Condition;
-
-  Condition c0(0);
-  Condition c1(1);
-
-  typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,CON,MultiGFS,CON,LOP,Condition,0> SubProblem;
-  SubProblem sp0(con,con,lop,c0);
-  SubProblem sp1(con,con,lop,c1);
-
-  SubProblem::Traits::LocalTrialFunctionSpace
-    splfs0(sp0,sp0.trialGridFunctionSpaceConstraints()),
-    splfs1(sp1,sp1.trialGridFunctionSpaceConstraints());
-
-  constraints(b,multigfs,cg,b,splfs0,b,splfs1);
-
-  // make coefficent Vector and initialize it from a function
-  typedef MultiGFS::VectorContainer<R>::Type V;
-  V x0(multigfs);
-  x0 = 0.0;
-  Dune::PDELab::MultiDomain::interpolate(multigfs,x0,g,splfs0,g,splfs1);
-  Dune::PDELab::set_shifted_dofs(cg,0.0,x0);
-
-  typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
-
-  typedef Dune::PDELab::MultiDomain::MultiDomainGridOperatorSpace<MultiGFS,MultiGFS,MBE,SubProblem,SubProblem> MultiGOS;
-
-  MultiGOS multigos(multigfs,multigfs,cg,cg,sp0,sp1);
-
-  typedef MultiGOS::MatrixContainer<R>::Type M;
-  M m(multigos);
-  m = 0.0;
-
-  multigos.jacobian(x0,m);
-
-  V r(multigfs);
-
-  r = 0.0;
-
-  multigos.residual(x0,r);
-
-  Dune::MatrixAdapter<M,V,V> opa(m);
-  Dune::SeqSSOR<M,V,V> ssor(m,1,1.0);
-  Dune::CGSolver<V> solver(opa,ssor,1e-10,5000,2);
-  Dune::InverseOperatorResult stat;
-
-  r *= -1.0;
-
-  V x(multigfs,0.0);
-  solver.apply(x,r,stat);
-
-  x += x0;
-
-  typedef Dune::PDELab::DiscreteGridFunction<GFS,V> DGF;
-  DGF dgf(gfs,x);
-
-  Dune::VTKWriter<MDGV> vtkwriter(mdgv,Dune::VTKOptions::conforming);
-  vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
-  vtkwriter.write("poisson.vtu",Dune::VTKOptions::ascii);
+  catch (...){
+    std::cerr << "Unknown exception thrown!" << std::endl;
+    return 1;
+  }
 
 }

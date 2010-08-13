@@ -140,6 +140,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  Dune::MPIHelper::instance(argc,argv);
+
   const double dtstart = atof(argv[2]);
   const double dtmax = atof(argv[3]);
   const double tend = atof(argv[4]);

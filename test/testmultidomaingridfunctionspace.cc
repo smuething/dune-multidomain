@@ -7,6 +7,9 @@
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 
 int main(int argc, char** argv) {
+
+  Dune::MPIHelper::instance(argc,argv);
+
   const int dim = 2;
   typedef Dune::SGrid<dim,dim> BaseGrid;
   const int s[2] = {4,4};

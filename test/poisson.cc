@@ -95,6 +95,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  Dune::MPIHelper::instance(argc,argv);
+
   const int dim = 2;
   //typedef Dune::SGrid<dim,dim> BaseGrid;
   typedef Dune::YaspGrid<dim> BaseGrid;

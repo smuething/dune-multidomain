@@ -100,6 +100,8 @@ int main(int argc, char** argv) {
 
   try {
 
+    Dune::MPIHelper::instance(argc,argv);
+
     if (argc < 5) {
       std::cerr << "Usage: " << argv[0] << " <refinement level> <coupling intensity> <dt> <tend>" << std::endl;
       return 1;

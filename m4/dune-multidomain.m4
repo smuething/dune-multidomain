@@ -13,5 +13,5 @@ AC_DEFUN([DUNE_MULTIDOMAIN_CHECKS])
 # not by dune-multidomain itself
 AC_DEFUN([DUNE_MULTIDOMAIN_CHECK_MODULE],
 [
-  DUNE_CHECK_MODULES([dune-multidomain],[dune/pdelab/multidomain/multidomaingridfunctionspace.hh])
+  DUNE_CHECK_MODULES([dune-multidomain],[pdelab/multidomain/utility.hh])
 ])

@@ -131,8 +131,8 @@ struct BuildVolumePattern
     for (size_t k=0; k<localpattern.size(); ++k)
       // TODO: Figure out if we really need the localIndex() call
       data.gos().add_entry(globalpattern,
-                           lfsv.globalIndex(lfsv.localIndex(localpattern[k].i())),
-                           lfsu.globalIndex(lfsu.localIndex(localpattern[k].j()))
+                           data.lfsu().globalIndex(lfsu.localIndex(localpattern[k].i())),
+                           data.lfsv().globalIndex(lfsv.localIndex(localpattern[k].j()))
                            );
   }
 
@@ -166,14 +166,14 @@ struct BuildSkeletonPattern
     // translate local to global indices and add to global pattern
     for (size_t k=0; k<localpattern_sn.size(); ++k)
       data.gos().add_entry(globalpattern,
-                           data.lfsv().globalIndex(data.lfsv().localIndex(localpattern_sn[k].i())),
-                           data.lfsun().globalIndex(data.lfsun().localIndex(localpattern_sn[k].j()))
+                           data.lfsu().globalIndex(lfsu().localIndex(localpattern_sn[k].i())),
+                           data.lfsvn().globalIndex(lfsvn().localIndex(localpattern_sn[k].j()))
                            );
 
     for (size_t k=0; k<localpattern_ns.size(); ++k)
       data.gos().add_entry(globalpattern,
-                           data.lfsvn().globalIndex(data.lfsvn().localIndex(localpattern_ns[k].i())),
-                           data.lfsu().globalIndex(data.lfsu().localIndex(localpattern_ns[k].j()))
+                           data.lfsun().globalIndex(lfsun.localIndex(localpattern_ns[k].i())),
+                           data.lfsv().globalIndex(lfsv.localIndex(localpattern_ns[k].j()))
                            );
   }
 
@@ -215,13 +215,13 @@ struct BuildCouplingPattern
     // FIXME: this only works because of some kind of miracle!
     for (size_t k=0; k<localpattern_sn.size(); ++k)
       data.gos().add_entry(globalpattern,
-                           data.lfsv().globalIndex(data.lfsv().localIndex(localpattern_sn[k].i())),
-                           data.lfsun().globalIndex(data.lfsun().localIndex(localpattern_sn[k].j()))
+                           data.lfsu().globalIndex(local_lfsu.localIndex(localpattern_sn[k].i())),
+                           data.lfsvn().globalIndex(remote_lfsv.localIndex(localpattern_sn[k].j()))
                            );
     for (size_t k=0; k<localpattern_ns.size(); ++k)
       data.gos().add_entry(globalpattern,
-                           data.lfsvn().globalIndex(data.lfsvn().localIndex(localpattern_ns[k].i())),
-                           data.lfsu().globalIndex(data.lfsu().localIndex(localpattern_ns[k].j()))
+                           data.lfsun().globalIndex(remote_lfsu.localIndex(localpattern_ns[k].i())),
+                           data.lfsv().globalIndex(local_lfsv.localIndex(localpattern_ns[k].j()))
                            );
   }
 

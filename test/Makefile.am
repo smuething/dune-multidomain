@@ -11,7 +11,8 @@ check_PROGRAMS = testmultidomaingridfunctionspace \
 	reactiondiffusion \
 	explicitlycoupledpoisson \
 	instationarypoisson \
-	instationaryexplicitlycoupledpoisson
+	instationaryexplicitlycoupledpoisson \
+	testmatrixconstruction
 
 testmultidomaingridfunctionspace_SOURCES = testmultidomaingridfunctionspace.cc
 #testmultidomaingridfunctionspace_CXXFLAGS = $(AM_CXXFLAGS) $(ALL_PKG_CPPFLAGS) $(BOOST_CPPFLAGS)
@@ -28,3 +29,5 @@ explicitlycoupledpoisson_SOURCES = explicitlycoupledpoisson.cc
 instationarypoisson_SOURCES = instationarypoisson.cc
 
 instationaryexplicitlycoupledpoisson_SOURCES = instationaryexplicitlycoupledpoisson.cc
+
+testmatrixconstruction_SOURCES = testmatrixconstruction.cc

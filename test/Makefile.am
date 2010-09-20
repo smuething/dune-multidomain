@@ -12,7 +12,7 @@ check_PROGRAMS = testmultidomaingridfunctionspace \
 	explicitlycoupledpoisson \
 	instationarypoisson \
 	instationaryexplicitlycoupledpoisson \
-	testmatrixconstruction
+	testlocalfunctionspace
 
 testmultidomaingridfunctionspace_SOURCES = testmultidomaingridfunctionspace.cc
 #testmultidomaingridfunctionspace_CXXFLAGS = $(AM_CXXFLAGS) $(ALL_PKG_CPPFLAGS) $(BOOST_CPPFLAGS)
@@ -30,4 +30,5 @@ instationarypoisson_SOURCES = instationarypoisson.cc
 
 instationaryexplicitlycoupledpoisson_SOURCES = instationaryexplicitlycoupledpoisson.cc
 
-testmatrixconstruction_SOURCES = testmatrixconstruction.cc
+
+testlocalfunctionspace_SOURCES = testlocalfunctionspace.cc

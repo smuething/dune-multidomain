@@ -360,6 +360,11 @@ public:
     return pgfs->maxLocalSize();
   }
 
+  typename Traits::IndexContainer::size_type localVectorSize() const
+  {
+    return plfs->localVectorSize();
+  }
+
   // map index in this local function space to root local function space
   typename Traits::IndexContainer::size_type localIndex (typename Traits::IndexContainer::size_type index) const
   {
@@ -522,6 +527,11 @@ public:
   typename Traits::IndexContainer::size_type maxSize () const
   {
     return pgfs->maxLocalSize();
+  }
+
+  typename Traits::IndexContainer::size_type localVectorSize() const
+  {
+    return baseLFS().localVectorSize();
   }
 
   // map index in this local function space to root local function space
@@ -701,6 +711,11 @@ public:
     return pgfs->maxLocalSize();
   }
 
+  typename Traits::IndexContainer::size_type localVectorSize() const
+  {
+    return baseLFS().localVectorSize();
+  }
+
   // map index in this local function space to root local function space
   typename Traits::IndexContainer::size_type localIndex (typename Traits::IndexContainer::size_type index) const
   {
@@ -853,6 +868,11 @@ public:
   typename Traits::IndexContainer::size_type maxSize () const
   {
     return pgfs->maxLocalSize();
+  }
+
+  typename Traits::IndexContainer::size_type localVectorSize() const
+  {
+    return baseLFS().localVectorSize();
   }
 
   // map index in this local function space to root local function space

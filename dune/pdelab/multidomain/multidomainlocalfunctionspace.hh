@@ -225,6 +225,11 @@ public:
     return n;
   }
 
+  typename Traits::IndexContainer::size_type localVectorSize() const
+  {
+    return n;
+  }
+
   //! \brief get maximum possible size (which is maxLocalSize from grid function space)
   typename Traits::IndexContainer::size_type maxSize () const
   {

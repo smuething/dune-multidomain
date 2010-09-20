@@ -31,10 +31,10 @@ template<typename T, bool isLeaf, typename GV, typename E, typename It, typename
 struct GuardedVisit<T,isLeaf,GV,E,It,Int,Dune::mdgrid::multiDomainGrid>
 {
 
-  static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset)
+  static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
   {
     if (gv.indexSet().contains(e))
-      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,E,It,Int>::fill_indices(t,e,begin,offset);
+      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,E,It,Int>::fill_indices(t,e,begin,offset,lvsize);
   }
 
   static void reserve(T& t, GV gv, const E& e, Int& offset)
@@ -49,13 +49,13 @@ template<typename T, bool isLeaf, typename GV, typename E, typename It, typename
 struct GuardedVisit<T,isLeaf,GV,E,It,Int,Dune::mdgrid::subDomainGrid>
 {
 
-  static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset)
+  static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
   {
     typedef typename T::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
     typedef typename SDEP::Entity SDE;
     const SDEP ep = gv.grid().subDomainEntityPointer(e);
     if (gv.indexSet().contains(*ep))
-      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,SDE,It,Int>::fill_indices(t,*ep,begin,offset);
+      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,SDE,It,Int>::fill_indices(t,*ep,begin,offset,lvsize);
   }
 
   static void reserve(T& t, GV gv, const E& e, Int& offset)
@@ -84,16 +84,16 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inne
     NextChild::setup(t,gfs);
   }
 
-  static void fill_indices (T& t, const E& e, It begin, Int& offset)
+  static void fill_indices (T& t, const E& e, It begin, Int& offset, const Int lvsize)
   {
     // vist children of node t in order
     typedef typename T::template Child<i>::Type C;
     Int initial_offset = offset; // remember initial offset to compute size later
     GuardedVisit<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,Dune::mdgrid::GridType<typename C::Traits::GridViewType::Grid>::v >::
-      fill_indices(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,begin,offset);
+      fill_indices(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,begin,offset,lvsize);
     for (Int j=initial_offset; j<offset; j++)
       begin[j] = t.pgfs->template subMap<i>(begin[j]);
-    NextChild::fill_indices(t,e,begin,offset);
+    NextChild::fill_indices(t,e,begin,offset,lvsize);
   }
 
   static void reserve (T& t, const E& e, Int& offset)
@@ -116,7 +116,7 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,E,It,Int,n,n> // end
   {
   }
 
-  static void fill_indices (T& t, const E& e, It begin, Int& offset)
+  static void fill_indices (T& t, const E& e, It begin, Int& offset, const Int lvsize)
   {
     return;
   }
@@ -326,7 +326,7 @@ public:
     offset = 0;
     this->offset = 0;
     this->i = global.begin();
-    VisitChildTMP::fill_indices(*this,e,global.begin(),offset);
+    VisitChildTMP::fill_indices(*this,e,global.begin(),offset,global.size());
 
     // apply upMap
     for (typename BaseT::Traits::IndexContainer::size_type i=0; i<offset; i++)

@@ -438,11 +438,17 @@ private:
 };
 
 
-// single-component version
+// single-component version base - this needs to be specialized for each supported base LFS
 
 
-template<typename MDLFS, typename SubProblem, typename Constraints, int ChildIndex>
-class SubProblemLocalFunctionSpace<MDLFS,SubProblem,Constraints,ChildIndex>
+template<typename MDLFS, typename SubProblem, typename Constraints, int ChildIndex, typename BaseLFS>
+class SubProblemLocalFunctionSpaceBase;
+
+
+// single-component version base - specialization for leaf function space
+
+template<typename MDLFS, typename SubProblem, typename Constraints, int ChildIndex, typename BaseGFS>
+class SubProblemLocalFunctionSpaceBase<MDLFS,SubProblem,Constraints,ChildIndex, LeafLocalFunctionSpaceNode<BaseGFS> >
   : public LeafNode
 {
 
@@ -465,7 +471,7 @@ class SubProblemLocalFunctionSpace<MDLFS,SubProblem,Constraints,ChildIndex>
   }
 
 public:
-  typedef SubProblemLeafLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpace,BaseLFS,SubProblem,Constraints> Traits;
+  typedef SubProblemLeafLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpaceBase,BaseLFS,SubProblem,Constraints> Traits;
 
   //! \brief empty constructor - TODO:Do we need this???
   /*SubProblemLocalFunctionSpace ()
@@ -473,7 +479,7 @@ public:
   }*/
 
   //! \brief initialize with grid function space
-  SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const SubProblem& subProblem, const Constraints& constraints) :
+  SubProblemLocalFunctionSpaceBase (const MDLFS& mdlfs, const SubProblem& subProblem, const Constraints& constraints) :
     plfs(&mdlfs),
     pgfs(&(mdlfs.gfs())),
     _subProblem(subProblem),
@@ -483,7 +489,7 @@ public:
   }
 
   //! \brief variant if no local function space is availabe at construction time
-  SubProblemLocalFunctionSpace(const SubProblem& subProblem, const Constraints& constraints) :
+  SubProblemLocalFunctionSpaceBase(const SubProblem& subProblem, const Constraints& constraints) :
     plfs(NULL),
     pgfs(NULL),
     _subProblem(subProblem),
@@ -597,6 +603,353 @@ private:
   typename Traits::IndexContainer::size_type n;
   typename Traits::IndexContainer::size_type offset;
   typename Traits::IndexContainer global;
+
+};
+
+
+// single-component version base - specialization for power function space
+
+template<typename MDLFS, typename SubProblem, typename Constraints, int ChildIndex, typename BaseGFS>
+class SubProblemLocalFunctionSpaceBase<MDLFS,SubProblem,Constraints,ChildIndex,PowerLocalFunctionSpaceNode<BaseGFS> >
+{
+
+  dune_static_assert((ChildIndex < MDLFS::CHILDREN),"Child index out of range");
+
+  typedef typename MDLFS::Traits::GridFunctionSpaceType GFS;
+
+  template<typename T, bool b, typename E, typename It, typename Int>
+  friend struct LocalFunctionSpaceBaseVisitNodeMetaProgram;
+  template<typename T, typename E, typename It, typename Int, int n, int i>
+  friend struct SubProblemLocalFunctionSpaceVisitChildMetaProgram;
+
+  typedef typename GFS::Traits::BackendType B;
+  typedef typename GFS::Traits::GridType::Traits::template Codim<0>::Entity Element;
+
+  typedef typename MDLFS::template Child<ChildIndex>::Type BaseLFS;
+
+
+  const BaseLFS& baseLFS() const {
+    return plfs->template getChild<ChildIndex>();
+  }
+
+public:
+
+  static const bool isLeaf = false;
+  static const bool isPower = true;
+  static const bool isComposite = false;
+  static const unsigned int CHILDREN = BaseLFS::CHILDREN;
+  typedef typename BaseLFS::template Child<0>::Type ChildType;
+
+  template<int i>
+  struct Child
+  {
+    typedef ChildType Type;
+  };
+
+  template<int i>
+  const ChildType& getChild () const
+  {
+    return baseLFS().template getChild<i>();
+  }
+
+  const ChildType& getChild(int i) const
+  {
+    return baseLFS().getChild(i);
+  }
+
+  typedef SubProblemLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpaceBase,SubProblem,Constraints> Traits;
+
+  //! \brief initialize with grid function space
+  SubProblemLocalFunctionSpaceBase (const MDLFS& mdlfs, const SubProblem& subProblem, const Constraints& constraints) :
+    plfs(&mdlfs),
+    pgfs(&(mdlfs.gfs())),
+    _subProblem(subProblem),
+    _constraints(constraints)
+  {
+    setup(mdlfs);
+  }
+
+  //! \brief variant if no local function space is availabe at construction time
+  SubProblemLocalFunctionSpaceBase(const SubProblem& subProblem, const Constraints& constraints) :
+    plfs(NULL),
+    pgfs(NULL),
+    _subProblem(subProblem),
+    _constraints(constraints)
+  {}
+
+  //! \brief initialize with grid function space
+  void setup (const MDLFS& lfs) const
+  {
+    plfs = &lfs;
+    pgfs = &(lfs.gfs());
+  }
+
+  void bind() const
+  {
+    // TODO: throw an exception
+  }
+
+  //! \brief get current size
+  typename Traits::IndexContainer::size_type size () const
+  {
+    return baseLFS().size();
+  }
+
+  //! \brief get maximum possible size (which is maxLocalSize from grid function space)
+  typename Traits::IndexContainer::size_type maxSize () const
+  {
+    return pgfs->maxLocalSize();
+  }
+
+  // map index in this local function space to root local function space
+  typename Traits::IndexContainer::size_type localIndex (typename Traits::IndexContainer::size_type index) const
+  {
+    return baseLFS().localIndex(index);
+  }
+
+  // map index in this local function space to global index space
+  typename Traits::SizeType globalIndex (typename Traits::IndexContainer::size_type index) const
+  {
+    return baseLFS().globalIndex(index);
+  }
+
+  /** \brief extract coefficients for one element from container */
+  template<typename GC, typename LC>
+  void vread (const GC& globalcontainer, LC& localcontainer) const
+  {
+    baseLFS().vread(globalcontainer,localcontainer);
+  }
+
+  /** \brief write back coefficients for one element to container */
+  template<typename GC, typename LC>
+  void vwrite (const LC& localcontainer, GC& globalcontainer) const
+  {
+    baseLFS().vwrite(localcontainer,globalcontainer);
+  }
+
+  /** \brief add coefficients for one element to container */
+  template<typename GC, typename LC>
+  void vadd (const LC& localcontainer, GC& globalcontainer) const
+  {
+    baseLFS().vadd(localcontainer,globalcontainer);
+  }
+
+  //! \brief bind local function space to entity
+  void bind (const typename Traits::Element& e)
+  {
+    assert(false);
+  }
+
+  template<typename GC, typename LC>
+  void mwrite (const LC& lc, GC& gc) const
+  {
+    baseLFS().mwrite(lc,gc);
+  }
+
+  const SubProblem& subProblem() const {
+    return _subProblem;
+  }
+
+  const Constraints& constraints() const {
+    return _constraints;
+  }
+
+  template<typename SubDomainSet>
+  bool appliesTo(const SubDomainSet& sds) const {
+    return _subProblem.appliesTo(sds);
+  }
+
+private:
+  mutable const MDLFS * plfs;
+  mutable const GFS * pgfs;
+  const SubProblem& _subProblem;
+  const Constraints& _constraints;
+
+};
+
+
+// single-component version base - specialization for composite function space
+
+template<typename MDLFS, typename SubProblem, typename Constraints, int ChildIndex, typename BaseGFS>
+class SubProblemLocalFunctionSpaceBase<MDLFS,SubProblem,Constraints,ChildIndex,CompositeLocalFunctionSpaceNode<BaseGFS> >
+{
+
+  dune_static_assert((ChildIndex < MDLFS::CHILDREN),"Child index out of range");
+
+  typedef typename MDLFS::Traits::GridFunctionSpaceType GFS;
+
+  template<typename T, bool b, typename E, typename It, typename Int>
+  friend struct LocalFunctionSpaceBaseVisitNodeMetaProgram;
+  template<typename T, typename E, typename It, typename Int, int n, int i>
+  friend struct SubProblemLocalFunctionSpaceVisitChildMetaProgram;
+
+  typedef typename GFS::Traits::BackendType B;
+  typedef typename GFS::Traits::GridType::Traits::template Codim<0>::Entity Element;
+
+  typedef typename MDLFS::template Child<ChildIndex>::Type BaseLFS;
+
+  const BaseLFS& baseLFS() const {
+    return plfs->template getChild<ChildIndex>();
+  }
+
+public:
+
+  static const bool isLeaf = false;
+  static const bool isPower = false;
+  static const bool isComposite = true;
+  static const unsigned int CHILDREN = BaseLFS::CHILDREN;
+
+  template<int i>
+  struct Child
+  {
+    typedef typename BaseLFS::template Child<i>::Type Type;
+  };
+
+  template<int i>
+  const typename Child<i>::Type getChild () const
+  {
+    return baseLFS().template getChild<i>();
+  }
+
+  typedef SubProblemLocalFunctionSpaceTraits<GFS,SubProblemLocalFunctionSpaceBase,SubProblem,Constraints> Traits;
+
+  //! \brief initialize with grid function space
+  SubProblemLocalFunctionSpaceBase (const MDLFS& mdlfs, const SubProblem& subProblem, const Constraints& constraints) :
+    plfs(&mdlfs),
+    pgfs(&(mdlfs.gfs())),
+    _subProblem(subProblem),
+    _constraints(constraints)
+  {
+    setup(mdlfs);
+  }
+
+  //! \brief variant if no local function space is availabe at construction time
+  SubProblemLocalFunctionSpaceBase(const SubProblem& subProblem, const Constraints& constraints) :
+    plfs(NULL),
+    pgfs(NULL),
+    _subProblem(subProblem),
+    _constraints(constraints)
+  {}
+
+  //! \brief initialize with grid function space
+  void setup (const MDLFS& lfs) const
+  {
+    plfs = &lfs;
+    pgfs = &(lfs.gfs());
+  }
+
+  void bind() const
+  {
+    // nothing to do here...
+  }
+
+  //! \brief get current size
+  typename Traits::IndexContainer::size_type size () const
+  {
+    return baseLFS().size();
+  }
+
+  //! \brief get maximum possible size (which is maxLocalSize from grid function space)
+  typename Traits::IndexContainer::size_type maxSize () const
+  {
+    return pgfs->maxLocalSize();
+  }
+
+  // map index in this local function space to root local function space
+  typename Traits::IndexContainer::size_type localIndex (typename Traits::IndexContainer::size_type index) const
+  {
+    return baseLFS().localIndex(index);
+  }
+
+  // map index in this local function space to global index space
+  typename Traits::SizeType globalIndex (typename Traits::IndexContainer::size_type index) const
+  {
+    return baseLFS().globalIndex(index);
+  }
+
+  /** \brief extract coefficients for one element from container */
+  template<typename GC, typename LC>
+  void vread (const GC& globalcontainer, LC& localcontainer) const
+  {
+    baseLFS().vread(globalcontainer,localcontainer);
+  }
+
+  /** \brief write back coefficients for one element to container */
+  template<typename GC, typename LC>
+  void vwrite (const LC& localcontainer, GC& globalcontainer) const
+  {
+    baseLFS().vwrite(localcontainer,globalcontainer);
+  }
+
+  /** \brief add coefficients for one element to container */
+  template<typename GC, typename LC>
+  void vadd (const LC& localcontainer, GC& globalcontainer) const
+  {
+    baseLFS().vadd(localcontainer,globalcontainer);
+  }
+
+  //! \brief bind local function space to entity
+  void bind (const typename Traits::Element& e)
+  {
+    assert(false);
+  }
+
+  template<typename GC, typename LC>
+  void mwrite (const LC& lc, GC& gc) const
+  {
+    baseLFS().mwrite(lc,gc);
+  }
+
+  const SubProblem& subProblem() const {
+    return _subProblem;
+  }
+
+  const Constraints& constraints() const {
+    return _constraints;
+  }
+
+  template<typename SubDomainSet>
+  bool appliesTo(const SubDomainSet& sds) const {
+    return _subProblem.appliesTo(sds);
+  }
+
+private:
+  mutable const MDLFS * plfs;
+  mutable const GFS * pgfs;
+  const SubProblem& _subProblem;
+  const Constraints& _constraints;
+
+};
+
+
+
+template<typename MDLFS, typename SubProblem, typename Constraints, int ChildIndex>
+class SubProblemLocalFunctionSpace<MDLFS,SubProblem,Constraints,ChildIndex>
+  : public SubProblemLocalFunctionSpaceBase<MDLFS,SubProblem,Constraints,ChildIndex,typename MDLFS::template Child<ChildIndex>::Type>
+{
+
+  typedef SubProblemLocalFunctionSpaceBase<MDLFS,SubProblem,Constraints,ChildIndex,typename MDLFS::template Child<ChildIndex>::Type> BaseT;
+
+  dune_static_assert((ChildIndex < MDLFS::CHILDREN),"Child index out of range");
+
+public:
+  typedef typename BaseT::Traits Traits;
+
+  //! \brief empty constructor - TODO:Do we need this???
+  /*SubProblemLocalFunctionSpace ()
+  {
+  }*/
+
+  //! \brief initialize with grid function space
+  SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const SubProblem& subProblem, const Constraints& constraints) :
+    BaseT(mdlfs,subProblem,constraints)
+  {
+  }
+
+  //! \brief variant if no local function space is availabe at construction time
+  SubProblemLocalFunctionSpace(const SubProblem& subProblem, const Constraints& constraints) :
+    BaseT(subProblem,constraints)
+  {}
 
 };
 

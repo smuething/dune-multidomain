@@ -19,11 +19,7 @@
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/pdelab/multidomain/coupling.hh>
 
-#include<typeinfo>
-#include <cxxabi.h>
-
 #include "functionmacros.hh"
-#include "proportionalflowcoupling.hh"
 
 // source term
 SIMPLE_ANALYTIC_FUNCTION(F,x,y)
@@ -230,18 +226,6 @@ int main(int argc, char** argv) {
     SubProblem4::Traits::LocalTrialFunctionSpace
       splfs4(sp4,sp4.trialGridFunctionSpaceConstraints());
 
-
-    /*
-    ProportionalFlowCoupling proportionalFlowCoupling(atof(argv[2]));
-
-    typedef Dune::PDELab::MultiDomain::Coupling<SubProblem0,SubProblem1,ProportionalFlowCoupling> Coupling;
-    Coupling coupling(sp0,sp1,proportionalFlowCoupling);
-
-    std::cout << "subproblem / coupling setup: " << timer.elapsed() << " sec" << std::endl;
-    timer.reset();
-    */
-    constraints(b,multigfs,cg,b,splfs0,b,splfs1);
-
     MultiGFS::LocalFunctionSpace multilfs(multigfs);
 
     for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
@@ -284,91 +268,6 @@ int main(int argc, char** argv) {
             lfs.getChild<1>().getChild(1).localVectorSize();
           }
       }
-    /*
-    std::cout << "constraints evaluation: " << timer.elapsed() << " sec" << std::endl;
-    timer.reset();
-
-    // make coefficent Vector and initialize it from a function
-    typedef MultiGFS::VectorContainer<R>::Type V;
-    V x0(multigfs);
-    x0 = 0.0;
-    Dune::PDELab::MultiDomain::interpolate(multigfs,x0,g,splfs0,g,splfs1);
-
-    Dune::PDELab::set_shifted_dofs(cg,0.0,x0);
-
-    std::cout << "interpolation: " << timer.elapsed() << " sec" << std::endl;
-    std::cout << x0.size() << " dof total, " << cg.size() << " dof constrained" << std::endl;
-    timer.reset();
-
-    typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,GFS0> SGFS0;
-    typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,GFS1> SGFS1;
-    SGFS0 sgfs0(multigfs);
-    SGFS1 sgfs1(multigfs);
-
-    typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
-
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridOperatorSpace<MultiGFS,MultiGFS,MBE,SubProblem0,SubProblem1,Coupling> MultiGOS;
-
-    MultiGOS multigos(multigfs,multigfs,cg,cg,sp0,sp1,coupling);
-
-    std::cout << "operator space setup: " << timer.elapsed() << " sec" << std::endl;
-    timer.reset();
-
-    typedef MultiGOS::MatrixContainer<R>::Type M;
-    M m(multigos);
-    m = 0.0;
-
-
-    std::cout << "matrix construction: " << timer.elapsed() << " sec" << std::endl;
-    timer.reset();
-
-    multigos.jacobian(x0,m);
-
-    std::cout << "jacobian evaluation: " << timer.elapsed() << " sec" << std::endl;
-    timer.reset();
-
-    V r(multigfs);
-
-    r = 0.0;
-
-    multigos.residual(x0,r);
-    std::cout << "residual evaluation: " << timer.elapsed() << " sec" << std::endl;
-    timer.reset();
-
-    Dune::MatrixAdapter<M,V,V> opa(m);
-    Dune::SeqSSOR<M,V,V> ssor(m,1,1.0);
-    Dune::CGSolver<V> solver(opa,ssor,1e-10,5000,2);
-    Dune::InverseOperatorResult stat;
-
-    r *= -1.0;
-
-    V x(multigfs,0.0);
-    solver.apply(x,r,stat);
-
-    std::cout << "linear system: " << timer.elapsed() << " sec" << std::endl;
-    std::cout << "total time: " << totalTimer.elapsed() << " sec" << std::endl;
-    timer.reset();
-
-    x += x0;
-
-    {
-      typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> DGF;
-      DGF dgf(sgfs0,x);
-      Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv0,2);
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
-      vtkwriter.write("poisson-right",Dune::VTKOptions::ascii);
-    }
-
-    {
-      typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> DGF;
-      DGF dgf(sgfs1,x);
-      Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
-      vtkwriter.write("poisson-left",Dune::VTKOptions::ascii);
-    }
-
-    std::cout << "output I/O: " << timer.elapsed() << " sec" << std::endl;
-    */
   }
   catch (Dune::Exception &e){
     std::cerr << "Dune reported error: " << e << std::endl;

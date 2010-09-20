@@ -253,28 +253,35 @@ int main(int argc, char** argv) {
           {
             SubProblem0::Traits::LocalTrialFunctionSpace lfs(multilfs,sp0,sp0.trialGridFunctionSpaceConstraints());
             lfs.localFiniteElement();
+            lfs.localVectorSize();
           }
         if (sp1.appliesTo(sds))
           {
             SubProblem1::Traits::LocalTrialFunctionSpace lfs(multilfs,sp1,sp1.trialGridFunctionSpaceConstraints());
             lfs.localFiniteElement();
+            lfs.localVectorSize();
           }
         if (sp2.appliesTo(sds))
           {
             SubProblem2::Traits::LocalTrialFunctionSpace lfs(multilfs,sp2,sp2.trialGridFunctionSpaceConstraints());
             lfs.getChild<0>().localFiniteElement();
             lfs.getChild<1>().getChild(0).localFiniteElement();
+            lfs.getChild<0>().localVectorSize();
+            lfs.getChild<1>().getChild(1).localVectorSize();
           }
         if (sp3.appliesTo(sds))
           {
             SubProblem3::Traits::LocalTrialFunctionSpace lfs(multilfs,sp3,sp3.trialGridFunctionSpaceConstraints());
             lfs.getChild(1).localFiniteElement();
+            lfs.getChild(0).localVectorSize();
           }
         if (sp4.appliesTo(sds))
           {
             SubProblem4::Traits::LocalTrialFunctionSpace lfs(multilfs,sp4,sp4.trialGridFunctionSpaceConstraints());
             lfs.getChild<0>().localFiniteElement();
             lfs.getChild<1>().getChild(0).localFiniteElement();
+            lfs.getChild<0>().localVectorSize();
+            lfs.getChild<1>().getChild(1).localVectorSize();
           }
       }
     /*

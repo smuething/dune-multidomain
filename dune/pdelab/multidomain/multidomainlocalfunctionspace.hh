@@ -22,7 +22,11 @@ namespace MultiDomain {
     //=======================================
 
 
-template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int, Dune::mdgrid::MultiDomainGridType t>
+struct MultiDomainTag {};
+struct SubDomainTag {};
+struct CouplingTag {};
+
+template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int, typename Tag>
 struct GuardedVisit
 {
 };

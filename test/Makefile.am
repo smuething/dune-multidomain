@@ -13,6 +13,7 @@ check_PROGRAMS = testmultidomaingridfunctionspace \
 	instationarypoisson \
 	instationaryexplicitlycoupledpoisson \
 	testmatrixconstruction \
+	testcouplinggfs \
 	testlocalfunctionspace
 
 testmultidomaingridfunctionspace_SOURCES = testmultidomaingridfunctionspace.cc
@@ -34,3 +35,5 @@ instationaryexplicitlycoupledpoisson_SOURCES = instationaryexplicitlycoupledpois
 testmatrixconstruction_SOURCES = testmatrixconstruction.cc
 
 testlocalfunctionspace_SOURCES = testlocalfunctionspace.cc
+
+testcouplinggfs_SOURCES = testcouplinggfs.cc

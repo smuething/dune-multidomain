@@ -32,7 +32,7 @@ struct GuardedVisit
 };
 
 template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int>
-struct GuardedVisit<T,isLeaf,GV,E,It,Int,Dune::mdgrid::multiDomainGrid>
+struct GuardedVisit<T,isLeaf,GV,E,It,Int,MultiDomainTag>
 {
 
   static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
@@ -50,7 +50,7 @@ struct GuardedVisit<T,isLeaf,GV,E,It,Int,Dune::mdgrid::multiDomainGrid>
 };
 
 template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int>
-struct GuardedVisit<T,isLeaf,GV,E,It,Int,Dune::mdgrid::subDomainGrid>
+struct GuardedVisit<T,isLeaf,GV,E,It,Int,SubDomainTag>
 {
 
   static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
@@ -79,6 +79,7 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inne
 {
 
   typedef MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,E,It,Int,n,i+1> NextChild;
+  typedef typename T::Traits::GridFunctionSpaceType GFS;
 
   template<typename GFS>
   static void setup (T& t, const GFS& gfs)
@@ -93,7 +94,7 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inne
     // vist children of node t in order
     typedef typename T::template Child<i>::Type C;
     Int initial_offset = offset; // remember initial offset to compute size later
-    GuardedVisit<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,Dune::mdgrid::GridType<typename C::Traits::GridViewType::Grid>::v >::
+    GuardedVisit<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
       fill_indices(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,begin,offset,lvsize);
     for (Int j=initial_offset; j<offset; j++)
       begin[j] = t.pgfs->template subMap<i>(begin[j]);
@@ -104,7 +105,7 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inne
   {
     // vist children of node t in order
     typedef typename T::template Child<i>::Type C;
-    GuardedVisit<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,Dune::mdgrid::GridType<typename C::Traits::GridViewType::Grid>::v >::
+    GuardedVisit<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
       reserve(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,offset);
     NextChild::reserve(t,e,offset);
   }

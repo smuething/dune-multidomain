@@ -81,6 +81,38 @@ struct StandardGFSVisitor<T,isLeaf,GV,E,It,Int,SubDomainTag>
 };
 
 
+template<typename T, bool isLeaf, typename GV, typename Intersection, typename It, typename Int, typename Tag>
+struct CouplingGFSVisitor
+{
+
+  static void fill_indices(T& t, GV gv, const Intersection& is, It begin, Int& offset, const Int lvsize)
+  {}
+
+  static void reserve(T& t, GV gv, const Intersection& is, Int& offset)
+  {}
+
+};
+
+
+template<typename T, bool isLeaf, typename GV, typename Intersection, typename It, typename Int>
+struct CouplingGFSVisitor<T,isLeaf,GV,Intersection,It,Int,CouplingTag>
+{
+
+  static void fill_indices(T& t, GV gv, const Intersection& is, It begin, Int& offset, const Int lvsize)
+  {
+    if (t.gridFunctionSpace().contains(is))
+      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,Intersection,It,Int>::fill_indices(t,is,begin,offset,lvsize);
+  }
+
+  static void reserve(T& t, GV gv, const Intersection& is, Int& offset)
+  {
+    if (t.gridFunctionSpace().contains(is))
+      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,Intersection,It,Int>::reserve(t,is,offset);
+  }
+
+};
+
+
 template<typename T,
          typename E,
          typename It,
@@ -236,6 +268,14 @@ protected:
                                                              StandardGFSVisitor,
                                                              BaseT::CHILDREN,
                                                              0> VisitChildTMP;
+
+  typedef MultiDomainLocalFunctionSpaceVisitChildMetaProgram<MultiDomainLocalFunctionSpaceNode,
+                                                             typename Traits::Element,
+                                                             typename Traits::IndexContainer::iterator,
+                                                             typename Traits::IndexContainer::size_type,
+                                                             CouplingGFSVisitor,
+                                                             BaseT::CHILDREN,
+                                                             0> VisitCouplingChildTMP;
 
 public:
 

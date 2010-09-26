@@ -8,6 +8,7 @@
 #include <dune/pdelab/finiteelementmap/q1fem.hh>
 #include <dune/pdelab/finiteelementmap/q22dfem.hh>
 #include <dune/pdelab/finiteelementmap/q12dfem.hh>
+#include <dune/pdelab/finiteelementmap/pk2dfem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/backend/istlmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
@@ -217,13 +218,44 @@ int main(int argc, char** argv) {
     std::cout << *it << " ";
   std::cout << std::endl;
 
+  typedef double RF;
+
+  typedef Dune::PDELab::Pk2DLocalFiniteElementMap<MDGV,DF,RF,2> FEM;
+  FEM fem(mdgv);
+
+  typedef Dune::PDELab::GridFunctionSpace<MDGV,FEM,NOCON> GFS;
+
+  GFS gfs(mdgv,fem);
+
+  typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS,CouplingGFS> MultiGFS;
+
+  MultiGFS multigfs(grid,gfs,couplinggfs);
+
+  typedef MultiGFS::LocalFunctionSpace LFS;
+  LFS lfs(multigfs);
+
+  for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
+    {
+      lfs.bind(*it);
+      std::cout << lfs.size() << std::endl;
+      lfs.debug();
+      /*for(MDGV::IntersectionIterator iit = mdgv.ibegin(*it); iit != mdgv.iend(*it); ++iit)
+        {
+          if (couplinglfs.bind(couplinglfs,*iit))
+            {
+              std::vector<double> local(couplinglfs.size(),0.0);
+              couplinglfs.vread(global,local);
+              for (int i = 0; i < couplinglfs.size(); ++i)
+                {
+                  local[couplinglfs.localIndex(i)] = i+1;
+                }
+              couplinglfs.debug();
+              couplinglfs.vadd(local,global);
+            }
+            }*/
+    }
+
   /*
-
-  typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS,GFS0,GFS1,GFS2> MultiGFS;
-
-  MultiGFS multigfs(grid,gfs,gfs0,gfs1,gfs2);
-
-
   typedef B<MDGV> BType;
   BType b(mdgv);
 

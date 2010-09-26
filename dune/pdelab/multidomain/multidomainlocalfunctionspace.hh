@@ -367,12 +367,12 @@ public:
     VisitChildTMP::fill_indices(*this,e,global.begin(),offset,global.size());
 
     // apply upMap
-    for (typename BaseT::Traits::IndexContainer::size_type i=0; i<offset; i++)
+    for (typename Traits::IndexContainer::size_type i=0; i<offset; i++)
       global[i] = this->gfs().upMap(global[i]);
   }
 
 private:
-  typename BaseT::Traits::IndexContainer global;
+  typename Traits::IndexContainer global;
 };
 
 

@@ -29,6 +29,13 @@ struct CouplingTag {};
 template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int, typename Tag>
 struct GuardedVisit
 {
+
+  static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
+  {}
+
+  static void reserve(T& t, GV gv, const E& e, Int& offset)
+  {}
+
 };
 
 template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int>
@@ -74,11 +81,18 @@ struct GuardedVisit<T,isLeaf,GV,E,It,Int,SubDomainTag>
 };
 
 
-template<typename T, typename E, typename It, typename Int, int n, int i>
+template<typename T,
+         typename E,
+         typename It,
+         typename Int,
+         template<typename T1, bool isLeaf, typename GV, typename E1, typename It1, typename Int1, typename Tag> class Visitor,
+         int n,
+         int i
+         >
 struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inner node
 {
 
-  typedef MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,E,It,Int,n,i+1> NextChild;
+  typedef MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,E,It,Int,Visitor,n,i+1> NextChild;
   typedef typename T::Traits::GridFunctionSpaceType GFS;
 
   template<typename GFS>
@@ -94,7 +108,7 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inne
     // vist children of node t in order
     typedef typename T::template Child<i>::Type C;
     Int initial_offset = offset; // remember initial offset to compute size later
-    GuardedVisit<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
+    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
       fill_indices(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,begin,offset,lvsize);
     for (Int j=initial_offset; j<offset; j++)
       begin[j] = t.pgfs->template subMap<i>(begin[j]);
@@ -105,15 +119,21 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inne
   {
     // vist children of node t in order
     typedef typename T::template Child<i>::Type C;
-    GuardedVisit<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
+    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
       reserve(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,offset);
     NextChild::reserve(t,e,offset);
   }
 };
 
 
-template<typename T, typename E, typename It, typename Int, int n>
-struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,E,It,Int,n,n> // end of child recursion
+template<typename T,
+         typename E,
+         typename It,
+         typename Int,
+         template<typename T1, bool isLeaf, typename GV, typename E1, typename It1, typename Int1, typename Tag> class Visitor,
+         int n
+         >
+struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,E,It,Int,Visitor,n,n> // end of child recursion
 {
 
   template<typename GFS>
@@ -185,7 +205,14 @@ class MultiDomainLocalFunctionSpaceNode
 {
   template<typename T, bool b, typename E, typename It, typename Int>
   friend struct LocalFunctionSpaceBaseVisitNodeMetaProgram;
-  template<typename T, typename E, typename It, typename Int, int n, int i>
+  template<typename T,
+           typename E,
+           typename It,
+           typename Int,
+           template<typename T1, bool isLeaf, typename GV, typename E1, typename It1, typename Int1, typename Tag> class Visitor,
+           int n,
+           int i
+           >
   friend struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram;
 
   typedef typename GFS::Traits::BackendType B;
@@ -201,6 +228,7 @@ protected:
                                                              typename Traits::Element,
                                                              typename Traits::IndexContainer::iterator,
                                                              typename Traits::IndexContainer::size_type,
+                                                             GuardedVisit,
                                                              BaseT::CHILDREN,
                                                              0> VisitChildTMP;
 

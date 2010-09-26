@@ -1,6 +1,8 @@
 #ifndef DUNE_MULTIDOMAIN_COUPLINGGRIDFUNCTIONSPACE_HH
 #define DUNE_MULTIDOMAIN_COUPLINGGRIDFUNCTIONSPACE_HH
 
+#include <dune/pdelab/multidomain/couplinglocalfunctionspace.hh>
+
 namespace Dune {
 namespace PDELab {
 namespace MultiDomain {
@@ -150,7 +152,7 @@ public:
   };
 
   //! define local function space parametrized by self
-  typedef Dune::PDELab::LeafLocalFunctionSpaceNode<CouplingGridFunctionSpace> LocalFunctionSpace;
+  typedef CouplingLocalFunctionSpaceNode<CouplingGridFunctionSpace> LocalFunctionSpace;
 
   //! constructor
   CouplingGridFunctionSpace (const GV& gridview, const LFEM& lfem, const Predicate& predicate, const CE& ce_)

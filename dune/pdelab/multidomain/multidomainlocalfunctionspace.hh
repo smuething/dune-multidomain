@@ -264,7 +264,9 @@ struct BuildMultiDomainLocalFunctionSpaceNodeBase
 };
 
 // local function space for a power grid function space
-template<typename GFS, typename... Children>
+template<typename GFS,
+         template<typename, bool, typename, typename, typename, typename, typename> class Visitor,
+         typename... Children>
 class MultiDomainLocalFunctionSpaceNode
   : public BuildMultiDomainLocalFunctionSpaceNodeBase<Children...>::type
 {
@@ -274,7 +276,7 @@ class MultiDomainLocalFunctionSpaceNode
            typename E,
            typename It,
            typename Int,
-           template<typename T1, bool isLeaf, typename GV, typename E1, typename It1, typename Int1, typename Tag> class Visitor,
+           template<typename T1, bool isLeaf, typename GV, typename E1, typename It1, typename Int1, typename Tag> class Visitor1,
            int n,
            int i
            >
@@ -293,17 +295,9 @@ protected:
                                                              typename Traits::Element,
                                                              typename Traits::IndexContainer::iterator,
                                                              typename Traits::IndexContainer::size_type,
-                                                             StandardGFSVisitor,
+                                                             Visitor,
                                                              BaseT::CHILDREN,
                                                              0> VisitChildTMP;
-
-  typedef MultiDomainLocalFunctionSpaceVisitChildMetaProgram<MultiDomainLocalFunctionSpaceNode,
-                                                             typename Traits::Element,
-                                                             typename Traits::IndexContainer::iterator,
-                                                             typename Traits::IndexContainer::size_type,
-                                                             CouplingGFSVisitor,
-                                                             BaseT::CHILDREN,
-                                                             0> VisitCouplingChildTMP;
 
 public:
 
@@ -406,9 +400,9 @@ protected:
 // local function space description that can be bound to an element
 // depends on a grid function space
 template<typename GFS,typename... Children>
-class MultiDomainLocalFunctionSpace : public MultiDomainLocalFunctionSpaceNode<GFS,Children...>
+class MultiDomainLocalFunctionSpace : public MultiDomainLocalFunctionSpaceNode<GFS,StandardGFSVisitor,Children...>
 {
-  typedef MultiDomainLocalFunctionSpaceNode<GFS,Children...> BaseT;
+  typedef MultiDomainLocalFunctionSpaceNode<GFS,StandardGFSVisitor,Children...> BaseT;
 
   typedef typename BaseT::VisitChildTMP VisitChildTMP;
 

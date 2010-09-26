@@ -27,7 +27,7 @@ struct SubDomainTag {};
 struct CouplingTag {};
 
 template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int, typename Tag>
-struct GuardedVisit
+struct StandardGFSVisitor
 {
 
   static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
@@ -39,7 +39,7 @@ struct GuardedVisit
 };
 
 template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int>
-struct GuardedVisit<T,isLeaf,GV,E,It,Int,MultiDomainTag>
+struct StandardGFSVisitor<T,isLeaf,GV,E,It,Int,MultiDomainTag>
 {
 
   static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
@@ -57,7 +57,7 @@ struct GuardedVisit<T,isLeaf,GV,E,It,Int,MultiDomainTag>
 };
 
 template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int>
-struct GuardedVisit<T,isLeaf,GV,E,It,Int,SubDomainTag>
+struct StandardGFSVisitor<T,isLeaf,GV,E,It,Int,SubDomainTag>
 {
 
   static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
@@ -228,7 +228,7 @@ protected:
                                                              typename Traits::Element,
                                                              typename Traits::IndexContainer::iterator,
                                                              typename Traits::IndexContainer::size_type,
-                                                             GuardedVisit,
+                                                             StandardGFSVisitor,
                                                              BaseT::CHILDREN,
                                                              0> VisitChildTMP;
 

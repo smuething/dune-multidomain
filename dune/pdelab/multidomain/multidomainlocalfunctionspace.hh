@@ -26,7 +26,7 @@ struct MultiDomainTag {};
 struct SubDomainTag {};
 struct CouplingTag {};
 
-template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int, typename Tag>
+template<typename T, bool isLeaf, typename GV, typename It, typename Int, typename Tag>
 struct StandardGFSVisitor
 {
 
@@ -34,16 +34,18 @@ struct StandardGFSVisitor
   static void setup(T& t, const GFS& gfs)
   {}
 
+  template<typename E>
   static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
   {}
 
+  template<typename E>
   static void reserve(T& t, GV gv, const E& e, Int& offset)
   {}
 
 };
 
-template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int>
-struct StandardGFSVisitor<T,isLeaf,GV,E,It,Int,MultiDomainTag>
+template<typename T, bool isLeaf, typename GV, typename It, typename Int>
+struct StandardGFSVisitor<T,isLeaf,GV,It,Int,MultiDomainTag>
 {
 
   template<typename GFS>
@@ -52,12 +54,14 @@ struct StandardGFSVisitor<T,isLeaf,GV,E,It,Int,MultiDomainTag>
     t.setup(gfs);
   }
 
+  template<typename E>
   static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
   {
     if (gv.indexSet().contains(e))
       LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,E,It,Int>::fill_indices(t,e,begin,offset,lvsize);
   }
 
+  template<typename E>
   static void reserve(T& t, GV gv, const E& e, Int& offset)
   {
     if (gv.indexSet().contains(e))
@@ -66,8 +70,8 @@ struct StandardGFSVisitor<T,isLeaf,GV,E,It,Int,MultiDomainTag>
 
 };
 
-template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int>
-struct StandardGFSVisitor<T,isLeaf,GV,E,It,Int,SubDomainTag>
+template<typename T, bool isLeaf, typename GV, typename It, typename Int>
+struct StandardGFSVisitor<T,isLeaf,GV,It,Int,SubDomainTag>
 {
 
   template<typename GFS>
@@ -76,6 +80,7 @@ struct StandardGFSVisitor<T,isLeaf,GV,E,It,Int,SubDomainTag>
     t.setup(gfs);
   }
 
+  template<typename E>
   static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
   {
     typedef typename T::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
@@ -85,6 +90,7 @@ struct StandardGFSVisitor<T,isLeaf,GV,E,It,Int,SubDomainTag>
       LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,SDE,It,Int>::fill_indices(t,*ep,begin,offset,lvsize);
   }
 
+  template<typename E>
   static void reserve(T& t, GV gv, const E& e, Int& offset)
   {
     typedef typename T::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
@@ -97,7 +103,7 @@ struct StandardGFSVisitor<T,isLeaf,GV,E,It,Int,SubDomainTag>
 };
 
 
-template<typename T, bool isLeaf, typename GV, typename Intersection, typename It, typename Int, typename Tag>
+template<typename T, bool isLeaf, typename GV, typename It, typename Int, typename Tag>
 struct CouplingGFSVisitor
 {
 
@@ -105,17 +111,19 @@ struct CouplingGFSVisitor
   static void setup(T& t, const GFS& gfs)
   {}
 
+  template<typename Intersection>
   static void fill_indices(T& t, GV gv, const Intersection& is, It begin, Int& offset, const Int lvsize)
   {}
 
+  template<typename Intersection>
   static void reserve(T& t, GV gv, const Intersection& is, Int& offset)
   {}
 
 };
 
 
-template<typename T, bool isLeaf, typename GV, typename Intersection, typename It, typename Int>
-struct CouplingGFSVisitor<T,isLeaf,GV,Intersection,It,Int,CouplingTag>
+template<typename T, bool isLeaf, typename GV, typename It, typename Int>
+struct CouplingGFSVisitor<T,isLeaf,GV,It,Int,CouplingTag>
 {
 
   template<typename GFS>
@@ -124,12 +132,14 @@ struct CouplingGFSVisitor<T,isLeaf,GV,Intersection,It,Int,CouplingTag>
     t.setup(gfs);
   }
 
+  template<typename Intersection>
   static void fill_indices(T& t, GV gv, const Intersection& is, It begin, Int& offset, const Int lvsize)
   {
     if (t.gridFunctionSpace().contains(is))
       LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,Intersection,It,Int>::fill_indices(t,is,begin,offset,lvsize);
   }
 
+  template<typename Intersection>
   static void reserve(T& t, GV gv, const Intersection& is, Int& offset)
   {
     if (t.gridFunctionSpace().contains(is))
@@ -140,17 +150,16 @@ struct CouplingGFSVisitor<T,isLeaf,GV,Intersection,It,Int,CouplingTag>
 
 
 template<typename T,
-         typename E,
          typename It,
          typename Int,
-         template<typename T1, bool isLeaf, typename GV, typename E1, typename It1, typename Int1, typename Tag> class Visitor,
+         template<typename T1, bool isLeaf, typename GV, typename It1, typename Int1, typename Tag> class Visitor,
          int n,
          int i
          >
 struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inner node
 {
 
-  typedef MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,E,It,Int,Visitor,n,i+1> NextChild;
+  typedef MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,It,Int,Visitor,n,i+1> NextChild;
   typedef typename T::Traits::GridFunctionSpaceType GFS;
 
   template<typename GFS>
@@ -158,28 +167,30 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inne
   {
     //        std::cout << "setting up child " << i << " of " << n << std::endl;
     typedef typename T::template Child<i>::Type C;
-    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
+    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
       setup(t.template getChild<i>(),gfs.template getChild<i>());
     NextChild::setup(t,gfs);
   }
 
+  template<typename E>
   static void fill_indices (T& t, const E& e, It begin, Int& offset, const Int lvsize)
   {
     // vist children of node t in order
     typedef typename T::template Child<i>::Type C;
     Int initial_offset = offset; // remember initial offset to compute size later
-    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
+    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
       fill_indices(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,begin,offset,lvsize);
     for (Int j=initial_offset; j<offset; j++)
       begin[j] = t.pgfs->template subMap<i>(begin[j]);
     NextChild::fill_indices(t,e,begin,offset,lvsize);
   }
 
+  template<typename E>
   static void reserve (T& t, const E& e, Int& offset)
   {
     // vist children of node t in order
     typedef typename T::template Child<i>::Type C;
-    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
+    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
       reserve(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,offset);
     NextChild::reserve(t,e,offset);
   }
@@ -187,13 +198,12 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inne
 
 
 template<typename T,
-         typename E,
          typename It,
          typename Int,
-         template<typename T1, bool isLeaf, typename GV, typename E1, typename It1, typename Int1, typename Tag> class Visitor,
+         template<typename T1, bool isLeaf, typename GV, typename It1, typename Int1, typename Tag> class Visitor,
          int n
          >
-struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,E,It,Int,Visitor,n,n> // end of child recursion
+struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,It,Int,Visitor,n,n> // end of child recursion
 {
 
   template<typename GFS>
@@ -201,10 +211,13 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,E,It,Int,Visitor,n,n
   {
   }
 
+  template<typename E>
   static void fill_indices (T& t, const E& e, It begin, Int& offset, const Int lvsize)
   {
     return;
   }
+
+  template<typename E>
   static void reserve (T& t, const E& e, Int& offset)
   {
     return;
@@ -265,7 +278,7 @@ struct BuildMultiDomainLocalFunctionSpaceNodeBase
 
 // local function space for a power grid function space
 template<typename GFS,
-         template<typename, bool, typename, typename, typename, typename, typename> class Visitor,
+         template<typename, bool, typename, typename, typename, typename> class Visitor,
          typename... Children>
 class MultiDomainLocalFunctionSpaceNode
   : public BuildMultiDomainLocalFunctionSpaceNodeBase<Children...>::type
@@ -273,10 +286,9 @@ class MultiDomainLocalFunctionSpaceNode
   template<typename T, bool b, typename E, typename It, typename Int>
   friend struct LocalFunctionSpaceBaseVisitNodeMetaProgram;
   template<typename T,
-           typename E,
            typename It,
            typename Int,
-           template<typename T1, bool isLeaf, typename GV, typename E1, typename It1, typename Int1, typename Tag> class Visitor1,
+           template<typename T1, bool isLeaf, typename GV, typename It1, typename Int1, typename Tag> class Visitor1,
            int n,
            int i
            >
@@ -292,7 +304,6 @@ public:
 
 protected:
   typedef MultiDomainLocalFunctionSpaceVisitChildMetaProgram<MultiDomainLocalFunctionSpaceNode,
-                                                             typename Traits::Element,
                                                              typename Traits::IndexContainer::iterator,
                                                              typename Traits::IndexContainer::size_type,
                                                              Visitor,

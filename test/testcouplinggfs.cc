@@ -232,27 +232,19 @@ int main(int argc, char** argv) {
   MultiGFS multigfs(grid,gfs,couplinggfs);
 
   typedef MultiGFS::LocalFunctionSpace LFS;
+  typedef MultiGFS::CouplingLocalFunctionSpace CLFS;
   LFS lfs(multigfs);
+  CLFS clfs(multigfs);
 
   for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
     {
       lfs.bind(*it);
-      std::cout << lfs.size() << std::endl;
       lfs.debug();
-      /*for(MDGV::IntersectionIterator iit = mdgv.ibegin(*it); iit != mdgv.iend(*it); ++iit)
+      for(MDGV::IntersectionIterator iit = mdgv.ibegin(*it); iit != mdgv.iend(*it); ++iit)
         {
-          if (couplinglfs.bind(couplinglfs,*iit))
-            {
-              std::vector<double> local(couplinglfs.size(),0.0);
-              couplinglfs.vread(global,local);
-              for (int i = 0; i < couplinglfs.size(); ++i)
-                {
-                  local[couplinglfs.localIndex(i)] = i+1;
-                }
-              couplinglfs.debug();
-              couplinglfs.vadd(local,global);
-            }
-            }*/
+          clfs.bind(*iit);
+          clfs.debug();
+        }
     }
 
   /*

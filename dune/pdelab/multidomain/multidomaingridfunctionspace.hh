@@ -282,6 +282,7 @@ public:
 
   // define local function space parametrized by self
   typedef MultiDomainLocalFunctionSpace<MultiDomainGridFunctionSpace,Children...> LocalFunctionSpace;
+  typedef MultiDomainCouplingLocalFunctionSpace<MultiDomainGridFunctionSpace,Children...> CouplingLocalFunctionSpace;
 
 
   MultiDomainGridFunctionSpace (G& g, Children&... children) : BaseT(children...), _g(g)

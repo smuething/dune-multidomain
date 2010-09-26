@@ -198,6 +198,11 @@ public:
     return this->pgfs->constraints();
   }
 
+  const GFS& gridFunctionSpace() const
+  {
+    return *pgfs;
+  }
+
 private:
   CountingPointer<GFS const> pgfs;
   typename Traits::IndexContainer global;

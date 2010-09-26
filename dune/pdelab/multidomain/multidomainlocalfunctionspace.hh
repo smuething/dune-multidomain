@@ -454,6 +454,51 @@ private:
 };
 
 
+// local function space description that can be bound to an intersection
+// depends on a grid function space
+template<typename GFS,typename... Children>
+class MultiDomainCouplingLocalFunctionSpace : public MultiDomainLocalFunctionSpaceNode<GFS,CouplingGFSVisitor,Children...>
+{
+  typedef MultiDomainLocalFunctionSpaceNode<GFS,CouplingGFSVisitor,Children...> BaseT;
+
+  typedef typename BaseT::VisitChildTMP VisitChildTMP;
+
+public:
+  typedef typename BaseT::Traits Traits;
+
+  explicit MultiDomainCouplingLocalFunctionSpace (const GFS& gfs)
+    : BaseT(gfs), global(gfs.maxLocalSize())
+  {}
+
+  //! \brief bind local function space to entity
+  void bind (const typename Traits::Intersection& is)
+  {
+    // make offset
+    typename Traits::IndexContainer::size_type offset=0;
+
+    // compute sizes
+    VisitChildTMP::reserve(*this,is,offset);
+
+    this->n = offset;
+
+    // now reserve space in vector
+    global.resize(offset);
+
+    // initialize iterators and fill indices
+    offset = 0;
+    this->offset = 0;
+    this->i = global.begin();
+    VisitChildTMP::fill_indices(*this,is,global.begin(),offset,global.size());
+
+    // apply upMap
+    for (typename Traits::IndexContainer::size_type i=0; i<offset; i++)
+      global[i] = this->gfs().upMap(global[i]);
+  }
+
+private:
+  typename Traits::IndexContainer global;
+};
+
 
 
     //! \} group GridFunctionSpace

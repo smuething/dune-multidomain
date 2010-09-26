@@ -30,6 +30,10 @@ template<typename T, bool isLeaf, typename GV, typename E, typename It, typename
 struct StandardGFSVisitor
 {
 
+  template<typename GFS>
+  static void setup(T& t, const GFS& gfs)
+  {}
+
   static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
   {}
 
@@ -41,6 +45,12 @@ struct StandardGFSVisitor
 template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int>
 struct StandardGFSVisitor<T,isLeaf,GV,E,It,Int,MultiDomainTag>
 {
+
+  template<typename GFS>
+  static void setup(T& t, const GFS& gfs)
+  {
+    t.setup(gfs);
+  }
 
   static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
   {
@@ -59,6 +69,12 @@ struct StandardGFSVisitor<T,isLeaf,GV,E,It,Int,MultiDomainTag>
 template<typename T, bool isLeaf, typename GV, typename E, typename It, typename Int>
 struct StandardGFSVisitor<T,isLeaf,GV,E,It,Int,SubDomainTag>
 {
+
+  template<typename GFS>
+  static void setup(T& t, const GFS& gfs)
+  {
+    t.setup(gfs);
+  }
 
   static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
   {
@@ -85,6 +101,10 @@ template<typename T, bool isLeaf, typename GV, typename Intersection, typename I
 struct CouplingGFSVisitor
 {
 
+  template<typename GFS>
+  static void setup(T& t, const GFS& gfs)
+  {}
+
   static void fill_indices(T& t, GV gv, const Intersection& is, It begin, Int& offset, const Int lvsize)
   {}
 
@@ -97,6 +117,12 @@ struct CouplingGFSVisitor
 template<typename T, bool isLeaf, typename GV, typename Intersection, typename It, typename Int>
 struct CouplingGFSVisitor<T,isLeaf,GV,Intersection,It,Int,CouplingTag>
 {
+
+  template<typename GFS>
+  static void setup(T& t, const GFS& gfs)
+  {
+    t.setup(gfs);
+  }
 
   static void fill_indices(T& t, GV gv, const Intersection& is, It begin, Int& offset, const Int lvsize)
   {
@@ -131,7 +157,9 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inne
   static void setup (T& t, const GFS& gfs)
   {
     //        std::cout << "setting up child " << i << " of " << n << std::endl;
-    t.template getChild<i>().setup(gfs.template getChild<i>());
+    typedef typename T::template Child<i>::Type C;
+    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
+      setup(t.template getChild<i>(),gfs.template getChild<i>());
     NextChild::setup(t,gfs);
   }
 

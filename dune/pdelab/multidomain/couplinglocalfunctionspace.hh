@@ -6,6 +6,9 @@ namespace PDELab {
 namespace MultiDomain {
 
 
+template <typename GFS>
+class CouplingLocalFunctionSpaceNode;
+
 template<typename GFS>
 struct CouplingLocalFunctionSpaceTraits
 {
@@ -31,6 +34,8 @@ struct CouplingLocalFunctionSpaceTraits
 
   //! \brief Type of constraints engine
   typedef typename GFS::Traits::ConstraintsType ConstraintsType;
+
+  typedef CouplingLocalFunctionSpaceNode<GFS> NodeType;
 
 };
 

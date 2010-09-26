@@ -165,8 +165,13 @@ struct MultiDomainLocalFunctionSpaceTraits
   //! \brief Type to store indices from Backend
   typedef typename GFS::Traits::GridType GridType;
 
+  typedef typename GFS::Traits::GridViewType GridViewType;
+
   //! \brief Type of codim 0 entity in the grid
   typedef typename GridType::Traits::template Codim<0>::Entity Element;
+
+  //! \brief Type of intersection in the grid
+  typedef typename GridViewType::Intersection Intersection;
 
   //! \brief Type to store indices from Backend
   typedef typename GFS::Traits::SizeType SizeType;

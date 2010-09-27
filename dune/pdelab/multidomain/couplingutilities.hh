@@ -92,7 +92,7 @@ public:
       {
         for (int k=0; k<m_s; k++) up_s[k]=0.0;
         for (int k=0; k<m_n; k++) up_n[k]=0.0;
-        R delta = epsilon*(1.0+std::abs(u_s[j]));
+        R delta = epsilon*(1.0+std::abs(u_n[j]));
         u_n[j] += delta;
         asImp().alpha_coupling(ig,lfsu_s,u_s,lfsv_s,lfsu_n,u_n,lfsv_n,up_s,up_n);
         for (int i=0; i<m_s; i++)
@@ -173,7 +173,7 @@ public:
       {
         for (int k=0; k<m_s; k++) up_s[k]=0.0;
         for (int k=0; k<m_n; k++) up_n[k]=0.0;
-        R delta = epsilon*(1.0+std::abs(u_s[j]));
+        R delta = epsilon*(1.0+std::abs(u_n[j]));
         u_n[j] += delta;
         asImp().alpha_coupling(ig,lfsu_s,u_s,lfsv_s,lfsu_n,u_n,lfsv_n,up_s,up_n);
         for (int i=0; i<m_s; i++)

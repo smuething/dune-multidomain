@@ -229,6 +229,95 @@ struct BuildCouplingPattern
 };
 
 
+template<typename P, typename Operator = CouplingOperator>
+struct BuildEnrichedCouplingPattern
+{
+  BuildEnrichedCouplingPattern(P& gp) : globalpattern(gp) {}
+
+  template<typename Data, typename Child>
+  void operator()(Data& data, Child& child)
+  {
+    if (!child.appliesTo(data.elementSubDomains(),data.neighborSubDomains()))
+      return;
+    typedef typename Operator::template ExtractType<Child>::Type LOP;
+    typedef typename Child::Traits::LocalSubProblem LocalSubProblem;
+    typedef typename Child::Traits::RemoteSubProblem RemoteSubProblem;
+    typedef typename LocalSubProblem::Traits::TrialLocalFunctionSpace LocalLFSU;
+    typedef typename LocalSubProblem::Traits::TestLocalFunctionSpace LocalLFSV;
+    typedef typename RemoteSubProblem::Traits::TrialLocalFunctionSpace RemoteLFSU;
+    typedef typename RemoteSubProblem::Traits::TestLocalFunctionSpace RemoteLFSV;
+    const LocalSubProblem& localSubProblem = child.localSubProblem();
+    const RemoteSubProblem& remoteSubProblem = child.remoteSubProblem();
+    LocalLFSU local_lfsu(data.lfsu(),localSubProblem,localSubProblem.trialGridFunctionSpaceConstraints());
+    LocalLFSV local_lfsv(data.lfsv(),localSubProblem,localSubProblem.testGridFunctionSpaceConstraints());
+    local_lfsu.bind();
+    local_lfsv.bind();
+    RemoteLFSU remote_lfsu(data.lfsun(),remoteSubProblem,remoteSubProblem.trialGridFunctionSpaceConstraints());
+    RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
+    remote_lfsu.bind();
+    remote_lfsv.bind();
+    typedef typename Child::Traits::CouplingTrialLocalFunctionSpace CouplingLFSU;
+    typedef typename Child::Traits::CouplingTestLocalFunctionSpace CouplingLFSV;
+    const CouplingLFSU& coupling_lfsu = data.couplinglfsu().template getChild<Child::Traits::CouplingLFSIndex>();
+    const CouplingLFSV& coupling_lfsv = data.couplinglfsv().template getChild<Child::Traits::CouplingLFSIndex>();
+    LocalSparsityPattern localpattern_sn, localpattern_ns, localpattern_sc, localpattern_cs, localpattern_nc, localpattern_cn, localpattern_coupling;
+    Operator::extract(child).pattern_enriched_coupling(local_lfsu,
+                                                       local_lfsv,
+                                                       remote_lfsu,
+                                                       remote_lfsv,
+                                                       data.couplinglfsu().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                                       data.couplinglfsv().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                                       localpattern_sn,
+                                                       localpattern_ns,
+                                                       localpattern_sc,
+                                                       localpattern_cs,
+                                                       localpattern_nc,
+                                                       localpattern_cn,
+                                                       localpattern_coupling);
+
+    // translate local to global indices and add to global pattern
+    // FIXME: this only works because of some kind of miracle!
+    for (size_t k=0; k<localpattern_sn.size(); ++k)
+      data.gos().add_entry(globalpattern,
+                           data.lfsu().globalIndex(local_lfsu.localIndex(localpattern_sn[k].i())),
+                           data.lfsvn().globalIndex(remote_lfsv.localIndex(localpattern_sn[k].j()))
+                           );
+    for (size_t k=0; k<localpattern_ns.size(); ++k)
+      data.gos().add_entry(globalpattern,
+                           data.lfsun().globalIndex(remote_lfsu.localIndex(localpattern_ns[k].i())),
+                           data.lfsv().globalIndex(local_lfsv.localIndex(localpattern_ns[k].j()))
+                           );
+    for (size_t k=0; k<localpattern_sc.size(); ++k)
+      data.gos().add_entry(globalpattern,
+                           data.lfsu().globalIndex(local_lfsu.localIndex(localpattern_sc[k].i())),
+                           data.couplinglfsv().globalIndex(coupling_lfsv.localIndex(localpattern_sc[k].j()))
+                           );
+    for (size_t k=0; k<localpattern_cs.size(); ++k)
+      data.gos().add_entry(globalpattern,
+                           data.couplinglfsu().globalIndex(coupling_lfsu.localIndex(localpattern_cs[k].i())),
+                           data.lfsv().globalIndex(local_lfsv.localIndex(localpattern_cs[k].j()))
+                           );
+    for (size_t k=0; k<localpattern_nc.size(); ++k)
+      data.gos().add_entry(globalpattern,
+                           data.lfsun().globalIndex(remote_lfsu.localIndex(localpattern_nc[k].i())),
+                           data.couplinglfsv().globalIndex(coupling_lfsv.localIndex(localpattern_nc[k].j()))
+                           );
+    for (size_t k=0; k<localpattern_cn.size(); ++k)
+      data.gos().add_entry(globalpattern,
+                           data.couplinglfsu().globalIndex(coupling_lfsu.localIndex(localpattern_cn[k].i())),
+                           data.lfsvn().globalIndex(remote_lfsv.localIndex(localpattern_cn[k].j()))
+                           );
+    for (size_t k=0; k<localpattern_coupling.size(); ++k)
+      data.gos().add_entry(globalpattern,
+                           data.couplinglfsu().globalIndex(coupling_lfsu.localIndex(localpattern_coupling[k].i())),
+                           data.couplinglfsv().globalIndex(coupling_lfsv.localIndex(localpattern_coupling[k].j()))
+                           );
+  }
+
+  P& globalpattern;
+};
+
+
 template<typename XL, typename RL, typename Operator=SpatialOperator>
 struct InvokeAlphaVolume
 {
@@ -422,6 +511,68 @@ struct InvokeAlphaCoupling
   const XL& _remote_x;
   RL& _local_r;
   RL& _remote_r;
+};
+
+
+template<typename XL, typename RL, typename Operator=CouplingOperator>
+struct InvokeAlphaEnrichedCoupling
+{
+
+  InvokeAlphaEnrichedCoupling(const XL& xl, const XL& xn, const XL& xc, RL& rl, RL& rn, RL& rc) :
+    _local_x(xl),
+    _remote_x(xn),
+    _coupling_x(xc),
+    _local_r(rl),
+    _remote_r(rn),
+    _coupling_r(rc)
+  {}
+
+  template<typename Data, typename Child>
+  void operator()(Data& data, const Child& child)
+  {
+    if (!child.appliesTo(data.elementSubDomains(),data.neighborSubDomains()))
+      return;
+    typedef typename Operator::template ExtractType<Child>::Type LOP;
+    typedef typename Child::Traits::LocalSubProblem LocalSubProblem;
+    typedef typename Child::Traits::RemoteSubProblem RemoteSubProblem;
+    typedef typename LocalSubProblem::Traits::TrialLocalFunctionSpace LocalLFSU;
+    typedef typename LocalSubProblem::Traits::TestLocalFunctionSpace LocalLFSV;
+    typedef typename RemoteSubProblem::Traits::TrialLocalFunctionSpace RemoteLFSU;
+    typedef typename RemoteSubProblem::Traits::TestLocalFunctionSpace RemoteLFSV;
+    const LocalSubProblem& localSubProblem = child.localSubProblem();
+    const RemoteSubProblem& remoteSubProblem = child.remoteSubProblem();
+    LocalLFSU local_lfsu(data.lfsu(),localSubProblem,localSubProblem.trialGridFunctionSpaceConstraints());
+    LocalLFSV local_lfsv(data.lfsv(),localSubProblem,localSubProblem.testGridFunctionSpaceConstraints());
+    local_lfsu.bind();
+    local_lfsv.bind();
+    RemoteLFSU remote_lfsu(data.lfsun(),remoteSubProblem,remoteSubProblem.trialGridFunctionSpaceConstraints());
+    RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
+    remote_lfsu.bind();
+    remote_lfsv.bind();
+    Operator::extract(child).alpha_enriched_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                                       data.intersectionIndex()),
+                                                     local_lfsu,
+                                                     _local_x,
+                                                     local_lfsv,
+                                                     remote_lfsu,
+                                                     _remote_x,
+                                                     remote_lfsv,
+                                                     data.couplinglfsu().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                                     _coupling_x,
+                                                     data.couplinglfsv().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                                     _local_r,
+                                                     _remote_r,
+                                                     _coupling_r);
+    data.setAlphaSkeletonInvoked();
+    data.setAlphaEnrichedCouplingInvoked();
+  }
+
+  const XL& _local_x;
+  const XL& _remote_x;
+  const XL& _coupling_x;
+  RL& _local_r;
+  RL& _remote_r;
+  RL& _coupling_r;
 };
 
 
@@ -667,6 +818,68 @@ struct InvokeJacobianApplyCoupling
 };
 
 
+template<typename XL, typename YL, typename Operator=CouplingOperator>
+struct InvokeJacobianApplyEnrichedCoupling
+{
+
+  InvokeJacobianApplyEnrichedCoupling(const XL& xl, const XL& xn, const XL& xc, YL& yl, YL& yn, YL& yc) :
+    _local_x(xl),
+    _remote_x(xn),
+    _coupling_x(xc),
+    _local_y(yl),
+    _remote_y(yn),
+    _coupling_y(yc)
+  {}
+
+  template<typename Data, typename Child>
+  void operator()(Data& data, const Child& child)
+  {
+    if (!child.appliesTo(data.elementSubDomains(),data.neighborSubDomains()))
+      return;
+    typedef typename Operator::template ExtractType<Child>::Type LOP;
+    typedef typename Child::Traits::LocalSubProblem LocalSubProblem;
+    typedef typename Child::Traits::RemoteSubProblem RemoteSubProblem;
+    typedef typename LocalSubProblem::Traits::TrialLocalFunctionSpace LocalLFSU;
+    typedef typename LocalSubProblem::Traits::TestLocalFunctionSpace LocalLFSV;
+    typedef typename RemoteSubProblem::Traits::TrialLocalFunctionSpace RemoteLFSU;
+    typedef typename RemoteSubProblem::Traits::TestLocalFunctionSpace RemoteLFSV;
+    const LocalSubProblem& localSubProblem = child.localSubProblem();
+    const RemoteSubProblem& remoteSubProblem = child.remoteSubProblem();
+    LocalLFSU local_lfsu(data.lfsu(),localSubProblem,localSubProblem.trialGridFunctionSpaceConstraints());
+    LocalLFSV local_lfsv(data.lfsv(),localSubProblem,localSubProblem.testGridFunctionSpaceConstraints());
+    local_lfsu.bind();
+    local_lfsv.bind();
+    RemoteLFSU remote_lfsu(data.lfsun(),remoteSubProblem,remoteSubProblem.trialGridFunctionSpaceConstraints());
+    RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
+    remote_lfsu.bind();
+    remote_lfsv.bind();
+    Operator::extract(child).jacobian_apply_enriched_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                                                data.intersectionIndex()),
+                                                              local_lfsu,
+                                                              _local_x,
+                                                              local_lfsv,
+                                                              remote_lfsu,
+                                                              _remote_x,
+                                                              remote_lfsv,
+                                                              data.couplinglfsu().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                                              _coupling_x,
+                                                              data.couplinglfsv().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                                              _local_y,
+                                                              _remote_y,
+                                                              _coupling_y);
+    data.setAlphaSkeletonInvoked();
+    data.setAlphaEnrichedCouplingInvoked();
+  }
+
+  const XL& _local_x;
+  const XL& _remote_x;
+  const XL& _coupling_x;
+  YL& _local_y;
+  YL& _remote_y;
+  YL& _coupling_y;
+};
+
+
 template<typename XL, typename YL, typename Operator=SpatialOperator>
 struct InvokeJacobianApplyVolumePostSkeleton
 {
@@ -870,6 +1083,86 @@ struct InvokeJacobianCoupling
   AL& _local_to_remote_a;
   AL& _remote_to_local_a;
   AL& _remote_a;
+};
+
+
+template<typename XL, typename AL, typename Operator=CouplingOperator>
+struct InvokeJacobianEnrichedCoupling
+{
+
+  InvokeJacobianEnrichedCoupling(const XL& xl, const XL& xn, const XL& xc, AL& al, AL& al_sn, AL& al_ns, AL& al_nn, AL& al_sc, AL&  al_cs, AL& al_nc, AL& al_cn, AL& al_cc) :
+    _local_x(xl),
+    _remote_x(xn),
+    _coupling_x(xc),
+    _local_a(al),
+    _local_to_remote_a(al_sn),
+    _remote_to_local_a(al_ns),
+    _remote_a(al_nn),
+    _local_to_coupling_a(al_sc),
+    _coupling_to_local_a(al_cs),
+    _remote_to_coupling_a(al_nc),
+    _coupling_to_remote_a(al_cn),
+    _coupling_a(al_cc)
+  {}
+
+  template<typename Data, typename Child>
+  void operator()(Data& data, const Child& child)
+  {
+    if (!child.appliesTo(data.elementSubDomains(),data.neighborSubDomains()))
+      return;
+    typedef typename Operator::template ExtractType<Child>::Type LOP;
+    typedef typename Child::Traits::LocalSubProblem LocalSubProblem;
+    typedef typename Child::Traits::RemoteSubProblem RemoteSubProblem;
+    typedef typename LocalSubProblem::Traits::TrialLocalFunctionSpace LocalLFSU;
+    typedef typename LocalSubProblem::Traits::TestLocalFunctionSpace LocalLFSV;
+    typedef typename RemoteSubProblem::Traits::TrialLocalFunctionSpace RemoteLFSU;
+    typedef typename RemoteSubProblem::Traits::TestLocalFunctionSpace RemoteLFSV;
+    const LocalSubProblem& localSubProblem = child.localSubProblem();
+    const RemoteSubProblem& remoteSubProblem = child.remoteSubProblem();
+    LocalLFSU local_lfsu(data.lfsu(),localSubProblem,localSubProblem.trialGridFunctionSpaceConstraints());
+    LocalLFSV local_lfsv(data.lfsv(),localSubProblem,localSubProblem.testGridFunctionSpaceConstraints());
+    local_lfsu.bind();
+    local_lfsv.bind();
+    RemoteLFSU remote_lfsu(data.lfsun(),remoteSubProblem,remoteSubProblem.trialGridFunctionSpaceConstraints());
+    RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
+    remote_lfsu.bind();
+    remote_lfsv.bind();
+    Operator::extract(child).jacobian_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                                 data.intersectionIndex()),
+                                               local_lfsu,
+                                               _local_x,
+                                               local_lfsv,
+                                               remote_lfsu,
+                                               _remote_x,
+                                               remote_lfsv,
+                                               data.couplinglfsu().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                               _coupling_x,
+                                               data.couplinglfsv().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                               _local_a,
+                                               _local_to_remote_a,
+                                               _remote_to_local_a,
+                                               _remote_a,
+                                               _local_to_coupling_a,
+                                               _coupling_to_local_a,
+                                               _remote_to_coupling_a,
+                                               _coupling_to_remote_a,
+                                               _coupling_a);
+    data.setAlphaSkeletonInvoked();
+    data.setAlphaEnrichedCouplingInvoked();
+  }
+
+  const XL& _local_x;
+  const XL& _remote_x;
+  const XL& _coupling_x;
+  AL& _local_a;
+  AL& _local_to_remote_a;
+  AL& _remote_to_local_a;
+  AL& _remote_a;
+  AL& _local_to_coupling_a;
+  AL& _coupling_to_local_a;
+  AL& _remote_to_coupling_a;
+  AL& _coupling_to_remote_a;
+  AL& _coupling_a;
 };
 
 

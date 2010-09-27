@@ -172,10 +172,10 @@ int main(int argc, char** argv) {
   typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> EC;
   typedef Dune::PDELab::MultiDomain::SubDomainSupersetCondition<Grid> SC;
 
-  SC c0(0);
-  SC c1(1);
+  EC c0(0);
+  EC c1(1);
 
-  typedef Dune::PDELab::MultiDomain::SubProblemSubProblemInterface<MDGV,SC,SC> Pred;
+  typedef Dune::PDELab::MultiDomain::SubProblemSubProblemInterface<MDGV,EC,EC> Pred;
 
   Pred pred(mdgv,c0,c1);
 

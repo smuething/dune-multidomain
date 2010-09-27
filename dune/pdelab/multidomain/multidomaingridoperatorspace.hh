@@ -52,6 +52,9 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
   template<typename,typename>
   friend struct BuildCouplingPattern;
 
+  template<typename,typename>
+  friend struct BuildEnrichedCouplingPattern;
+
   typedef VariadicCompositeNode<CopyStoragePolicy,SubProblemsAndCouplings...> BaseT;
 
   typedef typename extract_problems<SubProblemsAndCouplings...>::type SubProblemList;

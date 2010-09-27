@@ -19,6 +19,7 @@ struct CouplingTraits
   typedef CouplingOperator_ CouplingOperator;
 };
 
+
 template<
   typename LocalSubProblem,
   typename RemoteSubProblem,
@@ -63,6 +64,7 @@ private:
 protected:
   CouplingOperator& _operator;
 };
+
 
 template<
   typename LocalSubProblem,

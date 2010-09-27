@@ -92,6 +92,43 @@ SIMPLE_ANALYTIC_FUNCTION(J,x,y)
 }
 END_SIMPLE_ANALYTIC_FUNCTION
 
+
+
+class EnrichedCouplingOperator :
+  public Dune::PDELab::MultiDomain::CouplingOperatorDefaultFlags,
+  public Dune::PDELab::MultiDomain::NumericalJacobianEnrichedCoupling<EnrichedCouplingOperator>,
+  public Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<EnrichedCouplingOperator>,
+  public Dune::PDELab::MultiDomain::FullEnrichedCouplingPattern,
+  public Dune::PDELab::InstationaryLocalOperatorDefaultMethods<double>
+{
+
+public:
+
+  static const bool doAlphaEnrichedCoupling = true;
+  static const bool doPatternEnrichedCoupling = true;
+
+  template<typename IG, typename LFSU1, typename LFSU2, typename X, typename LFSV1, typename LFSV2,
+           typename CouplingLFSU, typename CouplingLFSV, typename R>
+  void alpha_enriched_coupling
+  ( const IG& ig,
+    const LFSU1& lfsu_s, const X& x_s, const LFSV1& lfsv_s,
+    const LFSU2& lfsu_n, const X& x_n, const LFSV2& lfsv_n,
+    const CouplingLFSU& lfsu_c, const X& x_c, const CouplingLFSV& lfsv_c,
+    R& r_s, R& r_n, R& r_c) const
+  {
+    for (auto it = r_s.begin(); it != r_s.end(); ++it)
+      *it += 5;
+    for (auto it = r_n.begin(); it != r_n.end(); ++it)
+      *it += 5;
+    for (auto it = r_c.begin(); it != r_c.end(); ++it)
+      *it += 10;
+  }
+
+};
+
+
+
+
 #define UGGRID
 
 int main(int argc, char** argv) {

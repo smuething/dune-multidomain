@@ -7,6 +7,7 @@
 #include <dune/pdelab/localoperator/idefault.hh>
 
 class ProportionalFlowCoupling :
+  public Dune::PDELab::MultiDomain::CouplingOperatorDefaultFlags,
   public Dune::PDELab::MultiDomain::NumericalJacobianCoupling<ProportionalFlowCoupling>,
   public Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<ProportionalFlowCoupling>,
   public Dune::PDELab::MultiDomain::FullCouplingPattern,

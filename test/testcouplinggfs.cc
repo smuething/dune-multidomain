@@ -179,7 +179,7 @@ int main(int argc, char** argv) {
 
   Pred pred(mdgv,c0,c1);
 
-  typedef Dune::PDELab::MultiDomain::CouplingGridFunctionSpace<MDGV,COUPLINGFEM,Pred,NOCON> CouplingGFS;
+  typedef Dune::PDELab::MultiDomain::CouplingGridFunctionSpace<MDGV,COUPLINGFEM,Pred,NOCON,VBE> CouplingGFS;
 
 
   typedef CouplingGFS::ConstraintsContainer<R>::Type C;
@@ -188,8 +188,8 @@ int main(int argc, char** argv) {
   CouplingGFS couplinggfs(mdgv,couplingfem,pred);
   std::cout << couplinggfs.size() << std::endl;
 
-
-  std::vector<double> global(couplinggfs.size(),0.0);
+  typedef CouplingGFS::VectorContainer<double>::Type Vec;
+  Vec global(couplinggfs,0.0);
 
   typedef Dune::PDELab::MultiDomain::CouplingLocalFunctionSpaceNode<CouplingGFS> CouplingLFS;
   CouplingLFS couplinglfs(couplinggfs);

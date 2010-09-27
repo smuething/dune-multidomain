@@ -287,7 +287,7 @@ int main(int argc, char** argv) {
         }
     }
 
-  /*
+
   typedef B<MDGV> BType;
   BType b(mdgv);
 
@@ -300,45 +300,29 @@ int main(int argc, char** argv) {
   typedef J<MDGV,R> JType;
   JType j(mdgv);
 
-  typedef Dune::PDELab::Poisson<FType,BType,JType,2> LOP;
+  typedef Dune::PDELab::Poisson<FType,BType,JType,4> LOP;
   LOP lop(f,b,j);
 
-  typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> EC;
-  typedef Dune::PDELab::MultiDomain::SubDomainSupersetCondition<Grid> SC;
-
-  SC c0;
-  SC c1(2);
-  EC c2(0,1);
-  EC c3(1);
-  SC c4(0);
-
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,SC,GFS> SubProblem0;
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,SC,GFS2> SubProblem1;
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,EC,GFS0,GFS1> SubProblem2;
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,EC,GFS1> SubProblem3;
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,SC,GFS0> SubProblem4;
+  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,EC,GFS0> SubProblem0;
+  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,EC,GFS1> SubProblem1;
 
   SubProblem0 sp0(con,con,lop,c0);
   SubProblem1 sp1(con,con,lop,c1);
-  SubProblem2 sp2(con,con,lop,c2);
-  SubProblem3 sp3(con,con,lop,c3);
-  SubProblem4 sp4(con,con,lop,c4);
 
-  ProportionalFlowCoupling proportionalFlowCoupling(atof(argv[2]));
+  EnrichedCouplingOperator enrichedCouplingOperator;
 
-  typedef Dune::PDELab::MultiDomain::Coupling<SubProblem0,SubProblem1,ProportionalFlowCoupling> Coupling;
-  Coupling coupling(sp0,sp1,proportionalFlowCoupling);
+  typedef Dune::PDELab::MultiDomain::EnrichedCoupling<SubProblem0,SubProblem1,EnrichedCouplingOperator,2> Coupling;
+  Coupling coupling(sp0,sp1,enrichedCouplingOperator);
 
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 
-  typedef Dune::PDELab::MultiDomain::MultiDomainGridOperatorSpace<MultiGFS,MultiGFS,MBE,SubProblem0,SubProblem1,Coupling,SubProblem2,SubProblem4,SubProblem3> MultiGOS;
+  typedef Dune::PDELab::MultiDomain::MultiDomainGridOperatorSpace<MultiGFS,MultiGFS,MBE,SubProblem0,SubProblem1,Coupling> MultiGOS;
 
-  MultiGOS multigos(multigfs,multigfs,cg,cg,sp0,sp1,coupling,sp2,sp4,sp3);
+  MultiGOS multigos(multigfs,multigfs,cg,cg,sp0,sp1,coupling);
 
   typedef MultiGOS::MatrixContainer<R>::Type M;
   M m(multigos);
   m = 0.0;
-  */
   }
   catch (Dune::Exception &e){
     std::cerr << "Dune reported error: " << e << std::endl;

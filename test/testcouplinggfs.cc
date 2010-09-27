@@ -330,6 +330,7 @@ int main(int argc, char** argv) {
   V r(u);
 
   multigos.residual(u,r);
+  multigos.jacobian(u,m);
 
   std::cout << r << std::endl;
 

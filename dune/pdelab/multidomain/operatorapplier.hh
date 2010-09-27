@@ -230,6 +230,71 @@ class NeighborFunctionSpaces :
 {
 };
 
+
+template<typename MDGOS>
+class CouplingTrialFunctionSpace
+{
+
+public:
+
+  typedef typename MDGOS::Traits::TrialGridFunctionSpace::CouplingLocalFunctionSpace CouplingLFSU;
+
+  CouplingTrialFunctionSpace() :
+    _pcouplinglfsu(NULL)
+  {}
+
+  void setcouplinglfsu(const CouplingLFSU& couplinglfsu)
+  {
+    _pcouplinglfsu = &couplinglfsu;
+  }
+
+  const CouplingLFSU& couplinglfsu() const
+  {
+    assert(_pcouplinglfsu != NULL);
+    return *_pcouplinglfsu;
+  }
+
+private:
+  const CouplingLFSU* _pcouplinglfsu;
+};
+
+
+template<typename MDGOS>
+class CouplingTestFunctionSpace
+{
+
+public:
+
+  typedef typename MDGOS::Traits::TestGridFunctionSpace::CouplingLocalFunctionSpace CouplingLFSV;
+
+  CouplingTestFunctionSpace() :
+    _pcouplinglfsv(NULL)
+  {}
+
+  void setcouplinglfsv(const CouplingLFSV& couplinglfsv)
+  {
+    _pcouplinglfsv = &couplinglfsv;
+  }
+
+  const CouplingLFSV& couplinglfsv() const
+  {
+    assert(_pcouplinglfsv != NULL);
+    return *_pcouplinglfsv;
+  }
+
+private:
+  const CouplingLFSV* _pcouplinglfsv;
+};
+
+
+template<typename MDGOS>
+class CouplingFunctionSpaces :
+    public CouplingTrialFunctionSpace<MDGOS>,
+    public CouplingTestFunctionSpace<MDGOS>
+{
+};
+
+
 template<typename MDGOS>
 class ElementReference
 {
@@ -357,6 +422,32 @@ public:
 
 private:
   mutable bool _alphaSkeletonInvoked;
+
+};
+
+
+template<typename MDGOS>
+class EnrichedCouplingInvocationTracker
+{
+public:
+  EnrichedCouplingInvocationTracker() :
+    _alphaEnrichedCouplingInvoked(false)
+  {}
+
+  void setAlphaEnrichedCouplingInvoked() const {
+    _alphaEnrichedCouplingInvoked = true;
+  }
+
+  void clearAlphaEnrichedCouplingInvoked() {
+    _alphaEnrichedCouplingInvoked = false;
+  }
+
+  bool alphaEnrichedCouplingInvoked() const {
+    return _alphaEnrichedCouplingInvoked;
+  }
+
+private:
+  mutable bool _alphaEnrichedCouplingInvoked;
 
 };
 

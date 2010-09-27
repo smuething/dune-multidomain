@@ -219,16 +219,20 @@ int main(int argc, char** argv) {
     std::cout << *it << " ";
   std::cout << std::endl;
 
-  typedef Dune::PDELab::Pk2DLocalFiniteElementMap<MDGV,DF,RF,2> FEM;
-  FEM fem(mdgv);
+  typedef Dune::PDELab::Pk2DLocalFiniteElementMap<SDGV,DF,RF,2> FEM0;
+  FEM0 fem0(sdgv0);
+  typedef Dune::PDELab::Pk2DLocalFiniteElementMap<SDGV,DF,RF,1> FEM1;
+  FEM1 fem1(sdgv1);
 
-  typedef Dune::PDELab::GridFunctionSpace<MDGV,FEM,NOCON> GFS;
+  typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,NOCON,VBE> GFS0;
+  typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,NOCON,VBE> GFS1;
 
-  GFS gfs(mdgv,fem);
+  GFS0 gfs0(sdgv0,fem0);
+  GFS1 gfs1(sdgv1,fem1);
 
-  typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS,CouplingGFS> MultiGFS;
+  typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS0,GFS1,CouplingGFS> MultiGFS;
 
-  MultiGFS multigfs(grid,gfs,couplinggfs);
+  MultiGFS multigfs(grid,gfs0,gfs1,couplinggfs);
 
   typedef MultiGFS::LocalFunctionSpace LFS;
   typedef MultiGFS::CouplingLocalFunctionSpace CLFS;

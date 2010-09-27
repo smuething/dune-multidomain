@@ -256,17 +256,17 @@ struct BuildEnrichedCouplingPattern
     RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
     remote_lfsu.bind();
     remote_lfsv.bind();
-    typedef typename Child::Traits::CouplingTrialLocalFunctionSpace CouplingLFSU;
-    typedef typename Child::Traits::CouplingTestLocalFunctionSpace CouplingLFSV;
-    const CouplingLFSU& coupling_lfsu = data.couplinglfsu().template getChild<Child::Traits::CouplingLFSIndex>();
-    const CouplingLFSV& coupling_lfsv = data.couplinglfsv().template getChild<Child::Traits::CouplingLFSIndex>();
+    typedef typename Child::template CouplingLocalFunctionSpace<typename Data::LFSU>::Type CouplingLFSU;
+    typedef typename Child::template CouplingLocalFunctionSpace<typename Data::LFSV>::Type CouplingLFSV;
+    const CouplingLFSU& coupling_lfsu = child.couplingLocalFunctionSpace(data.couplinglfsu());
+    const CouplingLFSV& coupling_lfsv = child.couplingLocalFunctionSpace(data.couplinglfsv());
     LocalSparsityPattern localpattern_sn, localpattern_ns, localpattern_sc, localpattern_cs, localpattern_nc, localpattern_cn, localpattern_coupling;
     Operator::extract(child).pattern_enriched_coupling(local_lfsu,
                                                        local_lfsv,
                                                        remote_lfsu,
                                                        remote_lfsv,
-                                                       data.couplinglfsu().template getChild<Child::Traits::CouplingLFSIndex>(),
-                                                       data.couplinglfsv().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                                       coupling_lfsu,
+                                                       coupling_lfsv,
                                                        localpattern_sn,
                                                        localpattern_ns,
                                                        localpattern_sc,
@@ -557,9 +557,9 @@ struct InvokeAlphaEnrichedCoupling
                                                      remote_lfsu,
                                                      _remote_x,
                                                      remote_lfsv,
-                                                     data.couplinglfsu().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                                     child.couplingLocalFunctionSpace(data.couplinglfsu()),
                                                      _coupling_x,
-                                                     data.couplinglfsv().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                                     child.couplingLocalFunctionSpace(data.couplinglfsv()),
                                                      _local_r,
                                                      _remote_r,
                                                      _coupling_r);
@@ -861,9 +861,9 @@ struct InvokeJacobianApplyEnrichedCoupling
                                                               remote_lfsu,
                                                               _remote_x,
                                                               remote_lfsv,
-                                                              data.couplinglfsu().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                                              child.couplingLocalFunctionSpace(data.couplinglfsu()),
                                                               _coupling_x,
-                                                              data.couplinglfsv().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                                              child.couplingLocalFunctionSpace(data.couplinglfsv()),
                                                               _local_y,
                                                               _remote_y,
                                                               _coupling_y);
@@ -1135,9 +1135,9 @@ struct InvokeJacobianEnrichedCoupling
                                                remote_lfsu,
                                                _remote_x,
                                                remote_lfsv,
-                                               data.couplinglfsu().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                               child.couplingLocalFunctionSpace(data.couplinglfsu()),
                                                _coupling_x,
-                                               data.couplinglfsv().template getChild<Child::Traits::CouplingLFSIndex>(),
+                                               child.couplingLocalFunctionSpace(data.couplinglfsv()),
                                                _local_a,
                                                _local_to_remote_a,
                                                _remote_to_local_a,

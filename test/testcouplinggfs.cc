@@ -181,8 +181,9 @@ int main(int argc, char** argv) {
 
   typedef Dune::PDELab::MultiDomain::CouplingGridFunctionSpace<MDGV,COUPLINGFEM,Pred,NOCON,VBE> CouplingGFS;
 
+  typedef double RF;
 
-  typedef CouplingGFS::ConstraintsContainer<R>::Type C;
+  typedef CouplingGFS::ConstraintsContainer<RF>::Type C;
   C cg;
 
   CouplingGFS couplinggfs(mdgv,couplingfem,pred);
@@ -217,8 +218,6 @@ int main(int argc, char** argv) {
   for(auto it = global.begin(); it != global.end(); ++it)
     std::cout << *it << " ";
   std::cout << std::endl;
-
-  typedef double RF;
 
   typedef Dune::PDELab::Pk2DLocalFiniteElementMap<MDGV,DF,RF,2> FEM;
   FEM fem(mdgv);

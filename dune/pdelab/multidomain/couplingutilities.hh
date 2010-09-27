@@ -8,6 +8,16 @@ namespace PDELab {
 namespace MultiDomain {
 
 
+class CouplingOperatorDefaultFlags
+{
+public:
+  static const bool doPatternCoupling = false;
+  static const bool doPatternEnrichedCoupling = false;
+  static const bool doAlphaCoupling = false;
+  static const bool doAlphaEnrichedCoupling = false;
+};
+
+
 class FullCouplingPattern
 {
 

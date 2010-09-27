@@ -175,25 +175,25 @@ class NeighborTrialFunctionSpace
 
 public:
 
-  typedef typename MDGOS::Traits::TrialGridFunctionSpace::LocalFunctionSpace LFSU;
+  typedef typename MDGOS::Traits::TrialGridFunctionSpace::LocalFunctionSpace LFSU_;
 
   NeighborTrialFunctionSpace() :
     _plfsun(NULL)
   {}
 
-  void setlfsun(const LFSU& lfsun)
+  void setlfsun(const LFSU_& lfsun)
   {
     _plfsun = &lfsun;
   }
 
-  const LFSU& lfsun() const
+  const LFSU_& lfsun() const
   {
     assert(_plfsun != NULL);
     return *_plfsun;
   }
 
 private:
-  const LFSU* _plfsun;
+  const LFSU_* _plfsun;
 };
 
 template<typename MDGOS>
@@ -202,25 +202,25 @@ class NeighborTestFunctionSpace
 
 public:
 
-  typedef typename MDGOS::Traits::TestGridFunctionSpace::LocalFunctionSpace LFSV;
+  typedef typename MDGOS::Traits::TestGridFunctionSpace::LocalFunctionSpace LFSV_;
 
   NeighborTestFunctionSpace() :
     _plfsvn(NULL)
   {}
 
-  void setlfsvn(const LFSV& lfsvn)
+  void setlfsvn(const LFSV_& lfsvn)
   {
     _plfsvn = &lfsvn;
   }
 
-  const LFSV& lfsvn() const
+  const LFSV_& lfsvn() const
   {
     assert(_plfsvn != NULL);
     return *_plfsvn;
   }
 
 private:
-  const LFSV* _plfsvn;
+  const LFSV_* _plfsvn;
 };
 
 template<typename MDGOS>

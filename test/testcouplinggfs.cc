@@ -323,6 +323,16 @@ int main(int argc, char** argv) {
   typedef MultiGOS::MatrixContainer<R>::Type M;
   M m(multigos);
   m = 0.0;
+
+  typedef MultiGFS::VectorContainer<R>::Type V;
+
+  V u(multigfs,0.0);
+  V r(u);
+
+  multigos.residual(u,r);
+
+  std::cout << r << std::endl;
+
   }
   catch (Dune::Exception &e){
     std::cerr << "Dune reported error: " << e << std::endl;

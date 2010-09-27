@@ -136,7 +136,7 @@ public:
   struct VectorContainer
   {
     //! \brief define Type as the Type of a container of E's
-    typedef typename B::template VectorContainer<GridFunctionSpace,T> Type;
+    typedef typename B::template VectorContainer<CouplingGridFunctionSpace,T> Type;
   private:
     VectorContainer () {}
   };

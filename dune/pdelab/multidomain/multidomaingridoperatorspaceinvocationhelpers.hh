@@ -1127,26 +1127,26 @@ struct InvokeJacobianEnrichedCoupling
     RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
     remote_lfsu.bind();
     remote_lfsv.bind();
-    Operator::extract(child).jacobian_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                                 data.intersectionIndex()),
-                                               local_lfsu,
-                                               _local_x,
-                                               local_lfsv,
-                                               remote_lfsu,
-                                               _remote_x,
-                                               remote_lfsv,
-                                               child.couplingLocalFunctionSpace(data.couplinglfsu()),
-                                               _coupling_x,
-                                               child.couplingLocalFunctionSpace(data.couplinglfsv()),
-                                               _local_a,
-                                               _local_to_remote_a,
-                                               _remote_to_local_a,
-                                               _remote_a,
-                                               _local_to_coupling_a,
-                                               _coupling_to_local_a,
-                                               _remote_to_coupling_a,
-                                               _coupling_to_remote_a,
-                                               _coupling_a);
+    Operator::extract(child).jacobian_enriched_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                                          data.intersectionIndex()),
+                                                        local_lfsu,
+                                                        _local_x,
+                                                        local_lfsv,
+                                                        remote_lfsu,
+                                                        _remote_x,
+                                                        remote_lfsv,
+                                                        child.couplingLocalFunctionSpace(data.couplinglfsu()),
+                                                        _coupling_x,
+                                                        child.couplingLocalFunctionSpace(data.couplinglfsv()),
+                                                        _local_a,
+                                                        _local_to_remote_a,
+                                                        _remote_to_local_a,
+                                                        _remote_a,
+                                                        _local_to_coupling_a,
+                                                        _coupling_to_local_a,
+                                                        _remote_to_coupling_a,
+                                                        _coupling_to_remote_a,
+                                                        _coupling_a);
     data.setAlphaSkeletonInvoked();
     data.setAlphaEnrichedCouplingInvoked();
   }

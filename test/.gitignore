@@ -6,4 +6,5 @@ instationarypoisson
 instationaryexplicitlycoupledpoisson
 testmatrixconstruction
 testlocalfunctionspace
+stokesdarcy
 testcouplinggfs

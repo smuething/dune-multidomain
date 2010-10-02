@@ -14,6 +14,7 @@ check_PROGRAMS = testmultidomaingridfunctionspace \
 	instationaryexplicitlycoupledpoisson \
 	testmatrixconstruction \
 	testcouplinggfs \
+	stokesdarcy \
 	testlocalfunctionspace
 
 testmultidomaingridfunctionspace_SOURCES = testmultidomaingridfunctionspace.cc
@@ -35,5 +36,10 @@ instationaryexplicitlycoupledpoisson_SOURCES = instationaryexplicitlycoupledpois
 testmatrixconstruction_SOURCES = testmatrixconstruction.cc
 
 testlocalfunctionspace_SOURCES = testlocalfunctionspace.cc
+
+stokesdarcy_SOURCES = stokesdarcy.cc
+stokesdarcy_CPPFLAGS = $(AM_CPPFLAGS) $(SUPERLU_CPPFLAGS)
+stokesdarcy_LDFLAGS = $(AM_LDFLAGS) $(SUPERLU_LDFLAGS)
+stokesdarcy_LDADD = $(AM_LIBS) $(SUPERLU_LIBS)
 
 testcouplinggfs_SOURCES = testcouplinggfs.cc

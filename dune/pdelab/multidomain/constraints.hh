@@ -9,6 +9,271 @@ namespace Dune {
 namespace PDELab {
 namespace MultiDomain {
 
+
+//FIXME: This should be handled better....
+
+template<typename C, typename F, bool FisLeaf, typename LFS, bool LFSisLeaf>
+struct SubProblemConstraintsVisitNodeMetaProgram;
+
+template<typename C, typename F, typename LFS, int n, int i>
+struct SubProblemConstraintsVisitChildMetaProgram // visit i'th child of inner node
+{
+  template<typename CG, typename I>
+  static void boundary (const C& c, const F& f, const LFS& lfs, CG& cg, const IntersectionGeometry<I>& ig)
+  {
+    // vist children of both nodes in pairs
+    typedef typename F::template Child<i>::Type FC;
+    typedef typename LFS::template Child<i>::Type LFSC;
+
+    const FC& fc=f.template getChild<i>();
+    const LFSC& lfsc=lfs.template getChild<i>();
+
+    SubProblemConstraintsVisitNodeMetaProgram<C,FC,FC::isLeaf,LFSC,LFSC::isLeaf>::boundary(c,fc,lfsc,cg,ig);
+    SubProblemConstraintsVisitChildMetaProgram<C,F,LFS,n,i+1>::boundary(c,f,lfs,cg,ig);
+  }
+};
+
+template<typename C, typename F, typename LFS, int n>
+struct SubProblemConstraintsVisitChildMetaProgram<C,F,LFS,n,n> // end of child recursion
+{
+  // end of child recursion
+  template<typename CG, typename I>
+  static void boundary (const C& c, const F& f, const LFS& lfs, CG& cg, const IntersectionGeometry<I>& ig)
+  {
+    return;
+  }
+};
+
+template<typename C, typename F, bool FisLeaf, typename LFS, bool LFSisLeaf>
+struct SubProblemConstraintsVisitNodeMetaProgram // visit inner node
+{
+  template<typename CG, typename I>
+  static void boundary (const C& c, const F& f, const LFS& lfs, CG& cg, const IntersectionGeometry<I>& ig)
+  {
+    // both are inner nodes, visit all children
+    // check that both have same number of children
+    dune_static_assert((static_cast<int>(F::CHILDREN)==static_cast<int>(LFS::CHILDREN)),
+                       "both nodes must have same number of children");
+
+    // start child recursion
+    SubProblemConstraintsVisitChildMetaProgram<C,F,LFS,F::CHILDREN,0>::boundary(c,f,lfs,cg,ig);
+  }
+};
+
+template<typename C, typename F, typename LFS>
+struct SubProblemConstraintsVisitNodeMetaProgram<C,F,true,LFS,false> // try to interpolate components from vector valued function
+{
+  template<typename CG, typename I>
+  static void boundary (const C& c, const F& f, const LFS& lfs, CG& cg, const IntersectionGeometry<I>& ig)
+  {
+    dune_static_assert((static_cast<int>(LFS::isPower)==1),
+                       "specialization only for power");
+    dune_static_assert((static_cast<int>(LFS::template Child<0>::Type::isLeaf)==1),
+                       "children must be leaves");
+    dune_static_assert((static_cast<int>(F::Traits::dimRange)==static_cast<int>(LFS::CHILDREN)),
+                       "number of components must coincide with number of children");
+
+    // extract constraints type
+    //typedef typename LFS::template Child<0>::Type::Traits::ConstraintsType C;
+
+    for (int k=0; k<LFS::CHILDREN; k++)
+      {
+        // allocate empty local constraints map
+        CG cl;
+
+        // call boundary condition evaluation of child k with component k
+        typedef BoundaryGridFunctionSelectComponentAdapter<F> FCOMP;
+        FCOMP fcomp(f,k);
+
+        ConstraintsCallBoundary<C,C::doBoundary>::boundary(c, // lfs.getChild(k).constraints(),
+                                                           fcomp,ig,lfs.getChild(k),cl);
+
+        // write coefficients into local vector
+        lfs.getChild(k).mwrite(cl,cg);
+      }
+  }
+};
+
+template<typename C, typename F, typename LFS>
+struct SubProblemConstraintsVisitNodeMetaProgram<C,F,true,LFS,true> // leaf node in both trees
+{
+  template<typename CG, typename I>
+  static void boundary (const C& c, const F& f, const LFS& lfs, CG& cg, const IntersectionGeometry<I>& ig)
+  {
+    // now we are at a single component local function space
+    // which is part of a multi component local function space
+
+    // allocate local constraints map
+    CG cl;
+
+    // extract constraints type
+    // typedef typename LFS::Traits::ConstraintsType C;
+
+    // iterate over boundary, need intersection iterator
+    ConstraintsCallBoundary<C,C::doBoundary>::boundary(c /*lfs.constraints()*/,f,ig,lfs,cl);
+
+    // write coefficients into local vector
+    lfs.mwrite(cl,cg);
+  }
+};
+
+
+// second metaprogram that iterates over local function space only
+
+template<typename C, typename LFS, bool LFSisLeaf>
+struct SubProblemConstraintsVisitNodeMetaProgram2;
+
+template<typename C, typename LFS, int n, int i>
+struct SubProblemConstraintsVisitChildMetaProgram2 // visit i'th child of inner node
+{
+  template<typename CG, typename I>
+  static void processor (const C&c, const LFS& lfs, CG& cg, const IntersectionGeometry<I>& ig)
+  {
+    typedef typename LFS::template Child<i>::Type LFSC;
+    const LFSC& lfsc=lfs.template getChild<i>();
+
+    SubProblemConstraintsVisitNodeMetaProgram2<C,LFSC,LFSC::isLeaf>::processor(c,lfsc,cg,ig);
+    SubProblemConstraintsVisitChildMetaProgram2<C,LFS,n,i+1>::processor(c,lfs,cg,ig);
+  }
+  template<typename CG, typename I>
+  static void skeleton (const C& c, const LFS& lfs_e, const LFS& lfs_f, CG& cg,
+                        const IntersectionGeometry<I>& ig)
+  {
+    typedef typename LFS::template Child<i>::Type LFSC;
+    const LFSC& lfsc_e=lfs_e.template getChild<i>();
+    const LFSC& lfsc_f=lfs_f.template getChild<i>();
+
+    SubProblemConstraintsVisitNodeMetaProgram2<C,LFSC,LFSC::isLeaf>::skeleton(c,lfsc_e,lfsc_f,cg,ig);
+    SubProblemConstraintsVisitChildMetaProgram2<C,LFS,n,i+1>::skeleton(c,lfs_e,lfs_f,cg,ig);
+  }
+  template<typename CG, typename E>
+  static void volume (const C& c, const LFS& lfs, CG& cg, const ElementGeometry<E>& eg)
+  {
+    typedef typename LFS::template Child<i>::Type LFSC;
+    const LFSC& lfsc=lfs.template getChild<i>();
+
+    SubProblemConstraintsVisitNodeMetaProgram2<C,LFSC,LFSC::isLeaf>::volume(c,lfsc,cg,eg);
+    SubProblemConstraintsVisitChildMetaProgram2<C,LFS,n,i+1>::volume(c,lfs,cg,eg);
+  }
+};
+
+template<typename C, typename LFS, int n>
+struct SubProblemConstraintsVisitChildMetaProgram2<C,LFS,n,n> // end of child recursion
+{
+  template<typename CG, typename I>
+  static void processor (const C& c, const LFS& lfs, CG& cg, const IntersectionGeometry<I>& ig)
+  {
+    return;
+  }
+  template<typename CG, typename I>
+  static void skeleton (const C& c, const LFS& lfs_e, const LFS& lfs_f, CG& cg,
+                        const IntersectionGeometry<I>& ig)
+  {
+    return;
+  }
+  template<typename CG, typename E>
+  static void volume (const C& c, const LFS& lfs, CG& cg, const ElementGeometry<E>& eg)
+  {
+    return;
+  }
+};
+
+
+template<typename C, typename LFS, bool LFSisLeaf>
+struct SubProblemConstraintsVisitNodeMetaProgram2 // visit inner node
+{
+  template<typename CG, typename I>
+  static void processor (const C& c, const LFS& lfs, CG& cg, const IntersectionGeometry<I>& ig)
+  {
+    // start child recursion
+    SubProblemConstraintsVisitChildMetaProgram2<C,LFS,LFS::CHILDREN,0>::processor(c,lfs,cg,ig);
+  }
+  template<typename CG, typename I>
+  static void skeleton (const C& c, const LFS& lfs_e, const LFS& lfs_f, CG& cg,
+                        const IntersectionGeometry<I>& ig)
+  {
+    // start child recursion
+    SubProblemConstraintsVisitChildMetaProgram2<C,LFS,LFS::CHILDREN,0>::skeleton(c,lfs_e,lfs_f,cg,ig);
+  }
+  template<typename CG, typename E>
+  static void volume (const C& c, const LFS& lfs, CG& cg, const ElementGeometry<E>& eg)
+  {
+    // start child recursion
+    SubProblemConstraintsVisitChildMetaProgram2<C,LFS,LFS::CHILDREN,0>::volume(c,lfs,cg,eg);
+  }
+};
+
+
+template<typename C, typename LFS>
+struct SubProblemConstraintsVisitNodeMetaProgram2<C,LFS,true> // leaf node
+{
+  template<typename CG, typename I>
+  static void processor (const C& c, const LFS& lfs, CG& cg, const IntersectionGeometry<I>& ig)
+  {
+    // now we are at a single component local function space
+    // which is part of a multi component local function space
+
+    // allocate local constraints map
+    CG cl;
+
+    // extract constraints type
+    // typedef typename LFS::Traits::ConstraintsType C;
+
+    // iterate over boundary, need intersection iterator
+    ConstraintsCallProcessor<C,C::doProcessor>::processor(c /*lfs.constraints()*/,ig,lfs,cl);
+
+    // write coefficients into local vector
+    lfs.mwrite(cl,cg);
+  }
+  template<typename CG, typename I>
+  static void skeleton (const C& c, const LFS& lfs_e, const LFS& lfs_f, CG& cg,
+                        const IntersectionGeometry<I>& ig)
+  {
+    // now we are at a single component local function space
+    // which is part of a multi component local function space
+
+    // allocate local constraints map for both elements adjacent
+    // to this intersection
+    CG cl_e;
+    CG cl_f;
+
+    // extract constraints type
+    // typedef typename LFS::Traits::ConstraintsType C;
+
+    // as LFS::constraints() just returns the constraints of the
+    // GridFunctionSpace, lfs_e.constraints() is equivalent to
+    // lfs_f.constraints()
+    //const C & c = lfs_e.constraints();
+
+    // iterate over boundary, need intersection iterator
+    ConstraintsCallSkeleton<C,C::doSkeleton>::skeleton(c,ig,lfs_e,lfs_f,cl_e,cl_f);
+
+    // write coefficients into local vector
+    lfs_e.mwrite(cl_e,cg);
+    lfs_f.mwrite(cl_f,cg);
+  }
+  template<typename CG, typename E>
+  static void volume (const C& c, const LFS& lfs, CG& cg, const ElementGeometry<E>& eg)
+  {
+    // now we are at a single component local function space
+    // which is part of a multi component local function space
+
+    // allocate local constraints map
+    CG cl;
+
+    // extract constraints type
+    //typedef typename LFS::Traits::ConstraintsType C;
+    //const C & c = lfs.constraints();
+
+    // iterate over boundary, need intersection iterator
+    ConstraintsCallVolume<C,C::doVolume>::volume(c,eg,lfs,cl);
+
+    // write coefficients into local vector
+    lfs.mwrite(cl,cg);
+  }
+};
+
+
 template<typename... SubProblemBoundaries>
 struct constraints_pairs;
 
@@ -41,8 +306,10 @@ struct constraints_pairs<BoundaryConditionTypeFunction,SubProblemLFS,SubProblemB
     if (subProblemLFS.appliesTo(subDomainSet))
     {
       subProblemLFS.bind();
-      ConstraintsVisitNodeMetaProgram2<SubProblemLFS,SubProblemLFS::isLeaf>
-        ::volume(subProblemLFS,cg,geometry);
+      typedef typename SubProblemLFS::Traits::Constraints Constraints;
+      const Constraints& constraints = subProblemLFS.constraints();
+      SubProblemConstraintsVisitNodeMetaProgram2<Constraints,SubProblemLFS,SubProblemLFS::isLeaf>
+        ::volume(constraints,subProblemLFS,cg,geometry);
     }
     next_pair::volume(lfs,cg,geometry,subDomainSet,subProblemBoundaries...);
   }
@@ -55,11 +322,14 @@ struct constraints_pairs<BoundaryConditionTypeFunction,SubProblemLFS,SubProblemB
                           const BoundaryConditionTypeFunction& boundaryType,
                           const SubProblemLFS& subProblemLFS)
   {
-    ConstraintsVisitNodeMetaProgram<BoundaryConditionTypeFunction,
-                                    BoundaryConditionTypeFunction::isLeaf,
-                                    SubProblemLFS,
-                                    SubProblemLFS::isLeaf>
-      ::boundary(boundaryType,subProblemLFS,cg,intersectionGeometry);
+    typedef typename SubProblemLFS::Traits::Constraints Constraints;
+    const Constraints& constraints = subProblemLFS.constraints();
+    SubProblemConstraintsVisitNodeMetaProgram<Constraints,
+                                              BoundaryConditionTypeFunction,
+                                              BoundaryConditionTypeFunction::isLeaf,
+                                              SubProblemLFS,
+                                              SubProblemLFS::isLeaf>
+      ::boundary(constraints,boundaryType,subProblemLFS,cg,intersectionGeometry);
   }
 
   template<typename LFS, typename CG, typename IntersectionGeometry, typename SubDomainSet>
@@ -97,8 +367,10 @@ struct constraints_pairs<BoundaryConditionTypeFunction,SubProblemLFS,SubProblemB
         subProblemLFS.bind();
         SubProblemLFS subProblemLFS_neighbor(lfs_n,subProblemLFS.subProblem(),subProblemLFS.constraints());
         subProblemLFS_neighbor.bind();
-        ConstraintsVisitNodeMetaProgram2<SubProblemLFS,SubProblemLFS::isLeaf>
-          ::skeleton(subProblemLFS,subProblemLFS_neighbor,cg,intersectionGeometry);
+        typedef typename SubProblemLFS::Traits::Constraints Constraints;
+        const Constraints& constraints = subProblemLFS.constraints();
+        SubProblemConstraintsVisitNodeMetaProgram2<Constraints,SubProblemLFS,SubProblemLFS::isLeaf>
+          ::skeleton(constraints,subProblemLFS,subProblemLFS_neighbor,cg,intersectionGeometry);
       } else {
         do_boundary(lfs,cg,intersectionGeometry,subDomainSet,boundaryType,subProblemLFS);
       }

@@ -166,8 +166,8 @@ struct BuildSkeletonPattern
     // translate local to global indices and add to global pattern
     for (size_t k=0; k<localpattern_sn.size(); ++k)
       data.gos().add_entry(globalpattern,
-                           data.lfsu().globalIndex(lfsu().localIndex(localpattern_sn[k].i())),
-                           data.lfsvn().globalIndex(lfsvn().localIndex(localpattern_sn[k].j()))
+                           data.lfsu().globalIndex(lfsu.localIndex(localpattern_sn[k].i())),
+                           data.lfsvn().globalIndex(lfsvn.localIndex(localpattern_sn[k].j()))
                            );
 
     for (size_t k=0; k<localpattern_ns.size(); ++k)

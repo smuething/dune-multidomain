@@ -15,6 +15,7 @@ check_PROGRAMS = testmultidomaingridfunctionspace \
 	testmatrixconstruction \
 	testcouplinggfs \
 	stokesdarcy \
+	stokesdarcy2 \
 	testlocalfunctionspace
 
 testmultidomaingridfunctionspace_SOURCES = testmultidomaingridfunctionspace.cc
@@ -41,5 +42,10 @@ stokesdarcy_SOURCES = stokesdarcy.cc
 stokesdarcy_CPPFLAGS = $(AM_CPPFLAGS) $(SUPERLU_CPPFLAGS)
 stokesdarcy_LDFLAGS = $(AM_LDFLAGS) $(SUPERLU_LDFLAGS)
 stokesdarcy_LDADD = $(AM_LIBS) $(SUPERLU_LIBS)
+
+stokesdarcy2_SOURCES = stokesdarcy2.cc
+stokesdarcy2_CPPFLAGS = $(AM_CPPFLAGS) $(SUPERLU_CPPFLAGS)
+stokesdarcy2_LDFLAGS = $(AM_LDFLAGS) $(SUPERLU_LDFLAGS)
+stokesdarcy2_LDADD = $(AM_LIBS) $(SUPERLU_LIBS)
 
 testcouplinggfs_SOURCES = testcouplinggfs.cc

@@ -2,6 +2,7 @@
 #define STOKESDARCYCOUPLINGOPERATOR_HH
 
 #include <dune/pdelab/multidomain/couplingutilities.hh>
+#include <dune/common/parametertree.hh>
 
 template<typename GV>
 class CouplingParameters
@@ -13,38 +14,60 @@ public:
 
   double viscosity() const
   {
-    return 1.0;
+    return viscosity_;
+  }
+
+  double density() const
+  {
+    return density_;
   }
 
   double gravity() const
   {
-    return 1.0;
+    return gravity_;
   }
 
   double alpha() const
   {
-    return 1.0;
+    return alpha_;
   }
 
   double porosity() const
   {
-    return 1.0;
+    return porosity_;
   }
 
-  PermeabilityTensor permeability() const
+  double gamma() const
   {
-    return _permeability;
+    return gamma_;
   }
 
-  CouplingParameters()
+  PermeabilityTensor kabs() const
+  {
+    return _kabs;
+  }
+
+  CouplingParameters(const Dune::ParameterTree& params)
+    : alpha_(params.get("coupling.alpha",1.0))
+    , gamma_(params.get("coupling.gamma",1.0))
+    , porosity_(params.get<double>("soil.porosity"))
+    , gravity_(params.get("gravity",9.81))
+    , density_(params.get<double>("fluid.density"))
+    , viscosity_(params.get<double>("fluid.viscosity"))
   {
     for (int i = 0; i < GV::dimension; ++i)
       for (int j = 0; j < GV::dimension; ++j)
-        _permeability[i][j] = (i == j ? 1.0 : 0.0);
+        _kabs[i][j] = (i == j ? params.get<double>("soil.permeability") : 0.0);
   }
 
 private:
-  PermeabilityTensor _permeability;
+  PermeabilityTensor _kabs;
+  const double alpha_;
+  const double gamma_;
+  const double porosity_;
+  const double gravity_;
+  const double density_;
+  const double viscosity_;
 
 };
 
@@ -113,8 +136,8 @@ public:
 
     // select quadrature rule
     Dune::GeometryType gt = ig.geometry().type();
-    const int qorder = 2 * std::max(lfsu_v_pfs.template getChild(0).localFiniteElement().localBasis().order(),
-                                    darcylfsu.localFiniteElement().localBasis().order());
+    const int qorder = 2 * std::max(lfsu_v_pfs.template getChild(0).finiteElement().localBasis().order(),
+                                    darcylfsu.finiteElement().localBasis().order());
 
     const Dune::QuadratureRule<DF,dim-1>& rule = Dune::QuadratureRules<DF,dim-1>::rule(gt,qorder);
 
@@ -123,11 +146,14 @@ public:
     const RF g = parameters.gravity();
     const RF alpha = parameters.alpha();
     const RF nu = parameters.viscosity();
-    const RF S = parameters.porosity();
-    const typename Parameters::PermeabilityTensor Pi = parameters.permeability();
+    const RF porosity = parameters.porosity();
+    const RF gamma = parameters.gamma();
+    const RF rho = parameters.density();
+    const typename Parameters::PermeabilityTensor kabs = parameters.kabs();
     RF tracePi = 0.0;
     for (int i = 0; i < dim; ++i)
-      tracePi += Pi[i][i];
+      tracePi += kabs[i][i];
+    tracePi *= nu/g/rho;
 
     // loop over quadrature points
     for (typename Dune::QuadratureRule<DF,dim-1>::const_iterator it=rule.begin(); it!=rule.end(); ++it)
@@ -141,14 +167,14 @@ public:
         const RF factor = it->weight() * ig.geometry().integrationElement(it->position());
 
         std::vector<RT_V> v(vsize);
-        lfsu_v_pfs.getChild(0).localFiniteElement().localBasis().evaluateFunction(stokesPos,v);
+        lfsu_v_pfs.getChild(0).finiteElement().localBasis().evaluateFunction(stokesPos,v);
 
         std::vector<RT_D> psi(dsize);
-        darcylfsu.localFiniteElement().localBasis().evaluateFunction(darcyPos,psi);
+        darcylfsu.finiteElement().localBasis().evaluateFunction(darcyPos,psi);
 
         // evaluate gradient of shape functions (we assume Galerkin method lfsu=lfsv)
         std::vector<JacobianType_D> js(dsize);
-        darcylfsu.localFiniteElement().localBasis().evaluateJacobian(darcyPos,js);
+        darcylfsu.finiteElement().localBasis().evaluateJacobian(darcyPos,js);
 
         // transform gradient to real element
         const Dune::FieldMatrix<DF,dimw,dim> jac = darcyCell->geometry().jacobianInverseTransposed(darcyPos);
@@ -177,13 +203,14 @@ public:
               u[d] += stokesx[lfsu_v.localIndex(i)] * v[i];
           }
 
+
         for (size_type i = 0; i < darcylfsu.size(); ++i)
-          darcyr[darcylfsu.localIndex(i)] -= 1.0/S * (u * n) * psi[i] * factor;
+          darcyr[darcylfsu.localIndex(i)] -= gamma * porosity * (u * n) * psi[i] * factor;
 
         Dune::FieldVector<RF,dim> tangentialFlow(0.0);
-        Pi.mv(gradphi,tangentialFlow);
-        tangentialFlow *= g/nu;
-        tangentialFlow += u;
+        kabs.mv(gradphi,tangentialFlow);
+        tangentialFlow /= porosity;
+        tangentialFlow = u;
         // project into tangential plane
         GC scaledNormal = n;
         scaledNormal *= (tangentialFlow * n);
@@ -193,10 +220,19 @@ public:
           {
             const LFSU_V& lfsu_v = lfsu_v_pfs.getChild(d);
             for (size_type i = 0; i < lfsu_v.size(); ++i)
-                stokesr[lfsu_v.localIndex(i)] += g * (phi - pos[dim]) * v[i] * n[d] * factor;
+              {
+              stokesr[lfsu_v.localIndex(i)] += rho * g * (phi - pos[dim]) * v[i] * n[d] * factor;
+              /*std::cout << "d = " << d << " i = " << i << " codim = " << lfsu_v.finiteElement().localCoefficients().localKey(i).codim()
+                        << " entity = " << lfsu_v.finiteElement().localCoefficients().localKey(i).subEntity()
+                        << " index = " << lfsu_v.finiteElement().localCoefficients().localKey(i).index()
+                        << " f_n = " << rho * g * (phi - pos[dim]) * v[i] * n[d] * factor << std::endl;*/
+              }
 
             for (size_type i = 0; i < lfsu_v.size(); ++i)
-                stokesr[lfsu_v.localIndex(i)] += nu * alpha * sqrt(dim) / tracePi * tangentialFlow[d] * v[i] * factor;
+              {
+                //stokesr[lfsu_v.localIndex(i)] += alpha * sqrt(dim) / sqrt(tracePi) * tangentialFlow[d] * v[i] * factor;
+              //std::cout << "d = " << d << " i = " << i << " f_t = " << alpha * sqrt(dim) / sqrt(tracePi) * tangentialFlow[d] * v[i] * factor << std::endl;
+              }
           }
 
       }

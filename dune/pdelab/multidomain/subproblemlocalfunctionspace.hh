@@ -191,7 +191,9 @@ struct SubProblemLeafLocalFunctionSpaceTraits
   typedef typename std::vector<SizeType> IndexContainer;
 
   //! \brief local finite element
-  typedef typename BaseLFS::Traits::LocalFiniteElementType LocalFiniteElementType;
+  typedef typename BaseLFS::Traits::FiniteElementType LocalFiniteElementType DUNE_DEPRECATED;
+
+  typedef typename BaseLFS::Traits::FiniteElementType FiniteElementType DUNE_DEPRECATED;
 
   typedef _SubProblem SubProblem;
 
@@ -653,8 +655,12 @@ public:
     BaseT(subProblem,constraints)
   {}
 
-  const typename Traits::LocalFiniteElementType& localFiniteElement() const {
-    return this->baseLFS().localFiniteElement();
+  const typename Traits::FiniteElementType& localFiniteElement() const DUNE_DEPRECATED {
+    return this->baseLFS().finiteElement();
+  }
+
+  const typename Traits::FiniteElementType& finiteElement() const {
+    return this->baseLFS().finiteElement();
   }
 
 };

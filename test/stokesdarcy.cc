@@ -60,6 +60,35 @@ public:
 };
 
 
+template<typename GV, typename RF>
+class RightScalarFunction :
+  public Dune::PDELab::AnalyticGridFunctionBase<
+  Dune::PDELab::AnalyticGridFunctionTraits<GV,RF,1>,
+  RightScalarFunction<GV,RF> >
+{
+public:
+  typedef Dune::PDELab::AnalyticGridFunctionTraits<GV,RF,1> Traits;
+  typedef Dune::PDELab::AnalyticGridFunctionBase<Traits, RightScalarFunction<GV,RF> > BaseT;
+
+  typedef typename Traits::DomainType DomainType;
+  typedef typename Traits::RangeType RangeType;
+
+  RightScalarFunction(const GV & gv, double v_) : BaseT(gv), v(v_) {}
+
+  inline void evaluateGlobal(const DomainType & x, RangeType & y) const
+  {
+    if (x[0] > 1-1e-6)
+      y=v;
+    else
+      y=v;
+  }
+
+private:
+  const RangeType v;
+
+};
+
+
 template<typename GV>
 class ScalarNeumannBoundaryFunction :
   public Dune::PDELab::BoundaryGridFunctionBase<
@@ -399,13 +428,14 @@ int main(int argc, char** argv) {
     typedef MultiGFS::ConstraintsContainer<RF>::Type C;
     C cg;
 
-    typedef ZeroScalarFunction<MDGV,RF> ScalarVelocityInitialFunction;
+    typedef RightScalarFunction<MDGV,RF> ScalarVelocityInitialFunction;
     typedef Dune::PDELab::PowerGridFunction<ScalarVelocityInitialFunction,dim> VelocityInitialFunction;
     typedef ZeroScalarFunction<MDGV,RF> PressureInitialFunction;
     typedef Dune::PDELab::CompositeGridFunction<VelocityInitialFunction,PressureInitialFunction> StokesInitialFunction;
 
-    ScalarVelocityInitialFunction scalarVelocityInitialFunction(mdgv);
-    VelocityInitialFunction velocityInitialFunction(scalarVelocityInitialFunction);
+    ScalarVelocityInitialFunction scalarVelocityInitialFunctionX(mdgv,-1.0);
+    ScalarVelocityInitialFunction scalarVelocityInitialFunctionY(mdgv,1.0);
+    VelocityInitialFunction velocityInitialFunction(scalarVelocityInitialFunctionX,scalarVelocityInitialFunctionY);
     PressureInitialFunction pressureInitialFunction(mdgv);
     StokesInitialFunction stokesInitialFunction(velocityInitialFunction,pressureInitialFunction);
 

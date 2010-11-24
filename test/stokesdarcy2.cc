@@ -144,7 +144,8 @@ public:
     if (!ig.boundary())
       y = -1; // no bc
     else {
-      if (ig.geometry().global(x)[0] < 1e-6)
+      auto xg = ig.geometry().global(x);
+      if (xg[0] < 1e-6 || xg[0] > 100-1e-6)
         y = 0; // Neumann
       else
         y = 1; // Dirichlet
@@ -172,11 +173,11 @@ public:
 private:
   typedef typename Traits::DomainFieldType DFT;
 
-  const DFT pressure;
+  const DFT inflow, outflow;
 
 public:
-  PressureDropFlux (const GV& gv, const RF p_)
-    : BaseT(gv), pressure(p_)
+  PressureDropFlux (const GV& gv, const RF inflow_, const RF outflow_)
+    : BaseT(gv), inflow(inflow_), outflow(outflow_)
   {
   }
 
@@ -184,7 +185,9 @@ public:
                               typename Traits::RangeType& y) const
   {
     if (x[0] < 1e-6)
-      y = pressure;
+      y = inflow;//*0.04*(100-x[1])*(x[1]-110); // parabolic flow profile
+    else if (x[0] > 100-1e-6)
+      y = -outflow;//*0.04*(100-x[1])*(x[1]-110); // parabolic flow profile
     else
       y = 0;//-10*((x[1]-0.5)*(1.5-x[1])+0.02);
   }
@@ -243,6 +246,7 @@ public:
     , elementIndexToPhysicalGroup(physicalGroupMap)
     , gv(gridview)
     , bottomPotential(params.get<RF>("boundaries.bottompotential"))
+    , bottomflux((params.get<RF>("boundaries.outflow") - params.get<RF>("boundaries.inflow"))*0.1)
   {
     for (std::size_t i=0; i<Traits::dimDomain; i++)
       for (std::size_t j=0; j<Traits::dimDomain; j++)
@@ -306,7 +310,7 @@ public:
       if (x[0] < 1e-6 || x[0] > 100-1e-6)
         return BC::Flux;
       else
-        return BC::Dirichlet;
+        return BC::Flux;//BC::Dirichlet;
     }
   }
 
@@ -321,7 +325,11 @@ public:
   typename Traits::RangeFieldType
   j (const typename Traits::IntersectionType& is, const typename Traits::IntersectionDomainType& x_) const
   {
-    return 0.0;
+    auto x = is.geometry().global(x_);
+    if (x[1] < 1e-6)
+      return 0.0; //bottomflux;
+    else
+      return 0.0;
     /*
     Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
       x = is.geometry().global(x_);
@@ -342,7 +350,7 @@ private:
   typename Traits::RangeFieldType porosity_;
   const std::vector<int>& elementIndexToPhysicalGroup;
   const GV gv;
-  const typename Traits::RangeFieldType bottomPotential;
+  const typename Traits::RangeFieldType bottomPotential, bottomflux;
 };
 
 // boundary condition type
@@ -652,7 +660,7 @@ int main(int argc, char** argv) {
     DarcyBoundaryFunction darcyBoundaryFunction(mdgv);
 
     typedef PressureDropFlux<MDGV,RF> NeumannFlux;
-    NeumannFlux neumannFlux(mdgv,parameters.get<RF>("boundaries.inflow"));
+    NeumannFlux neumannFlux(mdgv,parameters.get<RF>("boundaries.inflow"),parameters.get<RF>("boundaries.outflow"));
 
     typedef NavierStokesParameters<MDGV,RF> NavierStokesParams;
     NavierStokesParams navierStokesParams(parameters.sub("parameters"));

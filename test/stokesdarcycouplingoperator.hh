@@ -47,6 +47,11 @@ public:
     return _kabs;
   }
 
+  double epsilon() const
+  {
+    return epsilon_;
+  }
+
   CouplingParameters(const Dune::ParameterTree& params)
     : alpha_(params.get("coupling.alpha",1.0))
     , gamma_(params.get("coupling.gamma",1.0))
@@ -54,6 +59,7 @@ public:
     , gravity_(params.get("gravity",9.81))
     , density_(params.get<double>("fluid.density"))
     , viscosity_(params.get<double>("fluid.viscosity"))
+    , epsilon_(params.get("epsilon",1e-8))
   {
     for (int i = 0; i < GV::dimension; ++i)
       for (int j = 0; j < GV::dimension; ++j)
@@ -68,6 +74,7 @@ private:
   const double gravity_;
   const double density_;
   const double viscosity_;
+  const double epsilon_;
 
 };
 
@@ -86,7 +93,9 @@ public:
   static const bool doAlphaCoupling = true;
 
   StokesDarcyCouplingOperator(const Parameters& params)
-    : parameters(params)
+    : Dune::PDELab::MultiDomain::NumericalJacobianCoupling<StokesDarcyCouplingOperator<Parameters> >(params.epsilon())
+    , Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<StokesDarcyCouplingOperator<Parameters> >(params.epsilon())
+    , parameters(params)
   {}
 
   template<typename IG,
@@ -210,7 +219,7 @@ public:
         Dune::FieldVector<RF,dim> tangentialFlow(0.0);
         kabs.mv(gradphi,tangentialFlow);
         tangentialFlow /= porosity;
-        tangentialFlow = u;
+        tangentialFlow += u;
         // project into tangential plane
         GC scaledNormal = n;
         scaledNormal *= (tangentialFlow * n);
@@ -221,17 +230,12 @@ public:
             const LFSU_V& lfsu_v = lfsu_v_pfs.getChild(d);
             for (size_type i = 0; i < lfsu_v.size(); ++i)
               {
-              stokesr[lfsu_v.localIndex(i)] += rho * g * (phi - pos[dim]) * v[i] * n[d] * factor;
-              /*std::cout << "d = " << d << " i = " << i << " codim = " << lfsu_v.finiteElement().localCoefficients().localKey(i).codim()
-                        << " entity = " << lfsu_v.finiteElement().localCoefficients().localKey(i).subEntity()
-                        << " index = " << lfsu_v.finiteElement().localCoefficients().localKey(i).index()
-                        << " f_n = " << rho * g * (phi - pos[dim]) * v[i] * n[d] * factor << std::endl;*/
+                stokesr[lfsu_v.localIndex(i)] -= rho * g * (phi - pos[dim-1]) * v[i] * n[d] * factor;
               }
 
             for (size_type i = 0; i < lfsu_v.size(); ++i)
               {
-                //stokesr[lfsu_v.localIndex(i)] += alpha * sqrt(dim) / sqrt(tracePi) * tangentialFlow[d] * v[i] * factor;
-              //std::cout << "d = " << d << " i = " << i << " f_t = " << alpha * sqrt(dim) / sqrt(tracePi) * tangentialFlow[d] * v[i] * factor << std::endl;
+                stokesr[lfsu_v.localIndex(i)] += alpha * sqrt(dim) / sqrt(tracePi) * tangentialFlow[d] * v[i] * factor;
               }
           }
 

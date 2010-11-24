@@ -785,7 +785,7 @@ public:
                     apply_operator.template conditional<Couplings,do_alpha_coupling<> >
                       (InvokeJacobianCoupling<XL,AL>(xl,xn,al,al_sn,al_ns,al_nn));
                     apply_operator.template conditional<Couplings,do_alpha_enriched_coupling<> >
-                      (InvokeJacobianEnrichedCoupling<XL,AL>(xl,xn,xcoupling,al,al_sn,al_ns,al_nn,al_sc,al_cs,al_nc,al_cn,al_cc));
+                      (InvokeJacobianEnrichedCoupling<XL,AL>(xl,xn,xcoupling,al,al_nn,al_sc,al_cs,al_nc,al_cn,al_cc));
                     if (apply_operator.alphaSkeletonInvoked())
                       {
                         etadd(lfsv,lfsun,al_sn,a);

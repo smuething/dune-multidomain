@@ -261,20 +261,26 @@ struct BuildEnrichedCouplingPattern
     const CouplingLFSU& coupling_lfsu = child.couplingLocalFunctionSpace(data.couplinglfsu());
     const CouplingLFSV& coupling_lfsv = child.couplingLocalFunctionSpace(data.couplinglfsv());
     LocalSparsityPattern localpattern_sn, localpattern_ns, localpattern_sc, localpattern_cs, localpattern_nc, localpattern_cn, localpattern_coupling;
-    Operator::extract(child).pattern_enriched_coupling(local_lfsu,
-                                                       local_lfsv,
-                                                       remote_lfsu,
-                                                       remote_lfsv,
-                                                       coupling_lfsu,
+
+    // handle pattern internal to the coupling
+    Operator::extract(child).pattern_enriched_coupling(coupling_lfsu,
                                                        coupling_lfsv,
-                                                       localpattern_sn,
-                                                       localpattern_ns,
-                                                       localpattern_sc,
-                                                       localpattern_cs,
-                                                       localpattern_nc,
-                                                       localpattern_cn,
                                                        localpattern_coupling);
 
+    // handle coupling between first subproblem and enrichment space
+    Operator::extract(child).pattern_enriched_coupling_first(local_lfsu,
+                                                             local_lfsv,
+                                                             coupling_lfsu,
+                                                             coupling_lfsv,
+                                                             localpattern_sc,
+                                                             localpattern_cs);
+    // handle coupling between second subproblem and enrichment space
+    Operator::extract(child).pattern_enriched_coupling_second(remote_lfsu,
+                                                              remote_lfsv,
+                                                              coupling_lfsu,
+                                                              coupling_lfsv,
+                                                              localpattern_nc,
+                                                              localpattern_cn);
     // translate local to global indices and add to global pattern
     // FIXME: this only works because of some kind of miracle!
     for (size_t k=0; k<localpattern_sn.size(); ++k)
@@ -549,20 +555,26 @@ struct InvokeAlphaEnrichedCoupling
     RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
     remote_lfsu.bind();
     remote_lfsv.bind();
-    Operator::extract(child).alpha_enriched_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                                       data.intersectionIndex()),
-                                                     local_lfsu,
-                                                     _local_x,
-                                                     local_lfsv,
-                                                     remote_lfsu,
-                                                     _remote_x,
-                                                     remote_lfsv,
-                                                     child.couplingLocalFunctionSpace(data.couplinglfsu()),
-                                                     _coupling_x,
-                                                     child.couplingLocalFunctionSpace(data.couplinglfsv()),
-                                                     _local_r,
-                                                     _remote_r,
-                                                     _coupling_r);
+    Operator::extract(child).alpha_enriched_coupling_first(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                                             data.intersectionIndex()),
+                                                           local_lfsu,
+                                                           _local_x,
+                                                           local_lfsv,
+                                                           child.couplingLocalFunctionSpace(data.couplinglfsu()),
+                                                           _coupling_x,
+                                                           child.couplingLocalFunctionSpace(data.couplinglfsv()),
+                                                           _local_r,
+                                                           _coupling_r);
+    Operator::extract(child).alpha_enriched_coupling_second(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                                              data.intersectionIndex()),
+                                                            remote_lfsu,
+                                                            _remote_x,
+                                                            remote_lfsv,
+                                                            child.couplingLocalFunctionSpace(data.couplinglfsu()),
+                                                            _coupling_x,
+                                                            child.couplingLocalFunctionSpace(data.couplinglfsv()),
+                                                            _remote_r,
+                                                            _coupling_r);
     data.setAlphaSkeletonInvoked();
     data.setAlphaEnrichedCouplingInvoked();
   }
@@ -853,20 +865,27 @@ struct InvokeJacobianApplyEnrichedCoupling
     RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
     remote_lfsu.bind();
     remote_lfsv.bind();
-    Operator::extract(child).jacobian_apply_enriched_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                                                data.intersectionIndex()),
-                                                              local_lfsu,
-                                                              _local_x,
-                                                              local_lfsv,
-                                                              remote_lfsu,
-                                                              _remote_x,
-                                                              remote_lfsv,
-                                                              child.couplingLocalFunctionSpace(data.couplinglfsu()),
-                                                              _coupling_x,
-                                                              child.couplingLocalFunctionSpace(data.couplinglfsv()),
-                                                              _local_y,
-                                                              _remote_y,
-                                                              _coupling_y);
+    Operator::extract(child).jacobian_apply_enriched_coupling_first(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                                                      data.intersectionIndex()),
+                                                                    local_lfsu,
+                                                                    _local_x,
+                                                                    local_lfsv,
+                                                                    child.couplingLocalFunctionSpace(data.couplinglfsu()),
+                                                                    _coupling_x,
+                                                                    child.couplingLocalFunctionSpace(data.couplinglfsv()),
+                                                                    _local_y,
+                                                                    _coupling_y);
+    Operator::extract(child).jacobian_apply_enriched_coupling_second(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                                                       data.intersectionIndex()),
+                                                                     remote_lfsu,
+                                                                     _remote_x,
+                                                                     remote_lfsv,
+                                                                     child.couplingLocalFunctionSpace(data.couplinglfsu()),
+                                                                     _coupling_x,
+                                                                     child.couplingLocalFunctionSpace(data.couplinglfsv()),
+                                                                     _remote_y,
+                                                                     _coupling_y);
+
     data.setAlphaSkeletonInvoked();
     data.setAlphaEnrichedCouplingInvoked();
   }
@@ -1090,13 +1109,11 @@ template<typename XL, typename AL, typename Operator=CouplingOperator>
 struct InvokeJacobianEnrichedCoupling
 {
 
-  InvokeJacobianEnrichedCoupling(const XL& xl, const XL& xn, const XL& xc, AL& al, AL& al_sn, AL& al_ns, AL& al_nn, AL& al_sc, AL&  al_cs, AL& al_nc, AL& al_cn, AL& al_cc) :
+  InvokeJacobianEnrichedCoupling(const XL& xl, const XL& xn, const XL& xc, AL& al, AL& al_nn, AL& al_sc, AL&  al_cs, AL& al_nc, AL& al_cn, AL& al_cc) :
     _local_x(xl),
     _remote_x(xn),
     _coupling_x(xc),
     _local_a(al),
-    _local_to_remote_a(al_sn),
-    _remote_to_local_a(al_ns),
     _remote_a(al_nn),
     _local_to_coupling_a(al_sc),
     _coupling_to_local_a(al_cs),
@@ -1127,26 +1144,30 @@ struct InvokeJacobianEnrichedCoupling
     RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
     remote_lfsu.bind();
     remote_lfsv.bind();
-    Operator::extract(child).jacobian_enriched_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                                          data.intersectionIndex()),
-                                                        local_lfsu,
-                                                        _local_x,
-                                                        local_lfsv,
-                                                        remote_lfsu,
-                                                        _remote_x,
-                                                        remote_lfsv,
-                                                        child.couplingLocalFunctionSpace(data.couplinglfsu()),
-                                                        _coupling_x,
-                                                        child.couplingLocalFunctionSpace(data.couplinglfsv()),
-                                                        _local_a,
-                                                        _local_to_remote_a,
-                                                        _remote_to_local_a,
-                                                        _remote_a,
-                                                        _local_to_coupling_a,
-                                                        _coupling_to_local_a,
-                                                        _remote_to_coupling_a,
-                                                        _coupling_to_remote_a,
-                                                        _coupling_a);
+    Operator::extract(child).jacobian_enriched_coupling_first(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                                                data.intersectionIndex()),
+                                                              local_lfsu,
+                                                              _local_x,
+                                                              local_lfsv,
+                                                              child.couplingLocalFunctionSpace(data.couplinglfsu()),
+                                                              _coupling_x,
+                                                              child.couplingLocalFunctionSpace(data.couplinglfsv()),
+                                                              _local_a,
+                                                              _local_to_coupling_a,
+                                                              _coupling_to_local_a,
+                                                              _coupling_a);
+    Operator::extract(child).jacobian_enriched_coupling_second(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
+                                                                                                                 data.intersectionIndex()),
+                                                               remote_lfsu,
+                                                               _remote_x,
+                                                               remote_lfsv,
+                                                               child.couplingLocalFunctionSpace(data.couplinglfsu()),
+                                                               _coupling_x,
+                                                               child.couplingLocalFunctionSpace(data.couplinglfsv()),
+                                                                _remote_a,
+                                                               _remote_to_coupling_a,
+                                                               _coupling_to_remote_a,
+                                                               _coupling_a);
     data.setAlphaSkeletonInvoked();
     data.setAlphaEnrichedCouplingInvoked();
   }
@@ -1155,8 +1176,6 @@ struct InvokeJacobianEnrichedCoupling
   const XL& _remote_x;
   const XL& _coupling_x;
   AL& _local_a;
-  AL& _local_to_remote_a;
-  AL& _remote_to_local_a;
   AL& _remote_a;
   AL& _local_to_coupling_a;
   AL& _coupling_to_local_a;

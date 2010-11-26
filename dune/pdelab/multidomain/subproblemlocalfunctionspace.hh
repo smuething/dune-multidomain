@@ -193,7 +193,7 @@ struct SubProblemLeafLocalFunctionSpaceTraits
   //! \brief local finite element
   typedef typename BaseLFS::Traits::FiniteElementType LocalFiniteElementType DUNE_DEPRECATED;
 
-  typedef typename BaseLFS::Traits::FiniteElementType FiniteElementType DUNE_DEPRECATED;
+  typedef typename BaseLFS::Traits::FiniteElementType FiniteElementType;
 
   typedef _SubProblem SubProblem;
 

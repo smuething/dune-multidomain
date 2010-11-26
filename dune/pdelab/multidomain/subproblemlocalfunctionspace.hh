@@ -100,14 +100,6 @@ struct SubProblemLocalFunctionSpaceVisitChildMetaProgram // visit child of inner
     NextChild::fill_indices(t,it);
   }
 
-  static void reserve (T& t, const E& e, Int& offset)
-  {
-    // vist children of node t in order
-    typedef typename T::template Child<i>::Type C;
-    GuardedVisit<C,C::isLeaf,typename C::Traits::GridViewType,E,It,Int,Dune::mdgrid::GridType<typename C::Traits::GridViewType::Grid>::v >::
-      reserve(t.template getChild<i>(),t.pgfs->template getChild<i>().gridview(),e,offset);
-    NextChild::reserve(t,e,offset);
-  }
 };
 
 

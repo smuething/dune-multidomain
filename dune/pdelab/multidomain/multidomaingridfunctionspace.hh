@@ -9,6 +9,7 @@
 #include <dune/pdelab/multidomain/multidomainlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/typemap.hh>
 #include <dune/grid/multidomaingrid.hh>
+#include <dune/pdelab/multidomain/couplinggridfunctionspace.hh>
 #include <utility>
 
 namespace Dune {
@@ -29,6 +30,8 @@ struct MultiDomainGridFunctionSpaceTraits
 
   //! \brief the grid view where grid function is defined upon
   typedef G GridType;
+
+  typedef typename G::LeafGridView GridViewType;
 
   //! \brief vector backend
   typedef B BackendType;
@@ -149,9 +152,6 @@ struct MultiDomainGridFunctionSpaceVisitChildMetaProgram<T,n,n> // end of child 
   }
 };
 
-struct MultiDomainTag {};
-struct SubDomainTag {};
-
 template<typename G, typename... Children>
 class MultiDomainGridFunctionSpace : public Countable, public VariadicCompositeNode<CopyStoragePolicy,Children...>
 {
@@ -159,13 +159,36 @@ class MultiDomainGridFunctionSpace : public Countable, public VariadicCompositeN
   typedef VariadicCompositeNode<CopyStoragePolicy,Children...> BaseT;
   typedef MultiDomainGridFunctionSpaceVisitChildMetaProgram<MultiDomainGridFunctionSpace,sizeof...(Children),0> VisitChildTMP;
 
-  template<typename T, std::size_t i, bool definedOnSubDomain_>
+public:
+
+  template<typename T, std::size_t i, typename Tag_>
   struct GFSChild
   {
     static const std::size_t index = i;
     typedef T type;
     typedef T key;
-    static const bool definedOnSubDomain = definedOnSubDomain_;
+    typedef Tag_ Tag;
+    static const bool definedOnSubDomain = std::is_same<Tag,SubDomainTag>::value;
+    static const bool isCouplingSpace = std::is_same<Tag,CouplingTag>::value;
+    static const bool isNormalSpace = std::is_same<Tag,MultiDomainTag>::value || std::is_same<Tag,SubDomainTag>::value;
+  };
+
+private:
+
+  template<typename T>
+  struct determine_tag
+  {
+    typedef typename Dune::SelectType<std::is_same<G,typename std::remove_const<typename T::Traits::GridViewType::Grid>::type>::value,
+                                      MultiDomainTag,
+                                      SubDomainTag
+                                      >::Type type;
+
+  };
+
+  template<typename GV, typename LFEM, typename Predicate_, typename CE, typename B>
+  struct determine_tag<CouplingGridFunctionSpace<GV,LFEM,Predicate_,CE,B> >
+  {
+    typedef CouplingTag type;
   };
 
   template<typename Grid, template<typename...> class Container>
@@ -176,7 +199,7 @@ class MultiDomainGridFunctionSpace : public Countable, public VariadicCompositeN
     struct transform {
       typedef GFSChild<T,
                        i,
-                       std::is_same<Grid,typename std::remove_const<typename T::Traits::GridViewType::Grid>::type>::value
+                       typename determine_tag<T>::type
                        > type;
     };
 
@@ -190,15 +213,16 @@ class MultiDomainGridFunctionSpace : public Countable, public VariadicCompositeN
 
   typedef typename indexed_transform<tagger<G,embedded_key_map>,Children...>::type ChildEntryMap;
 
+public:
+
   template<int i>
-  struct DefinedOnSubDomain
+  struct ChildInfo
   {
     dune_static_assert((0 <= i) && (i < BaseT::CHILDREN),"invalid child index");
 
-    static const bool value = std::tuple_element<i,ChildEntries>::type::definedOnSubDomain;
+    typedef typename std::tuple_element<i,ChildEntries>::type Type;
   };
 
-public:
   //! export traits class
   typedef MultiDomainGridFunctionSpaceTraits<G,
                                              typename BaseT::template Child<0>::Type::Traits::BackendType,
@@ -258,6 +282,7 @@ public:
 
   // define local function space parametrized by self
   typedef MultiDomainLocalFunctionSpace<MultiDomainGridFunctionSpace,Children...> LocalFunctionSpace;
+  typedef MultiDomainCouplingLocalFunctionSpace<MultiDomainGridFunctionSpace,Children...> CouplingLocalFunctionSpace;
 
 
   MultiDomainGridFunctionSpace (G& g, Children&... children) : BaseT(children...), _g(g)

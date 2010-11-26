@@ -1,5 +1,6 @@
 #include "config.h"
 
+#include <dune/common/configparser.hh>
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/sgrid.hh>
 #include <dune/grid/uggrid.hh>
@@ -35,6 +36,7 @@
 #include "../../dune-pm/dune/pm/models/adrwip.hh"
 
 #include "stokesdarcycouplingoperator.hh"
+#include "functionmacros.hh"
 
 #define UGGRID
 
@@ -142,9 +144,8 @@ public:
     if (!ig.boundary())
       y = -1; // no bc
     else {
-      Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
-      xg = ig.geometry().global(x);
-      if (xg[0] < 1e-6)// || (xg[0] > 1.0-1e-6 && xg[1] < 1.5-1e-6))
+      auto xg = ig.geometry().global(x);
+      if (xg[0] < 1e-6 || xg[0] > 100-1e-6)
         y = 0; // Neumann
       else
         y = 1; // Dirichlet
@@ -172,43 +173,59 @@ public:
 private:
   typedef typename Traits::DomainFieldType DFT;
 
-  const DFT pressure;
-  const DFT length;
-  const DFT origin;
-  const int direction;
+  const DFT inflow, outflow;
 
 public:
-  PressureDropFlux (const GV& gv, const RF p_, const RF l_, const RF o_, const int d_)
-    : BaseT(gv), pressure(p_), length(l_), origin(o_), direction(d_)
+  PressureDropFlux (const GV& gv, const RF inflow_, const RF outflow_)
+    : BaseT(gv), inflow(inflow_), outflow(outflow_)
   {
-    const int dim = GV::dimension;
-    assert(direction >=0 && direction <dim);
   }
 
   inline void evaluateGlobal (const typename Traits::DomainType& x,
                               typename Traits::RangeType& y) const
   {
     if (x[0] < 1e-6)
-      y = x[1]*x[1];
+      y = inflow;//*0.04*(100-x[1])*(x[1]-110); // parabolic flow profile
+    else if (x[0] > 100-1e-6)
+      y = -outflow;//*0.04*(100-x[1])*(x[1]-110); // parabolic flow profile
     else
-      y = -0.3;
+      y = 0;//-10*((x[1]-0.5)*(1.5-x[1])+0.02);
   }
 };
 
 
-
+template<typename GV, typename RF>
 class NavierStokesParameters
   : public Dune::PDELab::TaylorHoodNavierStokesParameters<double>
 {
 public:
 
+  typedef Dune::FieldVector<typename GV::Grid::ctype,GV::Grid::dimensionworld> Vector;
+
   double rho() const{
-    return 1.0;
+    return _viscosity;
   }
 
   double mu() const{
-    return 1.0;
+    return _density;
   }
+
+  Vector f1() const{
+    return _gravity;
+  }
+
+  NavierStokesParameters(const Dune::ParameterTree& params)
+    : _gravity(0.0)
+    , _density(params.get<RF>("fluid.density"))
+    , _viscosity(params.get<RF>("fluid.viscosity"))
+  {
+    _gravity[GV::Grid::dimensionworld-1] = - params.get("gravity",9.81);
+  }
+
+private:
+  Dune::FieldVector<RF,GV::Grid::dimensionworld> _gravity;
+  const RF _density;
+  const RF _viscosity;
 };
 
 
@@ -221,11 +238,22 @@ public:
   typedef Dune::PM::ADRTraits<GV,RF> Traits;
 
   //! constructor
-  DarcyParameters()
+  DarcyParameters(GV gridview,
+                  const std::vector<int>& physicalGroupMap,
+                  const Dune::ParameterTree& params)
+    : gamma(params.get("parameters.coupling.gamma",1.0))
+    , porosity_(params.get<RF>("parameters.soil.porosity"))
+    , elementIndexToPhysicalGroup(physicalGroupMap)
+    , gv(gridview)
+    , bottomPotential(params.get<RF>("boundaries.bottompotential"))
+    , bottomflux((params.get<RF>("boundaries.outflow") - params.get<RF>("boundaries.inflow"))*0.1)
   {
     for (std::size_t i=0; i<Traits::dimDomain; i++)
       for (std::size_t j=0; j<Traits::dimDomain; j++)
-        kabs[i][j] = (i==j) ? 1.0 : 0;
+        {
+          kabslow[i][j] = (i==j) ? params.get<RF>("parameters.soil.permeability.low") : 0;
+          kabs[i][j] = (i==j) ? params.get<RF>("parameters.soil.permeability") : 0;
+        }
   }
 
   //! velocity field
@@ -240,14 +268,20 @@ public:
   typename Traits::PermTensorType
   K (const typename Traits::ElementType& e, const typename Traits::DomainType& x_) const
   {
-    return kabs;
+    return elementIndexToPhysicalGroup[gv.indexSet().index(e)] == 1 ? kabs : kabslow;
   }
 
   //! nonlinear scalar diffusion term
   typename Traits::RangeFieldType
   w (const typename Traits::ElementType& e, const typename Traits::DomainType& x, typename Traits::RangeFieldType u) const
   {
-    return 1.0;
+    return gamma;
+  }
+
+  typename Traits::RangeFieldType
+  porosity (const typename Traits::ElementType& e, const typename Traits::DomainType& x) const
+  {
+    return porosity_;
   }
 
   //! reaction term
@@ -273,10 +307,10 @@ public:
     else {
       Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
         x = is.geometry().global(x_);
-      if (x[0] > 1.0-1e-6 && x[1] < 0.5+1e-6)
+      if (x[0] < 1e-6 || x[0] > 100-1e-6)
         return BC::Flux;
       else
-        return BC::Flux;
+        return BC::Flux;//BC::Dirichlet;
     }
   }
 
@@ -284,23 +318,25 @@ public:
   typename Traits::RangeFieldType
   g (const typename Traits::IntersectionType& is, const typename Traits::IntersectionDomainType& x_) const
   {
-    typename Traits::DomainType x = is.geometry().global(x_);
-    if (x[0]<1e-6)
-      return 1.0;
-    else
-      return 0.0;
+    return bottomPotential;
   }
 
   //! Neumann boundary condition
   typename Traits::RangeFieldType
   j (const typename Traits::IntersectionType& is, const typename Traits::IntersectionDomainType& x_) const
   {
+    auto x = is.geometry().global(x_);
+    if (x[1] < 1e-6)
+      return 0.0; //bottomflux;
+    else
+      return 0.0;
+    /*
     Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
       x = is.geometry().global(x_);
     if (x[0] > 1.0-1e-6 && x[1] < 0.5+1e-6)
       return 2.5;
     else
-      return 0.0;
+    return 0.0;*/
   }
 
   //! set time for subsequent evaluation
@@ -309,8 +345,201 @@ public:
   }
 
 private:
-  typename Traits::PermTensorType kabs;
+  typename Traits::PermTensorType kabslow, kabs;
+  typename Traits::RangeFieldType gamma;
+  typename Traits::RangeFieldType porosity_;
+  const std::vector<int>& elementIndexToPhysicalGroup;
+  const GV gv;
+  const typename Traits::RangeFieldType bottomPotential, bottomflux;
 };
+
+// boundary condition type
+SIMPLE_BOUNDARYTYPE_FUNCTION(DarcyBoundaryFunctionType,ig,x,y)
+{
+  Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
+    xg = ig.geometry().global(x);
+
+  if (!ig.boundary())
+    {
+      y = Traits::None; // no bc on subdomain interface
+      return;
+    }
+
+  if (xg[0]<1E-6 || xg[0]>100-1E-6)
+    {
+      y = Traits::Neumann; // Neumann
+      return;
+    }
+  y = Traits::Dirichlet; // Dirichlet
+}
+END_SIMPLE_BOUNDARYTYPE_FUNCTION
+
+
+namespace Dune {
+namespace PDELab {
+
+template<typename T, typename Params, typename X>
+class DiscretePressureGridFunction
+  : public GridFunctionInterface<
+  GridFunctionTraits<
+    typename T::Traits::GridViewType,
+    typename T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits::RangeFieldType,
+    T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits::dimRange,
+    typename T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits::RangeType
+    >,
+  DiscretePressureGridFunction<T,Params,X>
+  >
+{
+  typedef T GFS;
+
+  typedef GridFunctionInterface<
+    GridFunctionTraits<
+      typename T::Traits::GridViewType,
+      typename T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits::RangeFieldType,
+      T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits::dimRange,
+      typename T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits::RangeType
+      >,
+    DiscretePressureGridFunction<T,Params,X>
+    > BaseT;
+
+public:
+  typedef typename BaseT::Traits Traits;
+
+  /** \brief Construct a DiscreteGridFunction
+   *
+   * \param gfs The GridFunctionsSpace
+   * \param x_  The coefficients vector
+   */
+  DiscretePressureGridFunction (const GFS& gfs, const Params& params, const X& x_, const typename Traits::RangeFieldType& factor_)
+    : pgfs(&gfs), parameters(params), xg(x_), lfs(gfs), xl(gfs.maxLocalSize()), yb(gfs.maxLocalSize()), factor(factor_)
+  {
+  }
+
+  // Evaluate
+  inline void evaluate (const typename Traits::ElementType& e,
+                        const typename Traits::DomainType& x,
+                        typename Traits::RangeType& y) const
+  {
+    lfs.bind(e);
+    lfs.vread(xg,xl);
+    lfs.finiteElement().localBasis().evaluateFunction(x,yb);
+    typename Traits::RangeType t = 0;
+    for (unsigned int i=0; i<yb.size(); i++)
+      t.axpy(xl[i],yb[i]);
+    typename Traits::ElementType::Geometry::GlobalCoordinate xg = e.geometry().global(x);
+    t -= xg[Traits::dimDomain-1];
+    y = t;
+  }
+
+  //! get a reference to the GridView
+  inline const typename Traits::GridViewType& getGridView () const
+  {
+    return pgfs->gridview();
+  }
+
+private:
+  CountingPointer<GFS const> pgfs;
+  const Params& parameters;
+  const X& xg;
+  mutable typename GFS::LocalFunctionSpace lfs;
+  mutable std::vector<typename Traits::RangeFieldType> xl;
+  mutable std::vector<typename Traits::RangeType> yb;
+  const typename Traits::RangeFieldType factor;
+};
+
+template<typename T, typename Params, typename X>
+class DarcyFlowFromPotential
+  : public GridFunctionInterface<
+  GridFunctionTraits<
+    typename T::Traits::GridViewType,
+    typename T::Traits::LocalFiniteElementType::Traits::LocalBasisType
+    ::Traits::RangeFieldType,
+    T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits
+    ::dimDomain,
+    FieldVector<
+      typename T::Traits::LocalFiniteElementType::Traits
+      ::LocalBasisType::Traits::RangeFieldType,
+      T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits
+      ::dimDomain> >,
+  DarcyFlowFromPotential<T,Params,X> >
+{
+  typedef T GFS;
+  typedef typename GFS::Traits::LocalFiniteElementType::Traits::
+  LocalBasisType::Traits LBTraits;
+
+public:
+  typedef GridFunctionTraits<
+  typename GFS::Traits::GridViewType,
+  typename LBTraits::RangeFieldType,
+  LBTraits::dimDomain,
+  FieldVector<
+    typename LBTraits::RangeFieldType,
+    LBTraits::dimDomain> > Traits;
+
+private:
+  typedef GridFunctionInterface<
+  Traits,
+  DarcyFlowFromPotential<T,Params,X> > BaseT;
+
+public:
+  /** \brief Construct a DiscreteGridFunctionGradient
+   *
+   * \param gfs The GridFunctionsSpace
+   * \param x_  The coefficients vector
+   */
+  DarcyFlowFromPotential (const GFS& gfs, const Params& params, const X& x_)
+    : pgfs(&gfs), parameters(params), xg(x_)
+  { }
+
+  // Evaluate
+  inline void evaluate (const typename Traits::ElementType& e,
+                        const typename Traits::DomainType& x,
+                        typename Traits::RangeType& y) const
+  {
+    // get and bind local functions space
+    typename GFS::LocalFunctionSpace lfs(*pgfs);
+    lfs.bind(e);
+
+    // get local coefficients
+    std::vector<typename Traits::RangeFieldType> xl(lfs.size());
+    lfs.vread(xg,xl);
+
+    // get Jacobian of geometry
+    const typename Traits::ElementType::Geometry::Jacobian&
+      JgeoIT = e.geometry().jacobianInverseTransposed(x);
+
+    // get local Jacobians/gradients of the shape functions
+    std::vector<typename LBTraits::JacobianType> J(lfs.size());
+    lfs.finiteElement().localBasis().evaluateJacobian(x,J);
+
+    typename Traits::RangeType gradphi, t;
+    t = 0;
+    for(unsigned i = 0; i < lfs.size(); ++i) {
+      // compute global gradient of shape function i
+      gradphi = 0;
+      JgeoIT.umv(J[i][0], gradphi);
+
+      // sum up global gradients, weighting them with the appropriate coeff
+      t.axpy(xl[i], gradphi);
+    }
+    t /= -parameters.porosity(getGridView().grid().multiDomainEntity(e),x);
+    parameters.K(getGridView().grid().multiDomainEntity(e),x).mv(t,y);
+  }
+
+  //! get a reference to the GridView
+  inline const typename Traits::GridViewType& getGridView () const
+  {
+    return pgfs->gridview();
+  }
+
+private:
+  CountingPointer<GFS const> pgfs;
+  const Params& parameters;
+  const X& xg;
+};
+
+} // namespace PDELab
+} // namespace Dune
 
 int main(int argc, char** argv) {
 
@@ -318,24 +547,16 @@ int main(int argc, char** argv) {
 
     Dune::MPIHelper::instance(argc,argv);
 
+    Dune::ConfigParser parameters;
+    parameters.parseFile(argv[1]);
+
     const int dim = 2;
 
-#ifdef YASPGRID
-    typedef Dune::YaspGrid<dim> BaseGrid;
-    const Dune::FieldVector<int,dim> s(1);
-    const Dune::FieldVector<double,dim> h(1.0);
-    const Dune::FieldVector<bool,dim> p(false);
-    BaseGrid baseGrid(h,s,p,0);
-    baseGrid.globalRefine(2);
-#endif
-
-#ifdef UGGRID
     typedef Dune::UGGrid<dim> BaseGrid;
     BaseGrid baseGrid(500);
     std::vector<int> boundaryIndexToPhysicalGroup, elementIndexToPhysicalGroup;
     Dune::GmshReader<BaseGrid> gmshreader;
-    gmshreader.read(baseGrid,"stokesdarcy.msh",boundaryIndexToPhysicalGroup,elementIndexToPhysicalGroup,true,false);
-#endif
+    gmshreader.read(baseGrid,parameters["mesh.filename"],boundaryIndexToPhysicalGroup,elementIndexToPhysicalGroup,true,false);
 
     typedef BaseGrid::LeafGridView GV;
 
@@ -355,11 +576,7 @@ int main(int argc, char** argv) {
     grid.startSubDomainMarking();
     for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
       {
-#ifdef UGGRID
-        grid.addToSubDomain(elementIndexToPhysicalGroup[mdgv.indexSet().index(*it)],*it);
-#else
-        // FIXME: !!!!!!!!
-#endif
+        grid.addToSubDomain(elementIndexToPhysicalGroup[mdgv.indexSet().index(*it)] > 0 ? 1 : 0,*it);
       }
     grid.preUpdateSubDomains();
     grid.updateSubDomains();
@@ -395,10 +612,6 @@ int main(int argc, char** argv) {
     EC c0(0);
     EC c1(1);
 
-    typedef Dune::PDELab::MultiDomain::SubProblemSubProblemInterface<MDGV,EC,EC> StokesDarcyBoundary;
-
-    StokesDarcyBoundary stokesDarcyBoundary(mdgv,c0,c1);
-
     typedef Dune::PDELab::GridFunctionSpace<SDGV,V_FEM,NOCON,VBE> V_GFS;
     V_GFS vgfs(stokesGV,vfem);
 
@@ -416,12 +629,6 @@ int main(int argc, char** argv) {
     typedef Dune::PDELab::GridFunctionSpace<SDGV,DarcyFEM,NOCON,VBE> DarcyGFS;
     DarcyGFS darcygfs(darcyGV,darcyfem);
 
-    typedef Dune::PDELab::MultiDomain::CouplingGridFunctionSpace<MDGV,CouplingFEM,StokesDarcyBoundary,NOCON,VBE> CouplingGFS;
-
-    CouplingGFS couplinggfs(mdgv,couplingfem,stokesDarcyBoundary);
-
-    //typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,StokesGFS,DarcyGFS,CouplingGFS> MultiGFS;
-    //MultiGFS multigfs(grid,stokesgfs,darcygfs,couplinggfs);
     typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,StokesGFS,DarcyGFS> MultiGFS;
     MultiGFS multigfs(grid,stokesgfs,darcygfs);
 
@@ -449,25 +656,29 @@ int main(int argc, char** argv) {
     StokesPressureBoundaryFunction stokesPressureBoundaryFunction(mdgv);
     StokesBoundaryFunction stokesBoundaryFunction(stokesVelocityBoundaryFunction,stokesPressureBoundaryFunction);
 
-    typedef PressureDropFlux<MDGV,RF> NeumannFlux;
-    NeumannFlux neumannFlux(mdgv,5.0,0,0,0);
+    typedef DarcyBoundaryFunctionType<MDGV> DarcyBoundaryFunction;
+    DarcyBoundaryFunction darcyBoundaryFunction(mdgv);
 
-    NavierStokesParameters navierStokesParameters;
+    typedef PressureDropFlux<MDGV,RF> NeumannFlux;
+    NeumannFlux neumannFlux(mdgv,parameters.get<RF>("boundaries.inflow"),parameters.get<RF>("boundaries.outflow"));
+
+    typedef NavierStokesParameters<MDGV,RF> NavierStokesParams;
+    NavierStokesParams navierStokesParams(parameters.sub("parameters"));
 
     typedef Dune::PDELab::TaylorHoodNavierStokes<
-      StokesBoundaryFunction,NeumannFlux,NavierStokesParameters,true,stokes_q>
+      StokesBoundaryFunction,NeumannFlux,NavierStokesParams,false,stokes_q>
       StokesOperator;
-    StokesOperator stokesOperator(stokesBoundaryFunction,neumannFlux,navierStokesParameters);
+    StokesOperator stokesOperator(stokesBoundaryFunction,neumannFlux,navierStokesParams);
 
 
     typedef DarcyParameters<MDGV,RF> DarcyParams;
-    DarcyParams darcyParams;
+    DarcyParams darcyParams(mdgv,elementIndexToPhysicalGroup,parameters);
 
     typedef Dune::PM::ADRWIP<DarcyParams> DarcyOperator;
     DarcyOperator darcyOperator(darcyParams,Dune::PM::ADRWIPMethod::OBB,Dune::PM::ADRWIPWeights::weightsOn,0.0);
 
     typedef CouplingParameters<MDGV> CouplingParams;
-    CouplingParams couplingParams;
+    CouplingParams couplingParams(parameters.sub("parameters"));
 
     typedef StokesDarcyCouplingOperator<CouplingParams> CouplingOperator;
     CouplingOperator couplingOperator(couplingParams);
@@ -495,7 +706,6 @@ int main(int argc, char** argv) {
     typedef MultiGFS::VectorContainer<RF>::Type V;
 
     V u(multigfs,0.0);
-    V r(u);
 
     //typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
     //LS ls(5000,true);
@@ -505,7 +715,20 @@ int main(int argc, char** argv) {
     typedef Dune::PDELab::StationaryLinearProblemSolver<MultiGOS,LS,V> PDESOLVER;
     PDESOLVER pdesolver(multigos,ls,1e-10);
 
+    /*typedef Dune::PDELab::Newton<MultiGOS,LS,V> PDESOLVER;
+    PDESOLVER pdesolver(multigos,ls);
+    pdesolver.setReassembleThreshold(0.0);
+    pdesolver.setVerbosityLevel(2);
+    pdesolver.setReduction(1e-10);
+    pdesolver.setMinLinearReduction(1e-4);
+    pdesolver.setMaxIterations(25);
+    pdesolver.setLineSearchMaxIterations(10);*/
+
     pdesolver.apply(u);
+
+    V r(u);
+    r = 0.0;
+    multigos.residual(u,r);
 
     typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,StokesGFS> StokesSubGFS;
     typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,DarcyGFS> DarcySubGFS;
@@ -528,22 +751,35 @@ int main(int argc, char** argv) {
       typedef Dune::PDELab::DiscreteGridFunction<StokesPressureSubGFS,V> PDGF;
       VDGF vdgf(stokesvelocitysubgfs,u);
       PDGF pdgf(stokespressuresubgfs,u);
-      Dune::VTKWriter<SDGV> vtkwriter(stokesGV,Dune::VTKOptions::conforming);
+      VDGF vdgf2(stokesvelocitysubgfs,r);
+      PDGF pdgf2(stokespressuresubgfs,r);
+      Dune::SubsamplingVTKWriter<SDGV> vtkwriter(stokesGV,parameters.get("mesh.refineoutput",0));
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf,"u"));
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf,"p"));
+      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf2,"ru"));
+      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf2,"rp"));
       vtkwriter.write("stokes",Dune::VTKOptions::binaryappended);
       //fn0.increment();
     }
 
     //Dune::PDELab::FilenameHelper fn1("instationaryexplicitlycoupledpoisson-left");
     {
-      typedef Dune::PDELab::DiscreteGridFunctionGradient<DarcySubGFS,V> VDGF;
-      typedef Dune::PDELab::DiscreteGridFunction<DarcySubGFS,V> PDGF;
-      VDGF vdgf(darcysubgfs,u);
-      PDGF pdgf(darcysubgfs,u);
-      Dune::VTKWriter<SDGV> vtkwriter(darcyGV,Dune::VTKOptions::conforming);
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf,"v"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf,"phi"));
+      typedef Dune::PDELab::DarcyFlowFromPotential<DarcySubGFS,DarcyParams,V> VDGF;
+      typedef Dune::PDELab::DiscreteGridFunction<DarcySubGFS,V> PhiDGF;
+      typedef Dune::PDELab::DiscretePressureGridFunction<DarcySubGFS,DarcyParams,V> PDGF;
+      VDGF vdgf(darcysubgfs,darcyParams,u);
+      PhiDGF phidgf(darcysubgfs,u);
+      PDGF pdgf(darcysubgfs,darcyParams,u,couplingParams.gravity());
+      VDGF vdgf2(darcysubgfs,darcyParams,r);
+      PhiDGF phidgf2(darcysubgfs,r);
+      PDGF pdgf2(darcysubgfs,darcyParams,r,couplingParams.gravity());
+      Dune::SubsamplingVTKWriter<SDGV> vtkwriter(darcyGV,parameters.get("mesh.refineoutput",0));
+      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf,"u"));
+      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PhiDGF>(phidgf,"phi"));
+      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf,"p"));
+      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf2,"ru"));
+      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PhiDGF>(phidgf2,"rphi"));
+      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf2,"rp"));
       vtkwriter.write("darcy",Dune::VTKOptions::binaryappended);
       //fn1.increment();
     }

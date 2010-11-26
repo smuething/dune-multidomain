@@ -175,25 +175,25 @@ class NeighborTrialFunctionSpace
 
 public:
 
-  typedef typename MDGOS::Traits::TrialGridFunctionSpace::LocalFunctionSpace LFSU;
+  typedef typename MDGOS::Traits::TrialGridFunctionSpace::LocalFunctionSpace LFSU_;
 
   NeighborTrialFunctionSpace() :
     _plfsun(NULL)
   {}
 
-  void setlfsun(const LFSU& lfsun)
+  void setlfsun(const LFSU_& lfsun)
   {
     _plfsun = &lfsun;
   }
 
-  const LFSU& lfsun() const
+  const LFSU_& lfsun() const
   {
     assert(_plfsun != NULL);
     return *_plfsun;
   }
 
 private:
-  const LFSU* _plfsun;
+  const LFSU_* _plfsun;
 };
 
 template<typename MDGOS>
@@ -202,25 +202,25 @@ class NeighborTestFunctionSpace
 
 public:
 
-  typedef typename MDGOS::Traits::TestGridFunctionSpace::LocalFunctionSpace LFSV;
+  typedef typename MDGOS::Traits::TestGridFunctionSpace::LocalFunctionSpace LFSV_;
 
   NeighborTestFunctionSpace() :
     _plfsvn(NULL)
   {}
 
-  void setlfsvn(const LFSV& lfsvn)
+  void setlfsvn(const LFSV_& lfsvn)
   {
     _plfsvn = &lfsvn;
   }
 
-  const LFSV& lfsvn() const
+  const LFSV_& lfsvn() const
   {
     assert(_plfsvn != NULL);
     return *_plfsvn;
   }
 
 private:
-  const LFSV* _plfsvn;
+  const LFSV_* _plfsvn;
 };
 
 template<typename MDGOS>
@@ -229,6 +229,71 @@ class NeighborFunctionSpaces :
     public NeighborTestFunctionSpace<MDGOS>
 {
 };
+
+
+template<typename MDGOS>
+class CouplingTrialFunctionSpace
+{
+
+public:
+
+  typedef typename MDGOS::Traits::TrialGridFunctionSpace::CouplingLocalFunctionSpace CouplingLFSU;
+
+  CouplingTrialFunctionSpace() :
+    _pcouplinglfsu(NULL)
+  {}
+
+  void setcouplinglfsu(const CouplingLFSU& couplinglfsu)
+  {
+    _pcouplinglfsu = &couplinglfsu;
+  }
+
+  const CouplingLFSU& couplinglfsu() const
+  {
+    assert(_pcouplinglfsu != NULL);
+    return *_pcouplinglfsu;
+  }
+
+private:
+  const CouplingLFSU* _pcouplinglfsu;
+};
+
+
+template<typename MDGOS>
+class CouplingTestFunctionSpace
+{
+
+public:
+
+  typedef typename MDGOS::Traits::TestGridFunctionSpace::CouplingLocalFunctionSpace CouplingLFSV;
+
+  CouplingTestFunctionSpace() :
+    _pcouplinglfsv(NULL)
+  {}
+
+  void setcouplinglfsv(const CouplingLFSV& couplinglfsv)
+  {
+    _pcouplinglfsv = &couplinglfsv;
+  }
+
+  const CouplingLFSV& couplinglfsv() const
+  {
+    assert(_pcouplinglfsv != NULL);
+    return *_pcouplinglfsv;
+  }
+
+private:
+  const CouplingLFSV* _pcouplinglfsv;
+};
+
+
+template<typename MDGOS>
+class CouplingFunctionSpaces :
+    public CouplingTrialFunctionSpace<MDGOS>,
+    public CouplingTestFunctionSpace<MDGOS>
+{
+};
+
 
 template<typename MDGOS>
 class ElementReference
@@ -357,6 +422,32 @@ public:
 
 private:
   mutable bool _alphaSkeletonInvoked;
+
+};
+
+
+template<typename MDGOS>
+class EnrichedCouplingInvocationTracker
+{
+public:
+  EnrichedCouplingInvocationTracker() :
+    _alphaEnrichedCouplingInvoked(false)
+  {}
+
+  void setAlphaEnrichedCouplingInvoked() const {
+    _alphaEnrichedCouplingInvoked = true;
+  }
+
+  void clearAlphaEnrichedCouplingInvoked() {
+    _alphaEnrichedCouplingInvoked = false;
+  }
+
+  bool alphaEnrichedCouplingInvoked() const {
+    return _alphaEnrichedCouplingInvoked;
+  }
+
+private:
+  mutable bool _alphaEnrichedCouplingInvoked;
 
 };
 
@@ -505,6 +596,15 @@ struct do_pattern_coupling
   };
 };
 
+template<typename Operator = CouplingOperator>
+struct do_pattern_enriched_coupling
+{
+  template<typename T>
+  struct test {
+    static const bool value = Operator::template ExtractType<T>::Type::doPatternEnrichedCoupling;
+  };
+};
+
 template<typename Operator = SpatialOperator>
 struct do_alpha_volume
 {
@@ -547,6 +647,16 @@ struct do_alpha_coupling
   template<typename T>
   struct test {
     static const bool value = Operator::template ExtractType<T>::Type::doAlphaCoupling;
+  };
+};
+
+
+template<typename Operator = CouplingOperator>
+struct do_alpha_enriched_coupling
+{
+  template<typename T>
+  struct test {
+    static const bool value = Operator::template ExtractType<T>::Type::doAlphaEnrichedCoupling;
   };
 };
 

@@ -52,6 +52,9 @@ class MultiDomainGridOperatorSpace : public VariadicCompositeNode<CopyStoragePol
   template<typename,typename>
   friend struct BuildCouplingPattern;
 
+  template<typename,typename>
+  friend struct BuildEnrichedCouplingPattern;
+
   typedef VariadicCompositeNode<CopyStoragePolicy,SubProblemsAndCouplings...> BaseT;
 
   typedef typename extract_problems<SubProblemsAndCouplings...>::type SubProblemList;
@@ -224,8 +227,10 @@ public:
     const MultiDomainGridOperatorSpace,
     data::ElementData,
     data::NeighborData,
+    data::CouplingFunctionSpaces,
     data::IntersectionReference,
-    data::SkeletonInvocationTracker
+    data::SkeletonInvocationTracker,
+    data::EnrichedCouplingInvocationTracker
     > operator_applier_all_data;
 
 
@@ -246,7 +251,8 @@ public:
     operator_applier<
       const MultiDomainGridOperatorSpace,
       data::ElementData,
-      data::NeighborData
+      data::NeighborData,
+      data::CouplingFunctionSpaces
       > apply_operator(*this);
     apply_operator.setlfsu(lfsu);
     apply_operator.setlfsv(lfsv);
@@ -264,7 +270,8 @@ public:
 
         // skeleton and boundary pattern
         if (!(any_child<MultiDomainGridOperatorSpace,SubProblems,do_pattern_skeleton<> >::value ||
-              any_child<MultiDomainGridOperatorSpace,Couplings,do_pattern_coupling<> >::value))
+              any_child<MultiDomainGridOperatorSpace,Couplings,do_pattern_coupling<> >::value ||
+              any_child<MultiDomainGridOperatorSpace,Couplings,do_pattern_enriched_coupling<> >::value))
           continue;
 
         // local function spaces in neighbor
@@ -272,6 +279,13 @@ public:
         LFSV lfsvn(gfsv);
         apply_operator.setlfsun(lfsun);
         apply_operator.setlfsvn(lfsvn);
+
+        typedef typename GFSU::CouplingLocalFunctionSpace CouplingLFSU;
+        CouplingLFSU couplinglfsu(gfsu);
+        typedef typename GFSV::CouplingLocalFunctionSpace CouplingLFSV;
+        CouplingLFSV couplinglfsv(gfsv);
+        apply_operator.setcouplinglfsu(couplinglfsu);
+        apply_operator.setcouplinglfsv(couplinglfsv);
 
         IntersectionIterator endit = gfsu.gridview().iend(*it);
         for (IntersectionIterator iit = gfsu.gridview().ibegin(*it); iit!=endit; ++iit)
@@ -284,9 +298,18 @@ public:
             lfsvn.bind(*(iit->outside()));
             apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*(iit->outside())));
 
+            // only bind the coupling local function spaces if anyone is going to use them
+            if (any_child<MultiDomainGridOperatorSpace,Couplings,do_pattern_enriched_coupling<> >::value)
+              {
+                couplinglfsu.bind(*iit);
+                couplinglfsv.bind(*iit);
+              }
+
             // get pattern
             apply_operator.template conditional<SubProblems,do_pattern_skeleton<> >(BuildSkeletonPattern<P>(globalpattern));
             apply_operator.template conditional<Couplings,do_pattern_coupling<> >(BuildCouplingPattern<P>(globalpattern));
+            apply_operator.template conditional<Couplings,do_pattern_enriched_coupling<> >(BuildEnrichedCouplingPattern<P>(globalpattern));
+
           }
       }
   }
@@ -356,13 +379,21 @@ public:
         if (any_child<MultiDomainGridOperatorSpace,SubProblems,do_alpha_skeleton<> >::value ||
             any_child<MultiDomainGridOperatorSpace,SubProblems,do_alpha_boundary<> >::value ||
             any_child<MultiDomainGridOperatorSpace,SubProblems,do_lambda_boundary<> >::value ||
-            any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_coupling<> >::value)
+            any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_coupling<> >::value ||
+            any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_enriched_coupling<> >::value)
           {
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
             LFSV lfsvn(gfsv);
             apply_operator.setlfsun(lfsun);
             apply_operator.setlfsvn(lfsvn);
+
+            typedef typename GFSU::CouplingLocalFunctionSpace CouplingLFSU;
+            CouplingLFSU couplinglfsu(gfsu);
+            typedef typename GFSV::CouplingLocalFunctionSpace CouplingLFSV;
+            CouplingLFSV couplinglfsv(gfsv);
+            apply_operator.setcouplinglfsu(couplinglfsu);
+            apply_operator.setcouplinglfsv(couplinglfsv);
 
             // traverse intersections
             unsigned int intersection_index = 0;
@@ -392,6 +423,18 @@ public:
                     XL xn(lfsun.size());
                     RL rn(lfsvn.size(),0.0);
 
+                    XL xcoupling;
+                    RL rcoupling;
+
+                    // only bind the coupling local function spaces if anyone is going to use them
+                    if (any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_enriched_coupling<> >::value)
+                      {
+                        couplinglfsu.bind(*iit);
+                        couplinglfsv.bind(*iit);
+                        couplinglfsu.vread(x,xcoupling);
+                        rcoupling.resize(couplinglfsv.size(),0.0);
+                      }
+
                     // read coefficents
                     lfsun.vread(x,xn);
 
@@ -404,10 +447,17 @@ public:
                        );
                     apply_operator.template conditional<Couplings,do_alpha_coupling<> >
                       (InvokeAlphaCoupling<XL,RL>(xl,xn,rl,rn));
+                    apply_operator.template conditional<Couplings,do_alpha_enriched_coupling<> >
+                      (InvokeAlphaEnrichedCoupling<XL,RL>(xl,xn,xcoupling,rl,rn,rcoupling));
                     if (apply_operator.alphaSkeletonInvoked())
                       {
                         lfsvn.vadd(rn,r);
                         apply_operator.clearAlphaSkeletonInvoked();
+                      }
+                    if (apply_operator.alphaEnrichedCouplingInvoked())
+                      {
+                        couplinglfsv.vadd(rcoupling,r);
+                        apply_operator.clearAlphaEnrichedCouplingInvoked();
                       }
                   }
 
@@ -490,13 +540,21 @@ public:
         // skeleton and boundary evaluation
         if (any_child<MultiDomainGridOperatorSpace,SubProblems,do_alpha_skeleton<> >::value ||
             any_child<MultiDomainGridOperatorSpace,SubProblems,do_alpha_boundary<> >::value ||
-            any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_coupling<> >::value)
+            any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_coupling<> >::value ||
+            any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_enriched_coupling<> >::value)
           {
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
             LFSV lfsvn(gfsv);
             apply_operator.setlfsun(lfsun);
             apply_operator.setlfsvn(lfsvn);
+
+            typedef typename GFSU::CouplingLocalFunctionSpace CouplingLFSU;
+            CouplingLFSU couplinglfsu(gfsu);
+            typedef typename GFSV::CouplingLocalFunctionSpace CouplingLFSV;
+            CouplingLFSV couplinglfsv(gfsv);
+            apply_operator.setcouplinglfsu(couplinglfsu);
+            apply_operator.setcouplinglfsv(couplinglfsv);
 
             unsigned int intersection_index = 0;
             IntersectionIterator endit = gfsu.gridview().iend(*it);
@@ -526,6 +584,18 @@ public:
                     XL xn(lfsun.size());
                     YL yn(lfsvn.size(),0.0);
 
+                    XL xcoupling;
+                    YL ycoupling;
+
+                    // only bind the coupling local function spaces if anyone is going to use them
+                    if (any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_enriched_coupling<> >::value)
+                      {
+                        couplinglfsu.bind(*iit);
+                        couplinglfsv.bind(*iit);
+                        couplinglfsu.vread(x,xcoupling);
+                        ycoupling.resize(couplinglfsv.size(),0.0);
+                      }
+
                     // read coefficents
                     lfsun.vread(x,xn);
 
@@ -537,10 +607,17 @@ public:
                        );
                     apply_operator.template conditional<Couplings,do_alpha_coupling<> >
                       (InvokeJacobianApplyCoupling<XL,YL>(xl,xn,yl,yn));
+                    apply_operator.template conditional<Couplings,do_alpha_enriched_coupling<> >
+                      (InvokeJacobianApplyEnrichedCoupling<XL,YL>(xl,xn,xcoupling,yl,yn,ycoupling));
                     if (apply_operator.alphaSkeletonInvoked())
                       {
                         lfsvn.vadd(yn,y);
                         apply_operator.clearAlphaSkeletonInvoked();
+                      }
+                    if (apply_operator.alphaEnrichedCouplingInvoked())
+                      {
+                        couplinglfsv.vadd(ycoupling,y);
+                        apply_operator.clearAlphaEnrichedCouplingInvoked();
                       }
                   }
 
@@ -625,13 +702,21 @@ public:
         // skeleton and boundary evaluation
         if (any_child<MultiDomainGridOperatorSpace,SubProblems,do_alpha_skeleton<> >::value ||
             any_child<MultiDomainGridOperatorSpace,SubProblems,do_alpha_boundary<> >::value ||
-            any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_coupling<> >::value)
+            any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_coupling<> >::value ||
+            any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_enriched_coupling<> >::value)
           {
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
             LFSV lfsvn(gfsv);
             apply_operator.setlfsun(lfsun);
             apply_operator.setlfsvn(lfsvn);
+
+            typedef typename GFSU::CouplingLocalFunctionSpace CouplingLFSU;
+            CouplingLFSU couplinglfsu(gfsu);
+            typedef typename GFSV::CouplingLocalFunctionSpace CouplingLFSV;
+            CouplingLFSV couplinglfsv(gfsv);
+            apply_operator.setcouplinglfsu(couplinglfsu);
+            apply_operator.setcouplinglfsv(couplinglfsv);
 
             unsigned int intersection_index = 0;
             IntersectionIterator endit = gfsu.gridview().iend(*it);
@@ -664,6 +749,30 @@ public:
                     AL al_ns(lfsvn.size(),lfsu.size() ,0.0);
                     AL al_nn(lfsvn.size(),lfsun.size(),0.0);
 
+                    XL xcoupling;
+                    AL al_cc;
+                    AL al_sc;
+                    AL al_cs;
+                    AL al_nc;
+                    AL al_cn;
+
+                    // only bind the coupling local function spaces if anyone is going to use them
+                    if (any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_enriched_coupling<> >::value)
+                      {
+                        couplinglfsu.bind(*iit);
+                        couplinglfsv.bind(*iit);
+                        couplinglfsu.vread(x,xcoupling);
+                        al_cc.resize(couplinglfsv.size(),couplinglfsu.size());
+                        al_cc = 0.0;
+                        al_sc.resize(lfsv.size(),couplinglfsu.size());
+                        al_sc = 0.0;
+                        al_cs.resize(couplinglfsv.size(),lfsu.size());
+                        al_cs = 0.0;
+                        al_nc.resize(lfsvn.size(),couplinglfsu.size());
+                        al_nc = 0.0;
+                        al_cn.resize(couplinglfsv.size(),lfsun.size());
+                      }
+
                     // read coefficents
                     lfsun.vread(x,xn);
 
@@ -675,12 +784,23 @@ public:
                        );
                     apply_operator.template conditional<Couplings,do_alpha_coupling<> >
                       (InvokeJacobianCoupling<XL,AL>(xl,xn,al,al_sn,al_ns,al_nn));
+                    apply_operator.template conditional<Couplings,do_alpha_enriched_coupling<> >
+                      (InvokeJacobianEnrichedCoupling<XL,AL>(xl,xn,xcoupling,al,al_nn,al_sc,al_cs,al_nc,al_cn,al_cc));
                     if (apply_operator.alphaSkeletonInvoked())
                       {
                         etadd(lfsv,lfsun,al_sn,a);
                         etadd(lfsvn,lfsu,al_ns,a);
                         etadd(lfsvn,lfsun,al_nn,a);
                         apply_operator.clearAlphaSkeletonInvoked();
+                      }
+                    if (apply_operator.alphaEnrichedCouplingInvoked())
+                      {
+                        etadd(couplinglfsv,couplinglfsu,al_cc,a);
+                        etadd(lfsv,couplinglfsu,al_sc,a);
+                        etadd(couplinglfsv,lfsu,al_cs,a);
+                        etadd(lfsvn,couplinglfsu,al_nc,a);
+                        etadd(couplinglfsv,lfsun,al_cn,a);
+                        apply_operator.clearAlphaEnrichedCouplingInvoked();
                       }
                   }
 

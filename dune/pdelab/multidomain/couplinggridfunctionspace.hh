@@ -217,7 +217,7 @@ public:
   }
 
   //! compute global indices for one element
-  void globalIndices (const typename Traits::LocalFiniteElementType& lfe,
+  void globalIndices (const typename Traits::FiniteElementType& lfe,
                       const Intersection& is,
                       std::vector<typename Traits::SizeType>& global) const
   {
@@ -227,7 +227,7 @@ public:
         global.resize(0);
         return;
       }
-    const typename Traits::LocalFiniteElementType::Traits::LocalCoefficientsType&
+    const typename Traits::FiniteElementType::Traits::LocalCoefficientsType&
       lc = lfe.localCoefficients();
     global.resize(lc.size());
 
@@ -325,7 +325,7 @@ public:
               DUNE_THROW(Exception, "geometry type mismatch in GridFunctionSpace");
 
             // get local coefficients for this entity
-            const typename Traits::LocalFiniteElementType::Traits::LocalCoefficientsType&
+            const typename Traits::FiniteElementType::Traits::LocalCoefficientsType&
               lc = (plfem->find(*iit)).localCoefficients();
 
             // insert geometry type of all subentities into set
@@ -373,7 +373,7 @@ public:
             //EntityWrapper ew = buildWrapper(*iit);
 
             // get local coefficients for this entity
-            const typename Traits::LocalFiniteElementType::Traits::LocalCoefficientsType&
+            const typename Traits::FiniteElementType::Traits::LocalCoefficientsType&
               lc = (plfem->find(*iit)).localCoefficients();
 
             // compute maximum number of degrees of freedom per element

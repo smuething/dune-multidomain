@@ -30,7 +30,7 @@ struct CouplingLocalFunctionSpaceTraits
   typedef typename std::vector<SizeType> IndexContainer;
 
   //! \brief Type of local finite element
-  typedef typename GFS::Traits::LocalFiniteElementType LocalFiniteElementType;
+  typedef typename GFS::Traits::FiniteElementType FiniteElementType;
 
   //! \brief Type of constraints engine
   typedef typename GFS::Traits::ConstraintsType ConstraintsType;
@@ -192,7 +192,7 @@ public:
 
 
   //! \brief get local finite element
-  const typename Traits::LocalFiniteElementType& localFiniteElement () const
+  const typename Traits::FiniteElementType& finiteElement () const
   {
     return *plfem;
   }
@@ -215,7 +215,7 @@ private:
   typename Traits::IndexContainer::size_type n;
   typename Traits::IndexContainer::size_type offset;
   typename Traits::IndexContainer::size_type lvsize;
-  const typename Traits::LocalFiniteElementType* plfem;
+  const typename Traits::FiniteElementType* plfem;
 };
 
 } // namespace MultiDomain

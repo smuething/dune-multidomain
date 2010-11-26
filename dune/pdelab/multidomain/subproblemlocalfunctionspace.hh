@@ -190,9 +190,7 @@ struct SubProblemLeafLocalFunctionSpaceTraits
   //! \brief Type of container to store indices
   typedef typename std::vector<SizeType> IndexContainer;
 
-  //! \brief local finite element
-  typedef typename BaseLFS::Traits::FiniteElementType LocalFiniteElementType DUNE_DEPRECATED;
-
+  //! \brief finite element
   typedef typename BaseLFS::Traits::FiniteElementType FiniteElementType;
 
   typedef _SubProblem SubProblem;

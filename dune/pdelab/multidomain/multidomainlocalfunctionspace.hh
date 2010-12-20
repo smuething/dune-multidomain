@@ -26,7 +26,7 @@ struct MultiDomainTag {};
 struct SubDomainTag {};
 struct CouplingTag {};
 
-template<typename T, bool isLeaf, typename GV, typename It, typename Int, typename Tag>
+template<typename T, bool isLeaf, typename GV, typename GC, typename Int, typename Tag>
 struct StandardGFSVisitor
 {
 
@@ -35,17 +35,17 @@ struct StandardGFSVisitor
   {}
 
   template<typename E>
-  static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
+  static void fill_indices(T& t, GV gv, const E& e, Int& offset, GC * const global)
   {}
 
   template<typename E>
-  static void reserve(T& t, GV gv, const E& e, Int& offset)
+  static void compute_size(T& t, GV gv, const E& e, Int& offset)
   {}
 
 };
 
-template<typename T, bool isLeaf, typename GV, typename It, typename Int>
-struct StandardGFSVisitor<T,isLeaf,GV,It,Int,MultiDomainTag>
+template<typename T, bool isLeaf, typename GV, typename GC, typename Int>
+struct StandardGFSVisitor<T,isLeaf,GV,GC,Int,MultiDomainTag>
 {
 
   template<typename GFS>
@@ -55,23 +55,23 @@ struct StandardGFSVisitor<T,isLeaf,GV,It,Int,MultiDomainTag>
   }
 
   template<typename E>
-  static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
+  static void fill_indices(T& t, GV gv, const E& e, Int& offset, GC * const global)
   {
     if (gv.indexSet().contains(e))
-      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,E,It,Int>::fill_indices(t,e,begin,offset,lvsize);
+      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,E,GC,Int>().fill_indices(t,e,offset,global);
   }
 
   template<typename E>
-  static void reserve(T& t, GV gv, const E& e, Int& offset)
+  static void compute_size(T& t, GV gv, const E& e, Int& offset)
   {
     if (gv.indexSet().contains(e))
-      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,E,It,Int>::reserve(t,e,offset);
+      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,E,GC,Int>().compute_size(t,e,offset);
   }
 
 };
 
-template<typename T, bool isLeaf, typename GV, typename It, typename Int>
-struct StandardGFSVisitor<T,isLeaf,GV,It,Int,SubDomainTag>
+template<typename T, bool isLeaf, typename GV, typename GC, typename Int>
+struct StandardGFSVisitor<T,isLeaf,GV,GC,Int,SubDomainTag>
 {
 
   template<typename GFS>
@@ -81,29 +81,29 @@ struct StandardGFSVisitor<T,isLeaf,GV,It,Int,SubDomainTag>
   }
 
   template<typename E>
-  static void fill_indices(T& t, GV gv, const E& e, It begin, Int& offset, const Int lvsize)
+  static void fill_indices(T& t, GV gv, const E& e, Int& offset, GC * const global)
   {
     typedef typename T::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
     typedef typename SDEP::Entity SDE;
     const SDEP ep = gv.grid().subDomainEntityPointer(e);
     if (gv.indexSet().contains(*ep))
-      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,SDE,It,Int>::fill_indices(t,*ep,begin,offset,lvsize);
+      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,SDE,GC,Int>().fill_indices(t,*ep,offset,global);
   }
 
   template<typename E>
-  static void reserve(T& t, GV gv, const E& e, Int& offset)
+  static void compute_size(T& t, GV gv, const E& e, Int& offset)
   {
     typedef typename T::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
     typedef typename SDEP::Entity SDE;
     const SDEP ep = gv.grid().subDomainEntityPointer(e);
     if (gv.indexSet().contains(*ep))
-      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,SDE,It,Int>::reserve(t,*ep,offset);
+      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,SDE,GC,Int>().compute_size(t,*ep,offset);
   }
 
 };
 
 
-template<typename T, bool isLeaf, typename GV, typename It, typename Int, typename Tag>
+template<typename T, bool isLeaf, typename GV, typename GC, typename Int, typename Tag>
 struct CouplingGFSVisitor
 {
 
@@ -112,18 +112,18 @@ struct CouplingGFSVisitor
   {}
 
   template<typename Intersection>
-  static void fill_indices(T& t, GV gv, const Intersection& is, It begin, Int& offset, const Int lvsize)
+  static void fill_indices(T& t, GV gv, const Intersection& is, Int& offset, GC * const global)
   {}
 
   template<typename Intersection>
-  static void reserve(T& t, GV gv, const Intersection& is, Int& offset)
+  static void compute_size(T& t, GV gv, const Intersection& is, Int& offset)
   {}
 
 };
 
 
-template<typename T, bool isLeaf, typename GV, typename It, typename Int>
-struct CouplingGFSVisitor<T,isLeaf,GV,It,Int,CouplingTag>
+template<typename T, bool isLeaf, typename GV, typename GC, typename Int>
+struct CouplingGFSVisitor<T,isLeaf,GV,GC,Int,CouplingTag>
 {
 
   template<typename GFS>
@@ -133,33 +133,33 @@ struct CouplingGFSVisitor<T,isLeaf,GV,It,Int,CouplingTag>
   }
 
   template<typename Intersection>
-  static void fill_indices(T& t, GV gv, const Intersection& is, It begin, Int& offset, const Int lvsize)
+  static void fill_indices(T& t, GV gv, const Intersection& is, Int& offset, GC * const global)
   {
     if (t.gridFunctionSpace().contains(is))
-      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,Intersection,It,Int>::fill_indices(t,is,begin,offset,lvsize);
+      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,Intersection,GC,Int>().fill_indices(t,is,offset,global);
   }
 
   template<typename Intersection>
-  static void reserve(T& t, GV gv, const Intersection& is, Int& offset)
+  static void compute_size(T& t, GV gv, const Intersection& is, Int& offset)
   {
     if (t.gridFunctionSpace().contains(is))
-      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,Intersection,It,Int>::reserve(t,is,offset);
+      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,Intersection,GC,Int>().reserve(t,is,offset);
   }
 
 };
 
 
 template<typename T,
-         typename It,
+         typename Container,
          typename Int,
-         template<typename T1, bool isLeaf, typename GV, typename It1, typename Int1, typename Tag> class Visitor,
+         template<typename T1, bool isLeaf, typename GV, typename C1, typename Int1, typename Tag> class Visitor,
          int n,
          int i
          >
 struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inner node
 {
 
-  typedef MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,It,Int,Visitor,n,i+1> NextChild;
+  typedef MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,Container,Int,Visitor,n,i+1> NextChild;
   typedef typename T::Traits::GridFunctionSpaceType GFS;
 
   template<typename GFS>
@@ -167,43 +167,43 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inne
   {
     //        std::cout << "setting up child " << i << " of " << n << std::endl;
     typedef typename T::template Child<i>::Type C;
-    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
+    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,Container,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
       setup(t.template getChild<i>(),gfs.template getChild<i>());
     NextChild::setup(t,gfs);
   }
 
   template<typename E>
-  static void fill_indices (T& t, const E& e, It begin, Int& offset, const Int lvsize)
+  static void fill_indices (T& t, const E& e, Int& offset, Container * const global)
   {
     // vist children of node t in order
     typedef typename T::template Child<i>::Type C;
     Int initial_offset = offset; // remember initial offset to compute size later
-    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
-      fill_indices(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,begin,offset,lvsize);
+    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,Container,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
+      fill_indices(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,offset,global);
     for (Int j=initial_offset; j<offset; j++)
-      begin[j] = t.pgfs->template subMap<i>(begin[j]);
-    NextChild::fill_indices(t,e,begin,offset,lvsize);
+      (*global)[initial_offset+j] = t.pgfs->template subMap<i>((*global)[initial_offset+j]);
+    NextChild::fill_indices(t,e,offset,global);
   }
 
   template<typename E>
-  static void reserve (T& t, const E& e, Int& offset)
+  static void compute_size (T& t, const E& e, Int& offset)
   {
     // vist children of node t in order
     typedef typename T::template Child<i>::Type C;
-    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,It,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
-      reserve(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,offset);
-    NextChild::reserve(t,e,offset);
+    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,Container,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
+      compute_size(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,offset);
+    NextChild::compute_size(t,e,offset);
   }
 };
 
 
 template<typename T,
-         typename It,
+         typename Container,
          typename Int,
-         template<typename T1, bool isLeaf, typename GV, typename It1, typename Int1, typename Tag> class Visitor,
+         template<typename T1, bool isLeaf, typename GV, typename C1, typename Int1, typename Tag> class Visitor,
          int n
          >
-struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,It,Int,Visitor,n,n> // end of child recursion
+struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,Container,Int,Visitor,n,n> // end of child recursion
 {
 
   template<typename GFS>
@@ -212,13 +212,13 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,It,Int,Visitor,n,n> 
   }
 
   template<typename E>
-  static void fill_indices (T& t, const E& e, It begin, Int& offset, const Int lvsize)
+  static void fill_indices (T& t, const E& e, Int& offset, Container * const global)
   {
     return;
   }
 
   template<typename E>
-  static void reserve (T& t, const E& e, Int& offset)
+  static void compute_size (T& t, const E& e, Int& offset)
   {
     return;
   }
@@ -304,7 +304,7 @@ public:
 
 protected:
   typedef MultiDomainLocalFunctionSpaceVisitChildMetaProgram<MultiDomainLocalFunctionSpaceNode,
-                                                             typename Traits::IndexContainer::iterator,
+                                                             typename Traits::IndexContainer,
                                                              typename Traits::IndexContainer::size_type,
                                                              Visitor,
                                                              BaseT::CHILDREN,
@@ -356,7 +356,7 @@ public:
   // map index in this local function space to global index space
   typename Traits::SizeType globalIndex (typename Traits::IndexContainer::size_type index) const
   {
-    return i[index];
+    return global()[offset + index];
   }
 
   /** \brief extract coefficients for one element from container */
@@ -365,7 +365,7 @@ public:
   {
     localcontainer.resize(n);
     for (typename Traits::IndexContainer::size_type k=0; k<n; ++k)
-      localcontainer[k] = B::access(globalcontainer,i[k]);
+      localcontainer[k] = B::access(globalcontainer,global()[offset + k]);
   }
 
   /** \brief write back coefficients for one element to container */
@@ -373,7 +373,7 @@ public:
   void vwrite (const LC& localcontainer, GC& globalcontainer) const
   {
     for (typename Traits::IndexContainer::size_type k=0; k<n; ++k)
-      B::access(globalcontainer,i[k]) = localcontainer[k];
+      B::access(globalcontainer,global()[offset+k]) = localcontainer[k];
   }
 
   /** \brief add coefficients for one element to container */
@@ -381,14 +381,14 @@ public:
   void vadd (const LC& localcontainer, GC& globalcontainer) const
   {
     for (typename Traits::IndexContainer::size_type k=0; k<n; ++k)
-      B::access(globalcontainer,i[k]) += localcontainer[k];
+      B::access(globalcontainer,global()[offset+k]) += localcontainer[k];
   }
 
   void debug () const
   {
     std::cout << n << " indices = (";
     for (typename Traits::IndexContainer::size_type k=0; k<n; k++)
-      std::cout << i[k] << " ";
+      std::cout << global()[offset+k] << " ";
     std::cout << ")" << std::endl;
   }
 
@@ -400,9 +400,19 @@ public:
 
 protected:
   const GFS* pgfs;
-  typename Traits::IndexContainer::iterator i;
   typename Traits::IndexContainer::size_type n;
   typename Traits::IndexContainer::size_type offset;
+  typename Traits::IndexContainer* _global;
+
+  typename Traits::IndexContainer& global()
+  {
+    return *_global;
+  }
+
+  const typename Traits::IndexContainer& global() const
+  {
+    return *_global;
+  }
 
 };
 
@@ -421,7 +431,7 @@ public:
   typedef typename BaseT::Traits Traits;
 
   explicit MultiDomainLocalFunctionSpace (const GFS& gfs)
-    : BaseT(gfs), global(gfs.maxLocalSize())
+    : BaseT(gfs), global_container(gfs.maxLocalSize())
   {}
 
   //! \brief bind local function space to entity
@@ -429,28 +439,28 @@ public:
   {
     // make offset
     typename Traits::IndexContainer::size_type offset=0;
+    this->_global = &global_container;
 
     // compute sizes
-    VisitChildTMP::reserve(*this,e,offset);
+    VisitChildTMP::compute_size(*this,e,offset);
 
     this->n = offset;
 
     // now reserve space in vector
-    global.resize(offset);
+    global_container.resize(offset);
 
     // initialize iterators and fill indices
     offset = 0;
     this->offset = 0;
-    this->i = global.begin();
-    VisitChildTMP::fill_indices(*this,e,global.begin(),offset,global.size());
+    VisitChildTMP::fill_indices(*this,e,offset,this->_global);
 
     // apply upMap
     for (typename Traits::IndexContainer::size_type i=0; i<offset; i++)
-      global[i] = this->gfs().upMap(global[i]);
+      global_container[i] = this->gfs().upMap(global_container[i]);
   }
 
 private:
-  typename Traits::IndexContainer global;
+  typename Traits::IndexContainer global_container;
 };
 
 
@@ -467,7 +477,7 @@ public:
   typedef typename BaseT::Traits Traits;
 
   explicit MultiDomainCouplingLocalFunctionSpace (const GFS& gfs)
-    : BaseT(gfs), global(gfs.maxLocalSize())
+    : BaseT(gfs), global_container(gfs.maxLocalSize())
   {}
 
   //! \brief bind local function space to entity
@@ -475,28 +485,28 @@ public:
   {
     // make offset
     typename Traits::IndexContainer::size_type offset=0;
+    this->_global = &global_container;
 
     // compute sizes
-    VisitChildTMP::reserve(*this,is,offset);
+    VisitChildTMP::compute_size(*this,is,offset);
 
     this->n = offset;
 
     // now reserve space in vector
-    global.resize(offset);
+    global_container.resize(offset);
 
     // initialize iterators and fill indices
     offset = 0;
     this->offset = 0;
-    this->i = global.begin();
-    VisitChildTMP::fill_indices(*this,is,global.begin(),offset,global.size());
+    VisitChildTMP::fill_indices(*this,is,offset,this->_global);
 
     // apply upMap
     for (typename Traits::IndexContainer::size_type i=0; i<offset; i++)
-      global[i] = this->gfs().upMap(global[i]);
+      global_container[i] = this->gfs().upMap(global_container[i]);
   }
 
 private:
-  typename Traits::IndexContainer global;
+  typename Traits::IndexContainer global_container;
 };
 
 

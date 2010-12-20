@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
 
     typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM;
 
-    typedef FEM::Traits::LocalFiniteElementType::Traits::
+    typedef FEM::Traits::FiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
 
     FEM fem;

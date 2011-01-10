@@ -383,9 +383,9 @@ class DiscretePressureGridFunction
   : public GridFunctionInterface<
   GridFunctionTraits<
     typename T::Traits::GridViewType,
-    typename T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits::RangeFieldType,
-    T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits::dimRange,
-    typename T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits::RangeType
+    typename T::Traits::FiniteElementType::Traits::LocalBasisType::Traits::RangeFieldType,
+    T::Traits::FiniteElementType::Traits::LocalBasisType::Traits::dimRange,
+    typename T::Traits::FiniteElementType::Traits::LocalBasisType::Traits::RangeType
     >,
   DiscretePressureGridFunction<T,Params,X>
   >
@@ -395,9 +395,9 @@ class DiscretePressureGridFunction
   typedef GridFunctionInterface<
     GridFunctionTraits<
       typename T::Traits::GridViewType,
-      typename T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits::RangeFieldType,
-      T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits::dimRange,
-      typename T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits::RangeType
+      typename T::Traits::FiniteElementType::Traits::LocalBasisType::Traits::RangeFieldType,
+      T::Traits::FiniteElementType::Traits::LocalBasisType::Traits::dimRange,
+      typename T::Traits::FiniteElementType::Traits::LocalBasisType::Traits::RangeType
       >,
     DiscretePressureGridFunction<T,Params,X>
     > BaseT;
@@ -452,19 +452,19 @@ class DarcyFlowFromPotential
   : public GridFunctionInterface<
   GridFunctionTraits<
     typename T::Traits::GridViewType,
-    typename T::Traits::LocalFiniteElementType::Traits::LocalBasisType
+    typename T::Traits::FiniteElementType::Traits::LocalBasisType
     ::Traits::RangeFieldType,
-    T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits
+    T::Traits::FiniteElementType::Traits::LocalBasisType::Traits
     ::dimDomain,
     FieldVector<
-      typename T::Traits::LocalFiniteElementType::Traits
+      typename T::Traits::FiniteElementType::Traits
       ::LocalBasisType::Traits::RangeFieldType,
-      T::Traits::LocalFiniteElementType::Traits::LocalBasisType::Traits
+      T::Traits::FiniteElementType::Traits::LocalBasisType::Traits
       ::dimDomain> >,
   DarcyFlowFromPotential<T,Params,X> >
 {
   typedef T GFS;
-  typedef typename GFS::Traits::LocalFiniteElementType::Traits::
+  typedef typename GFS::Traits::FiniteElementType::Traits::
   LocalBasisType::Traits LBTraits;
 
 public:

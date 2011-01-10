@@ -119,9 +119,9 @@ public:
     const unsigned int vsize = lfsu_v_pfs.getChild(0).size();
 
     // domain and range field type
-    typedef typename LFSU_V::Traits::LocalFiniteElementType::
+    typedef typename LFSU_V::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::RangeFieldType RF;
-    typedef typename LFSU_V::Traits::LocalFiniteElementType::
+    typedef typename LFSU_V::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::RangeType RT_V;
     typedef typename LFSU_V::Traits::SizeType size_type;
 
@@ -129,14 +129,14 @@ public:
     //const LFSU_P& lfsu_p = stokeslfsu.template getChild<1>();
     //const unsigned int psize = lfsu_p.size();
 
-    typedef typename LFSU_P::Traits::LocalFiniteElementType::
+    typedef typename LFSU_P::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::DomainFieldType DF;
-    typedef typename LFSU_P::Traits::LocalFiniteElementType::
+    typedef typename LFSU_P::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::RangeType RT_P;
 
-    typedef typename DarcyLFSU::Traits::LocalFiniteElementType::
+    typedef typename DarcyLFSU::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::RangeType RT_D;
-    typedef typename DarcyLFSU::Traits::LocalFiniteElementType::
+    typedef typename DarcyLFSU::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::JacobianType JacobianType_D;
     const unsigned int dsize = darcylfsu.size();
 

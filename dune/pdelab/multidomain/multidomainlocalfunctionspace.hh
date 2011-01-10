@@ -181,7 +181,7 @@ struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inne
     Visitor<C,C::isLeaf,typename C::Traits::GridViewType,Container,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
       fill_indices(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,offset,global);
     for (Int j=initial_offset; j<offset; j++)
-      (*global)[initial_offset+j] = t.pgfs->template subMap<i>((*global)[initial_offset+j]);
+      (*global)[j] = t.pgfs->template subMap<i>((*global)[j]);
     NextChild::fill_indices(t,e,offset,global);
   }
 

@@ -3,9 +3,9 @@
 
 #include <tuple>
 #include <type_traits>
-#include <dune/pdelab/common/multitypetree.hh>
+#include <dune/pdelab/common/typetree.hh>
 #include <dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
-#include <dune/pdelab/multidomain/variadiccompositenode.hh>
+#include <dune/pdelab/gridfunctionspace/powercompositegridfunctionspacebase.hh>
 #include <dune/pdelab/multidomain/multidomainlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/typemap.hh>
 #include <dune/grid/multidomaingrid.hh>
@@ -46,72 +46,35 @@ struct MultiDomainGridFunctionSpaceTraits
 
 };
 
-template<typename T, int n, int i>
-struct MultiDomainGridFunctionSpaceVisitChildMetaProgram // visit child of inner node
+struct VerifyChildren
+  : public TypeTree::DirectChildrenVisitor
+  , public TypeTree::DynamicTraversal
 {
 
-  typedef MultiDomainGridFunctionSpaceVisitChildMetaProgram<T,n,i+1> NextChild;
-
-  template<typename Int>
-  static void setup (T& t, Int childGlobalSize[], Int childLocalSize[])
-  {
-    childGlobalSize[i] = t.template getChild<i>().globalSize();
-    childLocalSize[i] = t.template getChild<i>().maxLocalSize();
-    NextChild::setup(t,childGlobalSize,childLocalSize);
-  }
-  static void update (T& t)
-  {
-    t.template getChild<i>().update();
-    NextChild::update(t);
-  }
-  static bool dataHandleContains (const T& t, int dim, int codim)
-  {
-    return t.template getChild<i>().dataHandleContains(dim,codim) ||
-      NextChild::dataHandleContains(t,dim,codim);
-  }
-  static bool dataHandleFixedSize (const T& t, int dim, int codim)
-  {
-    return t.template getChild<i>().dataHandleFixedSize(dim,codim) &&
-      NextChild::dataHandleFixedSize(t,dim,codim);
-  }
-  template<class EntityType>
-  static size_t dataHandleSize (const T& t, const EntityType& e)
-  {
-    return t.template getChild<i>().dataHandleSize(e) +
-      NextChild::dataHandleSize(t,e);
-  }
-  template<class EntityType, class C>
-  static void dataHandleGlobalIndices (const T& t, const EntityType& e, C& global, size_t ng, C& childglobal)
-  {
-    size_t nc=t.template getChild<i>().dataHandleSize(e);
-    childglobal.resize(nc);
-    t.template getChild<i>().dataHandleGlobalIndices(e,childglobal);
-    for (size_t j=0; j<childglobal.size(); j++)
-      global[ng+j] = t.template subMap<i>(childglobal[j]);
-    NextChild::dataHandleGlobalIndices(t,e,global,ng+nc,childglobal);
-  }
-  static void verifyChild(const T& t)
+  template<typename T, typename Child, typename TreePath, typename ChildIndex>
+  void beforeChild(const T& t, const Child& child, TreePath treePath, ChildIndex childIndex) const
   {
     typedef typename T::Traits::GridType MultiDomainGrid;
     typedef typename MultiDomainGrid::SubDomainGrid SubDomainGrid;
-    typedef typename T::template Child<i>::Type::Traits::GridViewType::Grid ChildGrid;
-    dune_static_assert((std::is_same<MultiDomainGrid,ChildGrid>::value || std::is_same<SubDomainGrid,ChildGrid>::value)
-                       ,"MultiDomainGridFunctionSpace only works with a MultiDomainGrid and its associated SubDomainGrids.");
-    doVerify(t.grid(),t.template getChild<i>().gridview().grid());
-    NextChild::verifyChild(t);
+    typedef typename Child::Traits::GridViewType::Grid ChildGrid;
+    dune_static_assert((is_same<MultiDomainGrid,ChildGrid>::value || is_same<SubDomainGrid,ChildGrid>::value),
+                       "MultiDomainGridFunctionSpace only works with a MultiDomainGrid and its associated SubDomainGrids.");
+    doVerify<T>(t.grid(),t.template getChild<i>().gridview().grid());
   }
 
+  template<typename T>
   static void doVerify(const typename T::Traits::GridType& g, const typename T::Traits::GridType& cg)
   {
     assert(&g == &cg);
   }
 
+  template<typename T>
   static void doVerify(const typename T::Traits::GridType& g, const typename T::Traits::GridType::SubDomainGrid& cg)
   {
     assert(&g == &cg.multiDomainGrid());
   }
 
-  template<typename ST>
+  template<typename T, typename ST>
   static void doVerify(const typename T::Traits::GridType& g, const ST& cg)
   {
     // this is only here to keep the compiler from complaining about a missing function
@@ -120,46 +83,33 @@ struct MultiDomainGridFunctionSpaceVisitChildMetaProgram // visit child of inner
 
 };
 
-template<typename T, int n>
-struct MultiDomainGridFunctionSpaceVisitChildMetaProgram<T,n,n> // end of child recursion
-{
-  template<typename Int>
-  static void setup (T& t, Int childGlobalSize[], Int childLocalSize[])
-  {
-  }
-  static void update (T& t)
-  {
-  }
-  static bool dataHandleContains (const T& t, int dim, int codim)
-  {
-    return false;
-  }
-  static bool dataHandleFixedSize (const T& t, int dim, int codim)
-  {
-    return true;
-  }
-  template<class EntityType>
-  static size_t dataHandleSize (const T& t, const EntityType& e)
-  {
-    return 0;
-  }
-  template<class EntityType, class C>
-  static void dataHandleGlobalIndices (const T& t, const EntityType& e, C& global, size_t n_, C& childglobal)
-  {
-  }
-  static void verifyChild(const T& t)
-  {
-  }
-};
+
+struct MultiDomainGridFunctionSpaceTag {};
 
 template<typename G, typename... Children>
-class MultiDomainGridFunctionSpace : public Countable, public VariadicCompositeNode<CopyStoragePolicy,Children...>
+class MultiDomainGridFunctionSpace
+  : public TypeTree::VariadicCompositeNode<Children...>
+  , public PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<Children...>,
+                                               typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
+                                               typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::BackendType,
+                                               GridFunctionSpaceLexicographicMapper,
+                                               sizeof...(Children)
+                                               >
 {
 
-  typedef VariadicCompositeNode<CopyStoragePolicy,Children...> BaseT;
-  typedef MultiDomainGridFunctionSpaceVisitChildMetaProgram<MultiDomainGridFunctionSpace,sizeof...(Children),0> VisitChildTMP;
+  typedef TypeTree::VariadicCompositeNode<Children...> BaseT;
+
+  friend class
+  PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<Children...>,
+                                      typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
+                                      typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::BackendType,
+                                      GridFunctionSpaceLexicographicMapper,
+                                      sizeof...(Children)
+                                      >;
 
 public:
+
+  typedef MultiDomainGridFunctionSpaceTag ImplementationTag;
 
   template<typename T, std::size_t i, typename Tag_>
   struct GFSChild
@@ -215,10 +165,10 @@ private:
 
 public:
 
-  template<int i>
+  template<std::size_t i>
   struct ChildInfo
   {
-    dune_static_assert((0 <= i) && (i < BaseT::CHILDREN),"invalid child index");
+    dune_static_assert(i < BaseT::CHILDREN,"invalid child index");
 
     typedef typename std::tuple_element<i,ChildEntries>::type Type;
   };
@@ -258,58 +208,19 @@ public:
     return this->template getChild<get_map_entry<T,ChildEntryMap>::type::index>();
   }
 
-  //! extract type of container storing Es
-  template<typename E>
-  struct VectorContainer
-  {
-    //! \brief define Type as the Type of a container of E's
-    typedef typename Traits::BackendType::template VectorContainer<MultiDomainGridFunctionSpace,E> Type;
-  private:
-    VectorContainer ();
-  };
-
   typename G::LeafGridView gridview() const { return grid().leafView(); }
 
-  //! extract type for storing constraints
-  template<typename E>
-  struct ConstraintsContainer
-  {
-    //! \brief define Type as the Type of a container of E's
-    typedef ConstraintsTransformation<typename Traits::SizeType,E> Type;
-  private:
-    ConstraintsContainer ();
-  };
-
   // define local function space parametrized by self
-  typedef MultiDomainLocalFunctionSpace<MultiDomainGridFunctionSpace,Children...> LocalFunctionSpace;
-  typedef MultiDomainCouplingLocalFunctionSpace<MultiDomainGridFunctionSpace,Children...> CouplingLocalFunctionSpace;
+  typedef typename Dune::PDELab::TypeTree::TransformTree<MultiDomainGridFunctionSpace,Dune::PDELab::gfs_to_lfs>::Type LocalFunctionSpace;
+  //typedef MultiDomainCouplingLocalFunctionSpace<MultiDomainGridFunctionSpace,Children...> CouplingLocalFunctionSpace;
 
 
   MultiDomainGridFunctionSpace (G& g, Children&... children) : BaseT(children...), _g(g)
   {
     dune_static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
                        "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
-    VisitChildTMP::verifyChild(*this);
-    update();
-  }
-
-  //! get dimension of root finite element space
-  typename Traits::SizeType globalSize () const
-  {
-    return offset[BaseT::CHILDREN];
-  }
-
-  //! get dimension of this finite element space
-  typename Traits::SizeType size () const
-  {
-    return offset[BaseT::CHILDREN];
-  }
-
-  // get max dimension of shape function space
-  typename Traits::SizeType maxLocalSize () const
-  {
-    // this is bullshit !
-    return maxlocalsize;
+    TypeTree::applyToTree(*this,VerifyChildren());
+    this->setup();
   }
 
   //! map index from our index set [0,size()-1] to root index set
@@ -319,37 +230,17 @@ public:
   }
 
   //! map index from child i's index set into our index set
-  template<int i>
-  typename Traits::SizeType subMap (typename Traits::SizeType j) const
+  typename Traits::SizeType subMap (typename Traits::SizeType i, typename Traits::SizeType j) const
   {
     return offset[i]+j;
   }
 
-
-  //------------------------------
-  // generic data handle interface
-  //------------------------------
-
-  //! returns true if data for this codim should be communicated
-  bool dataHandleContains (int dim, int codim) const
-  {
-    return VisitChildTMP::dataHandleContains(*this,dim,codim);
-  }
-
-  //! returns true if size per entity of given dim and codim is a constant
-  bool dataHandleFixedSize (int dim, int codim) const
-  {
-    return VisitChildTMP::dataHandleFixedSize(*this,dim,codim);
-  }
-
-  /*! how many objects of type DataType have to be sent for a given entity
-
-    Note: Only the sender side needs to know this size.
-*/
   template<class EntityType>
   size_t dataHandleSize (const EntityType& e) const
   {
-    return VisitChildTMP::dataHandleSize(*this,e);
+    // FIXME!
+    //return VisitChildTMP::dataHandleSize(*this,e);
+    return 0;
   }
 
   //! return vector of global indices associated with the given entity
@@ -357,21 +248,13 @@ public:
   void dataHandleGlobalIndices (const EntityType& e,
                                 std::vector<typename Traits::SizeType>& global) const
   {
-    size_t n=dataHandleSize(e);
-    global.resize(n);
-    VisitChildTMP::dataHandleGlobalIndices(*this,e,global,0,childglobal);
+    // FIXME!
+    // size_t n=dataHandleSize(e);
+    // global.resize(n);
+    // VisitChildTMP::dataHandleGlobalIndices(*this,e,global,0,childglobal);
   }
 
   //------------------------------
-
-
-
-  // recalculate sizes
-  void update ()
-  {
-    VisitChildTMP::update(*this);
-    setup();
-  }
 
   G& grid() {
     return _g;
@@ -385,17 +268,20 @@ private:
 
   const G& _g;
 
-  void setup ()
+  using ImplementationBase::childLocalSize;
+  using ImplementationBase::childGlobalSize;
+  using ImplementationBase::maxlocalsize;
+  using ImplementationBase::offset;
+
+  void calculateSizes ()
   {
     Dune::dinfo << "multi domain grid function space:"
                 << std::endl;
 
-    VisitChildTMP::setup(*this,childGlobalSize,childLocalSize);
-
     Dune::dinfo << "( ";
     offset[0] = 0;
     maxlocalsize = 0;
-    for (int i=0; i<BaseT::CHILDREN; i++)
+    for (std::size_t i=0; i<BaseT::CHILDREN; i++)
       {
         Dune::dinfo << childGlobalSize[i] << " ";
         offset[i+1] = offset[i]+childGlobalSize[i];
@@ -404,15 +290,7 @@ private:
     Dune::dinfo << ") total size = " << offset[BaseT::CHILDREN]
                 << " max local size = " << maxlocalsize
                 << std::endl;
-    childglobal.resize(maxlocalsize);
   }
-
-  typename Traits::SizeType childGlobalSize[BaseT::CHILDREN];
-  typename Traits::SizeType childLocalSize[BaseT::CHILDREN];
-  typename Traits::SizeType offset[BaseT::CHILDREN+1];
-  typename Traits::SizeType maxlocalsize;
-  mutable std::vector<typename Traits::SizeType> childglobal;
-
 
 };
 

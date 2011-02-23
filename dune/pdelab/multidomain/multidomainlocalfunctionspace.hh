@@ -3,7 +3,7 @@
 #define DUNE_MULTIDOMAIN_MULTIDOMAINLOCALFUNCTIONSPACE_HH
 
 #include <vector>
-#include <dune/pdelab/multidomain/variadiccompositenode.hh>
+#include <dune/pdelab/common/typetree.hh>
 #include <dune/pdelab/gridfunctionspace/localfunctionspace.hh>
 #include <dune/grid/multidomaingrid.hh>
 
@@ -25,205 +25,205 @@ namespace MultiDomain {
 struct MultiDomainTag {};
 struct SubDomainTag {};
 struct CouplingTag {};
+struct StandardLFSTag {};
+struct CouplingLFSTag {};
 
-template<typename T, bool isLeaf, typename GV, typename GC, typename Int, typename Tag>
-struct StandardGFSVisitor
+template<typename Entity, typename Impl>
+struct ComputeSizeVisitorBase
+  : public Dune::PDELab::TypeTree::DirectChildrenVisitor
+  , public Dune::PDELab::TypeTree::DynamicTraversal
 {
 
-  template<typename GFS>
-  static void setup(T& t, const GFS& gfs)
+  template<typename Node, typename TreePath>
+  void pre(Node& node, TreePath treePath)
+  {
+    node.offset = offset;
+  }
+
+  template<typename Node, typename TreePath>
+  void post(Node& node, TreePath treePath)
+  {
+    node.n = offset - node.offset;
+  }
+
+  template<typename LFS, typename Child, typename TreePath, typename ChildIndex>
+  void beforeChild(LFS& lfs, Child& child, TreePath treePath, ChildIndex childIndex)
+  {
+    impl().compute_size(child,typename LFS::Traits::GridFunctionSpaceType::template ChildInfo<i>::Type::Tag());
+  }
+
+  Impl& impl()
+  {
+    return static_cast<Impl&>(*this);
+  }
+
+  template<typename Child, typename Tag>
+  void compute_size(Child& child, Tag tag)
   {}
 
-  template<typename E>
-  static void fill_indices(T& t, GV gv, const E& e, Int& offset, GC * const global)
+  ComputeSizeVisitorBase(const Entity& entity, std::size_t offset_)
+    : e(entity)
+    , offset(offset_)
   {}
 
-  template<typename E>
-  static void compute_size(T& t, GV gv, const E& e, Int& offset)
-  {}
+  const Entity& e;
+  std::size_t offset;
 
 };
 
-template<typename T, bool isLeaf, typename GV, typename GC, typename Int>
-struct StandardGFSVisitor<T,isLeaf,GV,GC,Int,MultiDomainTag>
+
+template<typename Entity, typename LFSTag>
+struct ComputeSizeVisitor;
+
+template<typename Entity>
+struct ComputeSizeVisitor<Entity,StandardLFSTag>
+  : public ComputeSizeVisitorBase<Entity, ComputeSizeVisitor<Entity,StandardLFSTag> >
 {
 
-  template<typename GFS>
-  static void setup(T& t, const GFS& gfs)
+  typedef ComputeSizeVisitorBase<Entity, ComputeSizeVisitor<Entity,StandardLFSTag> > BaseT;
+
+  ComputeSizeVisitor(const Entity& entity, std::size_t offset_ = 0)
+    : BaseT(entity,offset_)
+  {}
+
+  template<typename Child>
+  void compute_size(Child& child, MultiDomainTag tag)
   {
-    t.setup(gfs);
+    Dune::PDELab::ComputeSizeVisitor<Entity> child_visitor(e,offset);
+    Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
+    offset = child_visitor.offset;
   }
 
-  template<typename E>
-  static void fill_indices(T& t, GV gv, const E& e, Int& offset, GC * const global)
+  template<typename Child>
+  void compute_size(Child& child, SubDomainTag tag)
   {
-    if (gv.indexSet().contains(e))
-      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,E,GC,Int>().fill_indices(t,e,offset,global);
-  }
-
-  template<typename E>
-  static void compute_size(T& t, GV gv, const E& e, Int& offset)
-  {
-    if (gv.indexSet().contains(e))
-      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,E,GC,Int>().compute_size(t,e,offset);
-  }
-
-};
-
-template<typename T, bool isLeaf, typename GV, typename GC, typename Int>
-struct StandardGFSVisitor<T,isLeaf,GV,GC,Int,SubDomainTag>
-{
-
-  template<typename GFS>
-  static void setup(T& t, const GFS& gfs)
-  {
-    t.setup(gfs);
-  }
-
-  template<typename E>
-  static void fill_indices(T& t, GV gv, const E& e, Int& offset, GC * const global)
-  {
-    typedef typename T::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
+    typedef typename Child::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
     typedef typename SDEP::Entity SDE;
-    const SDEP ep = gv.grid().subDomainEntityPointer(e);
-    if (gv.indexSet().contains(*ep))
-      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,SDE,GC,Int>().fill_indices(t,*ep,offset,global);
+    const SDEP ep = child.gfs().gridview().grid().subDomainEntityPointer(e);
+    if (child.gfs().gridview().indexSet().contains(*ep))
+      {
+        Dune::PDELab::ComputeSizeVisitor<SDE> child_visitor(*ep,offset);
+        Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
+        offset = child_visitor.offset;
+      }
   }
 
-  template<typename E>
-  static void compute_size(T& t, GV gv, const E& e, Int& offset)
+};
+
+
+template<typename Intersection>
+struct ComputeSizeVisitor<Intersection,CouplingLFSTag>
+  : public ComputeSizeVisitorBase<Intersection, ComputeSizeVisitor<Intersection,CouplingLFSTag> >
+{
+
+  typedef ComputeSizeVisitorBase<Intersection, ComputeSizeVisitor<Intersection,CouplingLFSTag> > BaseT;
+
+  ComputeSizeVisitor(const Intersection& intersection, std::size_t offset_ = 0)
+    : BaseT(intersection,offset_)
+  {}
+
+  template<typename Child>
+  void compute_size(Child& child, CouplingTag tag)
   {
-    typedef typename T::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
+    if (child.gridFunctionSpace().contains(is))
+      {
+        // TODO: Fix this - it is definitely wrong!
+        Dune::PDELab::ComputeSizeVisitor<Intersection> child_visitor(e,offset);
+        Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
+        offset = child_visitor.offset;
+      }
+  }
+
+};
+
+
+template<typename Impl>
+struct FillIndicesVisitorBase
+  : public Dune::PDELab::TypeTree::DirectChildrenVisitor
+  , public Dune::PDELab::TypeTree::DynamicTraversal
+{
+
+  template<typename GFS, typename Child, typename TreePath, typename ChildIndex>
+  void afterChild(GFS& gfs, Child& child, TreePath treePath, ChildIndex childIndex)
+  {
+    impl().fill_indices(child,typename LFS::Traits::GridFunctionSpaceType::template ChildInfo<i>::Type::Tag());
+    for (std::size_t i = 0; i<child.n; ++i)
+      (*lfs.global)[child.offset+i] = lfs.pgfs->subMap(childIndex,(*lfs.global)[child.offset+i]);
+  }
+
+  Impl& impl()
+  {
+    return static_cast<Impl&>(*this);
+  }
+
+  template<typename Child, typename Tag>
+  void fill_indices(Child& child, Tag tag)
+  {}
+
+};
+
+
+template<typename Entity, typename SizeType, typename LFSTag>
+struct FillIndicesVisitor;
+
+template<typename Entity, typename SizeType>
+struct FillIndicesVisitor<Entity,SizeType,StandardLFSTag>
+  : public FillIndicesVisitorBase<FillIndicesVisitor<Entity,StandardLFSTag> >
+{
+
+  FillIndicesVisitor(const Entity& entity)
+    : e(entity)
+  {}
+
+  const Entity& e;
+
+  template<typename Child>
+  void fill_indices(Child& child, MultiDomainTag tag)
+  {
+    Dune::PDELab::FillIndicesVisitor<Entity,SizeType> child_visitor(e,child.maxLocalSize());
+    Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
+  }
+
+  template<typename Child>
+  void fill_indices(Child& child, SubDomainTag tag)
+  {
+    typedef typename Child::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
     typedef typename SDEP::Entity SDE;
-    const SDEP ep = gv.grid().subDomainEntityPointer(e);
-    if (gv.indexSet().contains(*ep))
-      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,SDE,GC,Int>().compute_size(t,*ep,offset);
+    const SDEP ep = child.gfs().gridview().grid().subDomainEntityPointer(e);
+    if (child.gfs().gridview().indexSet().contains(*ep))
+      {
+        Dune::PDELab::FillIndicesVisitor<SDE,SizeType> child_visitor(*ep,child.maxLocalSize());
+        Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
+      }
   }
 
 };
 
 
-template<typename T, bool isLeaf, typename GV, typename GC, typename Int, typename Tag>
-struct CouplingGFSVisitor
+template<typename Intersection, typename SizeType>
+struct FillIndicesVisitor<Intersection,SizeType,CouplingLFSTag>
+  : public FillIndicesVisitorBase<FillIndicesVisitor<Intersection,CouplingLFSTag> >
 {
 
-  template<typename GFS>
-  static void setup(T& t, const GFS& gfs)
+  FillIndicesVisitor(const Intersection& intersection)
+    : is(intersection)
   {}
 
-  template<typename Intersection>
-  static void fill_indices(T& t, GV gv, const Intersection& is, Int& offset, GC * const global)
-  {}
-
-  template<typename Intersection>
-  static void compute_size(T& t, GV gv, const Intersection& is, Int& offset)
-  {}
-
-};
-
-
-template<typename T, bool isLeaf, typename GV, typename GC, typename Int>
-struct CouplingGFSVisitor<T,isLeaf,GV,GC,Int,CouplingTag>
-{
-
-  template<typename GFS>
-  static void setup(T& t, const GFS& gfs)
+  template<typename Child>
+  void fill_indices(Child& child, CouplingTag tag)
   {
-    t.setup(gfs);
-  }
-
-  template<typename Intersection>
-  static void fill_indices(T& t, GV gv, const Intersection& is, Int& offset, GC * const global)
-  {
-    if (t.gridFunctionSpace().contains(is))
-      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,Intersection,GC,Int>().fill_indices(t,is,offset,global);
-  }
-
-  template<typename Intersection>
-  static void compute_size(T& t, GV gv, const Intersection& is, Int& offset)
-  {
-    if (t.gridFunctionSpace().contains(is))
-      LocalFunctionSpaceBaseVisitNodeMetaProgram<T,isLeaf,Intersection,GC,Int>().reserve(t,is,offset);
+    if (child.gridFunctionSpace().contains(is))
+      {
+        // TODO: Fix this - it is definitely wrong!
+        Dune::PDELab::FillIndicesVisitor<Intersection,SizeType> child_visitor(is,child.maxLocalSize());
+        Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
+      }
   }
 
 };
 
 
-template<typename T,
-         typename Container,
-         typename Int,
-         template<typename T1, bool isLeaf, typename GV, typename C1, typename Int1, typename Tag> class Visitor,
-         int n,
-         int i
-         >
-struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram // visit child of inner node
-{
 
-  typedef MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,Container,Int,Visitor,n,i+1> NextChild;
-  typedef typename T::Traits::GridFunctionSpaceType GFS;
-
-  template<typename GFS>
-  static void setup (T& t, const GFS& gfs)
-  {
-    //        std::cout << "setting up child " << i << " of " << n << std::endl;
-    typedef typename T::template Child<i>::Type C;
-    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,Container,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
-      setup(t.template getChild<i>(),gfs.template getChild<i>());
-    NextChild::setup(t,gfs);
-  }
-
-  template<typename E>
-  static void fill_indices (T& t, const E& e, Int& offset, Container * const global)
-  {
-    // vist children of node t in order
-    typedef typename T::template Child<i>::Type C;
-    Int initial_offset = offset; // remember initial offset to compute size later
-    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,Container,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
-      fill_indices(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,offset,global);
-    for (Int j=initial_offset; j<offset; j++)
-      (*global)[j] = t.pgfs->template subMap<i>((*global)[j]);
-    NextChild::fill_indices(t,e,offset,global);
-  }
-
-  template<typename E>
-  static void compute_size (T& t, const E& e, Int& offset)
-  {
-    // vist children of node t in order
-    typedef typename T::template Child<i>::Type C;
-    Visitor<C,C::isLeaf,typename C::Traits::GridViewType,Container,Int,typename GFS::template ChildInfo<i>::Type::Tag >::
-      compute_size(t.template getChild<i>(),t.gfs().template getChild<i>().gridview(),e,offset);
-    NextChild::compute_size(t,e,offset);
-  }
-};
-
-
-template<typename T,
-         typename Container,
-         typename Int,
-         template<typename T1, bool isLeaf, typename GV, typename C1, typename Int1, typename Tag> class Visitor,
-         int n
-         >
-struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram<T,Container,Int,Visitor,n,n> // end of child recursion
-{
-
-  template<typename GFS>
-  static void setup (T& t, const GFS& gfs)
-  {
-  }
-
-  template<typename E>
-  static void fill_indices (T& t, const E& e, Int& offset, Container * const global)
-  {
-    return;
-  }
-
-  template<typename E>
-  static void compute_size (T& t, const E& e, Int& offset)
-  {
-    return;
-  }
-
-};
 
 
 template<typename GFS, typename N>
@@ -253,211 +253,120 @@ struct MultiDomainLocalFunctionSpaceTraits
   typedef typename std::vector<SizeType> IndexContainer;
 };
 
-template<typename... Children>
-struct BuildMultiDomainLocalFunctionSpaceNodeBase
-{
-
-  struct ExtractLocalFunctionSpaceNode
-  {
-    template<typename GFS>
-    struct transform {
-      typedef typename GFS::LocalFunctionSpace::Traits::NodeType type;
-    };
-
-    template<typename... Args>
-    struct container
-    {
-      typedef VariadicCompositeNode<CopyStoragePolicy,Args...> type;
-    };
-
-  };
-
-  typedef typename transform<ExtractLocalFunctionSpaceNode,Children...>::type type;
-
-};
-
-// local function space for a power grid function space
+// local function space for a MultiDomainGridFunctionSpace
 template<typename GFS,
-         template<typename, bool, typename, typename, typename, typename> class Visitor,
+         typename LFSTag,
          typename... Children>
 class MultiDomainLocalFunctionSpaceNode
-  : public BuildMultiDomainLocalFunctionSpaceNodeBase<Children...>::type
+  : public LocalFunctionSpaceBaseNode<GFS>
+  , public TypeTree::VariadicCompositeNode<Children...>
 {
-  template<typename T, bool b, typename E, typename It, typename Int>
-  friend struct LocalFunctionSpaceBaseVisitNodeMetaProgram;
-  template<typename T,
-           typename It,
-           typename Int,
-           template<typename T1, bool isLeaf, typename GV, typename It1, typename Int1, typename Tag> class Visitor1,
-           int n,
-           int i
-           >
-  friend struct MultiDomainLocalFunctionSpaceVisitChildMetaProgram;
 
   typedef typename GFS::Traits::BackendType B;
-  typedef typename GFS::Traits::GridType::Traits::template Codim<0>::Entity Element;
 
-  typedef typename BuildMultiDomainLocalFunctionSpaceNodeBase<Children...>::type BaseT;
+  typedef LocalFunctionSpaceBaseNode<GFS> BaseT;
 
 public:
   typedef MultiDomainLocalFunctionSpaceTraits<GFS,MultiDomainLocalFunctionSpaceNode> Traits;
 
-protected:
-  typedef MultiDomainLocalFunctionSpaceVisitChildMetaProgram<MultiDomainLocalFunctionSpaceNode,
-                                                             typename Traits::IndexContainer,
-                                                             typename Traits::IndexContainer::size_type,
-                                                             Visitor,
-                                                             BaseT::CHILDREN,
-                                                             0> VisitChildTMP;
-
 public:
 
-  //! \brief empty constructor
-  MultiDomainLocalFunctionSpaceNode ()
+  MultiDomainLocalFunctionSpaceNode(shared_ptr<const GFS> gfs,
+                                    shared_ptr<Children>... children)
+    : BaseT(gfs)
+    , TypeTree::VariadicCompositeNode<Children...>(children...)
+  {}
+
+  MultiDomainLocalFunctionSpaceNode(const GFS& gfs,
+                                    shared_ptr<Children>... children)
+    : BaseT(stackobject_to_shared_ptr(gfs))
+    , TypeTree::VariadicCompositeNode<Children...>(children...)
+  {}
+
+  using BaseT::global_storage;
+  using BaseT::n;
+  using BaseT::offset;
+
+  template<typename Element>
+  void bind (const Element& e)
   {
-  }
+    ComputeSizeVisitor<Element,LFSTag> csv(e);
+    Dune::PDELab::TypeTree::applyToTree(*this,csv);
 
-  //! \brief initialize with grid function space
-  MultiDomainLocalFunctionSpaceNode (const GFS& gfs) : pgfs(&gfs)
-  {
-    setup(gfs);
-  }
+    global_storage.resize(n);
 
-  //! \brief initialize with grid function space
-  void setup (const GFS& gfs)
-  {
-    pgfs = &gfs;
-    VisitChildTMP::setup(*this,gfs);
-  }
+    // initialize iterators and fill indices
+    FillIndicesVisitor<Element,typename Traits::IndexContainer::size_type,LFSTag> fiv(e,this->maxSize());
+    Dune::PDELab::TypeTree::applyToTree(*this,fiv);
 
-  //! \brief get current size
-  typename Traits::IndexContainer::size_type size () const
-  {
-    return n;
-  }
-
-  typename Traits::IndexContainer::size_type localVectorSize() const
-  {
-    return n;
-  }
-
-  //! \brief get maximum possible size (which is maxLocalSize from grid function space)
-  typename Traits::IndexContainer::size_type maxSize () const
-  {
-    return pgfs->maxLocalSize();
-  }
-
-  // map index in this local function space to root local function space
-  typename Traits::IndexContainer::size_type localIndex (typename Traits::IndexContainer::size_type index) const
-  {
-    return offset+index;
-  }
-
-  // map index in this local function space to global index space
-  typename Traits::SizeType globalIndex (typename Traits::IndexContainer::size_type index) const
-  {
-    return global()[offset + index];
-  }
-
-  /** \brief extract coefficients for one element from container */
-  template<typename GC, typename LC>
-  void vread (const GC& globalcontainer, LC& localcontainer) const
-  {
-    localcontainer.resize(n);
-    for (typename Traits::IndexContainer::size_type k=0; k<n; ++k)
-      localcontainer[k] = B::access(globalcontainer,global()[offset + k]);
-  }
-
-  /** \brief write back coefficients for one element to container */
-  template<typename GC, typename LC>
-  void vwrite (const LC& localcontainer, GC& globalcontainer) const
-  {
-    for (typename Traits::IndexContainer::size_type k=0; k<n; ++k)
-      B::access(globalcontainer,global()[offset+k]) = localcontainer[k];
-  }
-
-  /** \brief add coefficients for one element to container */
-  template<typename GC, typename LC>
-  void vadd (const LC& localcontainer, GC& globalcontainer) const
-  {
-    for (typename Traits::IndexContainer::size_type k=0; k<n; ++k)
-      B::access(globalcontainer,global()[offset+k]) += localcontainer[k];
-  }
-
-  void debug () const
-  {
-    std::cout << n << " indices = (";
-    for (typename Traits::IndexContainer::size_type k=0; k<n; k++)
-      std::cout << global()[offset+k] << " ";
-    std::cout << ")" << std::endl;
-  }
-
-public:
-
-  const GFS& gfs() const {
-    return *pgfs;
-  }
-
-protected:
-  const GFS* pgfs;
-  typename Traits::IndexContainer::size_type n;
-  typename Traits::IndexContainer::size_type offset;
-  typename Traits::IndexContainer* _global;
-
-  typename Traits::IndexContainer& global()
-  {
-    return *_global;
-  }
-
-  const typename Traits::IndexContainer& global() const
-  {
-    return *_global;
+    // apply upMap
+    for (typename Traits::IndexContainer::size_type i=0; i<offset; ++i)
+      global_storage[i] = this->gfs().upMap(global_storage[i]);
   }
 
 };
 
+struct MultiDomainGridFunctionSpaceTag {};
+
+template<typename MultiDomainGFS, typename LFSTag>
+struct MultiDomainLocalFunctionSpaceTransformationTemplate
+{
+  template<typename... TC>
+  struct result
+  {
+    typedef MultiDomainLocalFunctionSpaceNode<MultiDomainGFS,LFSTag,TC...> type;
+  };
+};
+
+template<typename MultiDomainGFS>
+Dune::PDELab::TypeTree::TemplatizedWrappingVariadicCompositeNodeTransformation<
+  MultiDomainGFS,
+  Dune::PDELab::gfs_to_lfs,
+  MultiDomainLocalFunctionSpaceTransformationTemplate<MultiDomainGFS,StandardLFSTag>::template result
+  >
+lookupNodeTransformation(MultiDomainGFS*, Dune::PDELab::gfs_to_lfs*, MultiDomainGridFunctionSpaceTag);
 
 
+struct gfs_to_coupling_lfs {};
+
+
+template<typename MultiDomainGFS>
+Dune::PDELab::TypeTree::TemplatizedWrappingVariadicCompositeNodeTransformation<
+  MultiDomainGFS,
+  Dune::PDELab::gfs_to_coupling_lfs,
+  MultiDomainLocalFunctionSpaceTransformationTemplate<MultiDomainGFS,CouplingLFSTag>::template result
+  >
+lookupNodeTransformation(MultiDomainGFS*, Dune::PDELab::gfs_to_coupling_lfs*, MultiDomainGridFunctionSpaceTag);
+
+
+#if 0
 // local function space description that can be bound to an element
 // depends on a grid function space
 template<typename GFS,typename... Children>
-class MultiDomainLocalFunctionSpace : public MultiDomainLocalFunctionSpaceNode<GFS,StandardGFSVisitor,Children...>
+class MultiDomainLocalFunctionSpaceNode : public MultiDomainLocalFunctionSpaceNodeBase<GFS,StandardLFSTag,Children...>
 {
-  typedef MultiDomainLocalFunctionSpaceNode<GFS,StandardGFSVisitor,Children...> BaseT;
-
-  typedef typename BaseT::VisitChildTMP VisitChildTMP;
+  typedef MultiDomainLocalFunctionSpaceNodeBase<GFS,StandardLFSTag,Children...> BaseT;
 
 public:
   typedef typename BaseT::Traits Traits;
 
-  explicit MultiDomainLocalFunctionSpace (const GFS& gfs)
+  explicit MultiDomainLocalFunctionSpaceNode(shared_ptr<const GFS> gfs,
+                                             shared_ptr<Children>... children)
+    : BaseT(gfs,children...)
+  {}
+
+  explicit MultiDomainLocalFunctionSpaceNode(const GFS& gfs,
+                                             shared_ptr<Children>... children)
+    : BaseT(gfs,children)
+    , TypeTree::VariadicCompositeNode<Children...>(children...)
+  {}
+
+  explicit MultiDomainLocalFunctionSpaceNode (const GFS& gfs)
     : BaseT(gfs), global_container(gfs.maxLocalSize())
   {}
 
   //! \brief bind local function space to entity
-  void bind (const typename Traits::Element& e)
-  {
-    // make offset
-    typename Traits::IndexContainer::size_type offset=0;
-    this->_global = &global_container;
 
-    // compute sizes
-    VisitChildTMP::compute_size(*this,e,offset);
-
-    this->n = offset;
-
-    // now reserve space in vector
-    global_container.resize(offset);
-
-    // initialize iterators and fill indices
-    offset = 0;
-    this->offset = 0;
-    VisitChildTMP::fill_indices(*this,e,offset,this->_global);
-
-    // apply upMap
-    for (typename Traits::IndexContainer::size_type i=0; i<offset; i++)
-      global_container[i] = this->gfs().upMap(global_container[i]);
-  }
 
 private:
   typename Traits::IndexContainer global_container;
@@ -509,7 +418,7 @@ private:
   typename Traits::IndexContainer global_container;
 };
 
-
+#endif
 
     //! \} group GridFunctionSpace
 

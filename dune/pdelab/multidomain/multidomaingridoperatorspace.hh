@@ -26,6 +26,151 @@ namespace PDELab {
 namespace MultiDomain {
 
 
+template<typename GFSU, typename GFSV>
+class Assembler
+{
+
+public:
+
+  template<typename LocalAssemblerEngine>
+  void assemble(LocalAssemblerEngine& engine)
+  {
+
+    engine.preAssembly();
+
+    // make local function spaces
+    typedef typename GFSU::LocalFunctionSpace LFSU;
+    LFSU lfsu(gfsu);
+    typedef typename GFSV::LocalFunctionSpace LFSV;
+    LFSV lfsv(gfsv);
+
+    typedef ElementGeometry<Element> ElementWrapper;
+
+    MultiGeomUniqueIDMapper<GV> cell_mapper(gfsu.gridview());
+
+    const ElementIterator endit = gfsu.gridview().template end<0>();
+
+    // traverse grid view
+    for (ElementIterator it = gfsu.gridview().template begin<0>();
+         it!=endit; ++it)
+      {
+
+        typename GV::IndexSet::IndexType ids = cell_mapper.map(*it);
+
+        // skip ghost and overlap
+        if (nonoverlapping_mode && it->partitionType()!=Dune::InteriorEntity)
+          continue;
+
+        // bind local function spaces to element
+        lfsu.bind(*it);
+        lfsv.bind(*it);
+
+        ElementWrapper elementWrapper(*it,is.subDomains(*it));
+
+        engine.onBindLFSU(elementWrapper,lfsu);
+        engine.onBindLFSV(elementWrapper,lfsv);
+
+        engine.assembleAlphaVolume(elementWrapper,lfsu,lfsv);
+        engine.assembleLambdaVolume(elementWrapper,lfsv);
+
+        // skip if no intersection iterator is needed
+        if (engine.requireIntersections())
+          {
+            // local function spaces in neighbor
+            LFSU lfsun(gfsu);
+            LFSV lfsvn(gfsv);
+
+            typedef typename GFSU::CouplingLocalFunctionSpace CouplingLFSU;
+            CouplingLFSU couplinglfsu(gfsu);
+            typedef typename GFSV::CouplingLocalFunctionSpace CouplingLFSV;
+            CouplingLFSV couplinglfsv(gfsv);
+
+            // traverse intersections
+            unsigned int intersection_index = 0;
+            IntersectionIterator endiit = gfsu.gridview().iend(*it);
+            for (IntersectionIterator iit = gfsu.gridview().ibegin(*it);
+                 iit!=endiit; ++iit, ++intersection_index)
+              {
+                // skeleton term
+                if (iit->neighbor())
+                  {
+                    const typename GV::IndexSet::IndexType idn = cell_mapper.map(*(iit->outside()));
+                    if (ids < idn && !engine.requireIntersectionsTwoSided())
+                      continue;
+
+                    lfsun.bind(*(iit->outside()));
+                    lfsvn.bind(*(iit->outside()));
+
+                    SkeletonIntersectionWrapper skeletonIntersectionWrapper(*iit,intersection_index,
+                                                                            elementWrapper.subDomains(),
+                                                                            is.subDomains(*(iit->outside())));
+
+                    engine.onBindLFSUOutside(skeletonIntersectionWrapper,lfsun);
+                    engine.onBindLFSVOutside(skeletonIntersectionWrapper,lfsvn);
+
+                    engine.assembleAlphaSkeleton(skeletonIntersectionWrapper,lfsu,lfsv,lfsun,lfsvn);
+                    engine.assembleLambdaSkeleton(skeletonIntersectionWrapper,lfsv,lfsvn);
+
+                    bool unbindLFSVCoupling = false;
+                    if (engine.requireLambdaEnrichedCoupling() || engine.requireAlphaEnrichedCoupling())
+                      {
+                        unbindLFSVCoupling = true;
+                        couplinglfsv.bind(*iit);
+                        engine.onBindLFSVCoupling(skeletonIntersectionWrapper,couplinglfsv);
+                      }
+
+                    if (engine.requireLambdaEnrichedCoupling())
+                      {
+                      engine.assembleLambdaEnrichedCoupling(skeletonIntersectionWrapper,lfsv,lfsvn,couplinglfsv);
+                      }
+
+                    if (engine.requireAlphaEnrichedCoupling())
+                      {
+                        couplinglfsu.bind(*iit);
+                        engine.onBindLFSUCoupling(skeletonIntersectionWrapper,couplinglfsu);
+                        engine.assembleAlphaEnrichedCoupling(skeletonIntersectionWrapper,lfsu,lfsv,lfsun,lfsvn,couplinglfsu,couplinglfsv);
+                        engine.onUnbindLFSUCoupling(skeletonIntersectionWrapper,couplinglfsu);
+                      }
+
+                    if (unbindLFSVCoupling)
+                      {
+                        engine.onUnbindLFSVCoupling(skeletonIntersectionWrapper,couplinglfsv);
+                      }
+
+                    engine.onUnbindLFSUOutside(skeletonIntersectionWrapper,lfsun);
+                    engine.onUnbindLFSVOutside(skeletonIntersectionWrapper,lfsvn);
+                  }
+
+                // boundary term
+                if (iit->boundary())
+                  {
+                    BoundaryIntersectionWrapper boundaryIntersectionWrapper(*iit,intersection_index,elementWrapper.subDomains());
+                    engine.onBindLFSUOutside(boundaryIntersectionWrapper,lfsun);
+                    engine.onBindLFSVOutside(boundaryIntersectionWrapper,lfsvn);
+                    engine.assembleAlphaBoundary(boundaryIntersectionWrapper,lfsu,lfsv);
+                    engine.assembleLambdaBoundary(boundaryIntersectionWrapper,lfsv);
+                    engine.onUnbindLFSUOutside(boundaryIntersectionWrapper,lfsun);
+                    engine.onUnbindLFSVOutside(boundaryIntersectionWrapper,lfsvn);
+                  }
+              }
+          }
+
+        engine.assembleAlphaVolumePostSkeleton(elementWrapper,lfsu,lfsv);
+        engine.assembleLambdaVolumePostSkeleton(elementWrapper,lfsv);
+
+        engine.onUnbindLFSU(elementWrapper,lfsu);
+        engine.onUnbindLFSV(elementWrapper,lfsv);
+
+      }
+
+    engine.postAssembly();
+  }
+
+  const GFSU& gfsu;
+  const GFSV& gfsv;
+
+};
+
 //================================================
 // The operator
 //================================================

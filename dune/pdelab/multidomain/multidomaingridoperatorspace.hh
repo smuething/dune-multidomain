@@ -171,6 +171,93 @@ public:
 
 };
 
+
+
+class MultiDomainLocalAssembler
+{
+
+  bool requireIntersections() const
+  {
+    return requireAlphaSkeleton() || requireLambdaSkeleton() ||
+      requireAlphaEnrichedCoupling() || requireLambdaEnrichedCoupling();
+  }
+
+  bool requireIntersectionsTwoSided() const
+  {
+    return any_child<MultiDomainLocalAssembler,SubProblems,require_intersections_two_sided<> >::value;
+  }
+
+  bool requireAlphaVolume() const
+  {
+    return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_volume<> >::value;
+  }
+
+  bool requireLambdaVolume() const
+  {
+    return any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_volume<> >::value;
+  }
+
+  bool requireAlphaSkeleton() const
+  {
+    return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_skeleton<> >::value ||
+      any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_boundary<> >::value ||
+      any_child<MultiDomainLocalAssembler,Couplings,do_alpha_coupling<> >::value ||
+      any_child<MultiDomainLocalAssembler,Couplings,do_alpha_enriched_coupling<> >::value;
+  }
+
+  bool requireLambdaSkeleton() const
+  {
+    return any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_skeleton<> >::value ||
+      any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_boundary<> >::value ||
+      any_child<MultiDomainLocalAssembler,Couplings,do_lambda_coupling<> >::value ||
+      any_child<MultiDomainLocalAssembler,Couplings,do_lambda_enriched_coupling<> >::value;
+  }
+
+  bool requireAlphaBoundary() const
+  {
+    return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_boundary<> >::value;
+  }
+
+  bool requireLambdaBoundary() const
+  {
+    return any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_boundary<> >::value;
+  }
+
+  bool requireAlphaEnrichedCoupling() const
+  {
+    return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_enriched_coupling<> >::value;
+  }
+
+  bool requireLambdaEnrichedCoupling() const
+  {
+    return any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_enriched_coupling<> >::value;
+  }
+
+  bool requireAlphaVolumePostSkeleton() const
+  {
+    return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_volume_post_skeleton<> >::value;
+  }
+
+  bool requireAlphaVolumePostSkeleton() const
+  {
+    return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_volume_post_skeleton<> >::value;
+  }
+
+
+  template<typename TReal>
+  void setTime(TReal time)
+  {
+    apply_operator.template apply<AllChildren>(SetTime<TReal>(time));
+  }
+
+  template<typename RF>
+  void setWeight(RF weight)
+  {
+    _weight = weight;
+  }
+
+};
+
 //================================================
 // The operator
 //================================================

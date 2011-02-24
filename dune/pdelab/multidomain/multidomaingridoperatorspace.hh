@@ -258,6 +258,201 @@ class MultiDomainLocalAssembler
 
 };
 
+
+
+template<typename X, typename R>
+class ResidualAssemblerEngine
+{
+
+  template<typename EG, typename LFSU>
+  void onBindLFSU(const EG& eg, const LFSU& lfsu)
+  {
+    // read local data
+    xl.resize(lfsu.size);
+    lfsu.vread(x,xl);
+  }
+
+  template<typename EG, typename LFSV>
+  void onBindLFSV(const EG& eg, const LFSV& lfsv)
+  {
+    // clear local residual
+    rl.resize(lfsv.size);
+    std::fill(rl.begin(),rl.end(),0.0);
+  }
+
+  template<typename EG, typename LFSU>
+  void onUnbindLFSU(const EG& eg, const LFSU& lfsu)
+  {}
+
+  template<typename EG, typename LFSV>
+  void onUnbindLFSV(const EG& eg, const LFSV& lfsv)
+  {
+    // accumulate local residual into global residual
+    lfsv.vadd(rl,r);
+  }
+
+
+  template<typename IG, typename LFSU_N>
+  void onBindLFSUOutside(const IG& ig, const LFSU_N& lfsu_n)
+  {
+    // read local data
+    xn.resize(lfsu_n.size);
+    lfsu_n.vread(x,xn);
+  }
+
+  template<typename IG, typename LFSV_N>
+  void onBindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
+  {
+    // clear local residual
+    rn.resize(lfsv_n.size);
+    std::fill(rn.begin(),rn.end(),0.0);
+  }
+
+  template<typename IG, typename LFSU_N>
+  void onUnbindLFSUOutside(const IG& ig, const LFSU_N& lfsu_n)
+  {}
+
+  template<typename IG, typename LFSV_N>
+  void onUnbindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
+  {
+    // accumulate local residual into global residual
+    lfsv_n.vadd(rn,r); // TODO: check if necessary
+  }
+
+
+  template<typename IG, typename LFSU_C>
+  void onBindLFSUCoupling(const IG& ig, const LFSU_C& lfsu_c)
+  {
+    // read local data
+    xc.resize(lfsu_c.size);
+    lfsu_c.vread(x,xc);
+  }
+
+  template<typename IG, typename LFSV_C>
+  void onBindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
+  {
+    // clear local residual
+    rc.resize(lfsv_c.size);
+    std::fill(rc.begin(),rc.end(),0.0);
+  }
+
+  template<typename IG, typename LFSU_C>
+  void onUnbindLFSUCoupling(const IG& ig, const LFSU_C& lfsu_c)
+  {}
+
+  template<typename IG, typename LFSV_C>
+  void onUnbindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
+  {
+    // accumulate local residual into global residual
+    lfsv_c.vadd(rc,r); // TODO: check if necessary
+  }
+
+
+  template<typename EG, typename LFSU, typename LFSV>
+  void assembleAlphaVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
+  {
+    apply_operator.template conditional<SubProblems,do_alpha_volume<> >(InvokeAlphaVolume<XL,RL>(xl,rl));
+  }
+
+  template<typename EG, typename LFSV>
+  void assembleLambdaVolume(const EG& eg, const LFSV& lfsv)
+  {
+    apply_operator.template conditional<SubProblems,do_lambda_volume<> >(InvokeLambdaVolume<RL>(rl));
+  }
+
+
+  template<typename IG, typename LFSU_S, typename LFSV_S, typename LFSU_N, typename LFSV_N>
+  void assembleAlphaSkeleton(const IG& ig,
+                             const LFSU_S& lfsu_s, const LFSV_S& lfsv_s,
+                             const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
+  {
+    apply_operator.template conditional<SubProblems,do_alpha_skeleton_or_boundary<> >
+      (InvokeAlphaSkeletonOrBoundary<XL,RL>(xl,xn,rl,rn));
+  }
+
+  template<typename IG, typename LFSV_S, typename LFSV_N>
+  void assembleLambdaSkeleton(const IG& ig,
+                             const LFSV_S& lfsv_s,
+                             const LFSV_N& lfsv_n)
+  {
+    apply_operator.template conditional<SubProblems,do_lambda_skeleton_or_boundary<> >
+      (InvokeLambdaSkeletonOrBoundary<RL>(rl,rn));
+  }
+
+
+  template<typename IG, typename LFSU, typename LFSV>
+  void assembleAlphaBoundary(const IG& ig, const LFSU& lfsu, const LFSV& lfsv)
+  {
+    apply_operator.template conditional<SubProblems,do_alpha_boundary<> >(InvokeAlphaBoundary<XL,RL>(xl,rl));
+  }
+
+  template<typename IG, typename LFSV>
+  void assembleLambdaBoundary(const IG& ig, const LFSV& lfsv)
+  {
+    apply_operator.template conditional<SubProblems,do_lambda_boundary<> >(InvokeLambdaBoundary<RL>(rl));
+  }
+
+
+  template<typename IG,
+           typename LFSU_S, typename LFSV_S,
+           typename LFSU_N, typename LFSV_N,
+           typename LFSU_C, typename LFSV_C>
+  void assembleAlphaEnrichedCoupling(const IG& ig,
+                                     const LFSU_S& lfsu_s, const LFSV_S& lfsv_s,
+                                     const LFSU_N& lfsu_n, const LFSV_N& lfsv_n,
+                                     const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
+  {
+    apply_operator.template conditional<Couplings,do_alpha_enriched_coupling<> >
+      (InvokeAlphaEnrichedCoupling<XL,RL>(xl,xn,xc,rl,rn,rc));
+  }
+
+  template<typename IG,
+           typename LFSV_S,
+           typename LFSV_N,
+           typename LFSV_C>
+  void assembleLambdaEnrichedCoupling(const IG& ig,
+                                      const LFSV_S& lfsv_s,
+                                      const LFSV_N& lfsv_n,
+                                      const LFSV_C& lfsv_c)
+  {
+    apply_operator.template conditional<Couplings,do_lambda_enriched_coupling<> >
+      (InvokeLambdaEnrichedCoupling<RL>(rl,rn,rc));
+  }
+
+
+  template<typename EG, typename LFSU, typename LFSV>
+  void assembleAlphaVolumePostSkeleton(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
+  {
+    apply_operator.template conditional<SubProblems,do_alpha_volume_post_skeleton<> >(InvokeAlphaVolumePostSkeleton<XL,RL>(xl,rl));
+  }
+
+  template<typename EG, typename LFSV>
+  void assembleLambdaVolumePostSkeleton(const EG& eg, const LFSV& lfsv)
+  {
+    apply_operator.template conditional<SubProblems,do_lambda_volume_post_skeleton<> >(InvokeLambdaVolumePostSkeleton<RL>(rl));
+  }
+
+
+  void preAssembly()
+  {}
+
+  void postAssembly()
+  {
+    Dune::PDELab::constrain_residual(*pconstraintsv,r);
+  }
+
+  const X& x;
+  R& r;
+
+  LocalVector<typename X::ElementType, TrialSpaceTag> xl;
+  LocalVector<typename R::ElementType, TestSpaceTag> rl;
+  LocalVector<typename X::ElementType, TrialSpaceTag> xn;
+  LocalVector<typename R::ElementType, TestSpaceTag> rn;
+  LocalVector<typename X::ElementType, TrialSpaceTag> xc;
+  LocalVector<typename R::ElementType, TestSpaceTag> rc;
+
+};
+
 //================================================
 // The operator
 //================================================

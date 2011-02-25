@@ -385,7 +385,7 @@ class ResidualAssemblerEngine
   {
     typedef visitor<invoke_alpha_volume,do_alpha_volume> Visitor;
     applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
-                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_xl(xl),wrap_rl(rl)));
+                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
   }
 
   template<typename EG, typename LFSV>
@@ -393,7 +393,7 @@ class ResidualAssemblerEngine
   {
     typedef visitor<invoke_lambda_volume,do_lambda_volume> Visitor;
     applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
-                                         wrap_lfsv(lfsv),wrap_rl(rl)));
+                                         wrap_lfsv(lfsv),wrap_r(r_s)));
   }
 
 
@@ -404,15 +404,15 @@ class ResidualAssemblerEngine
   {
     typedef visitor<invoke_alpha_skeleton_or_boundary,do_alpha_skeleton_or_boundary> SubProblemVisitor;
     applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
-                                                   store_alpha_skeleton_invoked(false),
-                                                   wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_xl(xl),wrap_rl(rl),
-                                                   wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_xn(xn),wrap_rn(rn)));
+                                                   store_neighbor_accessed(false),
+                                                   wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
+                                                   wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),wrap_r_n(r_n)));
 
     typedef visitor<invoke_alpha_coupling,do_alpha_coupling> CouplingVisitor;
     applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
-                                               store_alpha_skeleton_invoked(false),
-                                               wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_xl(xl),wrap_rl(rl),
-                                               wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_xn(xn),wrap_rn(rn)));
+                                               store_neighbor_accessed(false),
+                                               wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
+                                               wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),wrap_r_n(r_n)));
   }
 
   template<typename IG, typename LFSV_S, typename LFSV_N>
@@ -422,8 +422,8 @@ class ResidualAssemblerEngine
   {
     typedef visitor<invoke_lambda_skeleton_or_boundary,do_lambda_skeleton_or_boundary> Visitor;
     applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
-                                         wrap_lfsv_s(lfsv_s),wrap_rl(rl),
-                                         wrap_lfsv_n(lfsv_n),wrap_rn(rn)));
+                                         wrap_lfsv_s(lfsv_s),wrap_r_s(r_s),
+                                         wrap_lfsv_n(lfsv_n),wrap_r_n(r_n)));
   }
 
 
@@ -432,7 +432,7 @@ class ResidualAssemblerEngine
   {
     typedef visitor<invoke_alpha_boundary,do_alpha_boundary> Visitor;
     applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
-                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_xl(xl),wrap_rl(rl)));
+                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
   }
 
   template<typename IG, typename LFSV>
@@ -440,7 +440,7 @@ class ResidualAssemblerEngine
   {
     typedef visitor<invoke_lambda_boundary,do_lambda_boundary> Visitor;
     applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
-                                         wrap_lfsv(lfsv),wrap_rl(rl)));
+                                         wrap_lfsv(lfsv),wrap_r(r_s)));
   }
 
 
@@ -455,9 +455,9 @@ class ResidualAssemblerEngine
   {
     typedef visitor<invoke_alpha_enriched_coupling,do_alpha_enriched_coupling> CouplingVisitor;
     applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
-                                               wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_xl(xl),wrap_rl(rl),
-                                               wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_xn(xn),wrap_rn(rn),
-                                               wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),wrap_xc(xc),wrap_rc(rc)));
+                                               wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
+                                               wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),wrap_r_n(r_n),
+                                               wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),wrap_x_c(x_c),wrap_r_c(r_c)));
   }
 
   template<typename IG,
@@ -471,9 +471,9 @@ class ResidualAssemblerEngine
   {
     typedef visitor<invoke_lambda_enriched_coupling,do_lambda_enriched_coupling> CouplingVisitor;
     applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
-                                               wrap_lfsv_s(lfsv_s),wrap_rl(rl),
-                                               wrap_lfsv_n(lfsv_n),wrap_rn(rn),
-                                               wrap_lfsv_c(lfsv_c),wrap_rc(rc)));
+                                               wrap_lfsv_s(lfsv_s),wrap_r_s(r_s),
+                                               wrap_lfsv_n(lfsv_n),wrap_r_n(r_n),
+                                               wrap_lfsv_c(lfsv_c),wrap_r_c(r_c)));
   }
 
 
@@ -501,12 +501,12 @@ class ResidualAssemblerEngine
   const X& x;
   R& r;
 
-  LocalVector<typename X::ElementType, TrialSpaceTag> xl;
-  LocalVector<typename R::ElementType, TestSpaceTag> rl;
-  LocalVector<typename X::ElementType, TrialSpaceTag> xn;
-  LocalVector<typename R::ElementType, TestSpaceTag> rn;
-  LocalVector<typename X::ElementType, TrialSpaceTag> xc;
-  LocalVector<typename R::ElementType, TestSpaceTag> rc;
+  LocalVector<typename X::ElementType, TrialSpaceTag> x_s;
+  LocalVector<typename R::ElementType, TestSpaceTag> r_s;
+  LocalVector<typename X::ElementType, TrialSpaceTag> x_n;
+  LocalVector<typename R::ElementType, TestSpaceTag> r_n;
+  LocalVector<typename X::ElementType, TrialSpaceTag> x_c;
+  LocalVector<typename R::ElementType, TestSpaceTag> r_c;
 
 };
 

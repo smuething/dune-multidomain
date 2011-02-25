@@ -480,13 +480,17 @@ class ResidualAssemblerEngine
   template<typename EG, typename LFSU, typename LFSV>
   void assembleAlphaVolumePostSkeleton(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    apply_operator.template conditional<SubProblems,do_alpha_volume_post_skeleton<> >(InvokeAlphaVolumePostSkeleton<XL,RL>(xl,rl));
+    typedef visitor<invoke_alpha_volume_post_skeleton,do_alpha_volume_post_skeleton> Visitor;
+    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
+                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
   }
 
   template<typename EG, typename LFSV>
   void assembleLambdaVolumePostSkeleton(const EG& eg, const LFSV& lfsv)
   {
-    apply_operator.template conditional<SubProblems,do_lambda_volume_post_skeleton<> >(InvokeLambdaVolumePostSkeleton<RL>(rl));
+    typedef visitor<invoke_lambda_volume_post_skeleton,do_lambda_volume_post_skeleton> Visitor;
+    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
+                                         wrap_lfsv(lfsv),wrap_r(r_s)));
   }
 
 

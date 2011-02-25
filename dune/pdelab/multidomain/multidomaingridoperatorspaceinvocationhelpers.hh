@@ -424,33 +424,27 @@ lfsv_n(const Data& data, const SubProblem& subProblem)
 template<typename Data, typename Coupling>
 struct LFSU_C
 {
-  typedef typename Coupling::Traits::TrialLocalFunctionSpace type;
+  typedef typename Coupling::template CouplingLocalFunctionSpace<typename Data::LFSU_C>::Type type;
 };
 
 template<typename Data, typename Coupling>
 inline typename LFSU_C<Data,Coupling>::type
 lfsu_c(const Data& data, const Coupling& coupling)
 {
-  typedef typename LFSU_C<Data,Coupling>::type LFS;
-  LFS lfs(data.lfsu_c(),coupling,coupling.trialGridFunctionSpaceConstraints());
-  lfs.bind();
-  return lfs;
+  return coupling.couplingLocalFunctionSpace(data.lfsu_c());
 }
 
 template<typename Data, typename Coupling>
 struct LFSV_C
 {
-  typedef typename Coupling::Traits::TestLocalFunctionSpace type;
+  typedef typename Coupling::template CouplingLocalFunctionSpace<typename Data::LFSV_C>::Type type;
 };
 
 template<typename Data, typename Coupling>
 inline typename LFSV_C<Data,Coupling>::type
 lfsv_c(const Data& data, const Coupling& coupling)
 {
-  typedef typename LFSV_C<Data,Coupling>::type LFS;
-  LFS lfs(data.lfsv_c(),coupling,coupling.testGridFunctionSpaceConstraints());
-  lfs.bind();
-  return lfs;
+  return coupling.couplingLocalFunctionSpace(data.lfsv_c());
 }
 
 } // namespace LFS

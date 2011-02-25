@@ -39,9 +39,9 @@ public:
     engine.preAssembly();
 
     // make local function spaces
-    typedef typename GFSU::LocalFunctionSpace LFSU;
+    typedef LocalFunctionSpace<GFSU> LFSU;
     LFSU lfsu(gfsu);
-    typedef typename GFSV::LocalFunctionSpace LFSV;
+    typedef LocalFunctionSpace<GFSV> LFSV;
     LFSV lfsv(gfsv);
 
     typedef ElementGeometry<Element> ElementWrapper;
@@ -70,11 +70,11 @@ public:
         engine.onBindLFSU(elementWrapper,lfsu);
         engine.onBindLFSV(elementWrapper,lfsv);
 
-        engine.assembleAlphaVolume(elementWrapper,lfsu,lfsv);
-        engine.assembleLambdaVolume(elementWrapper,lfsv);
+        engine.assembleUVVolume(elementWrapper,lfsu,lfsv);
+        engine.assembleVVolume(elementWrapper,lfsv);
 
         // skip if no intersection iterator is needed
-        if (engine.requireIntersections())
+        if (engine.requireSkeleton())
           {
             // local function spaces in neighbor
             LFSU lfsun(gfsu);
@@ -95,7 +95,7 @@ public:
                 if (iit->neighbor())
                   {
                     const typename GV::IndexSet::IndexType idn = cell_mapper.map(*(iit->outside()));
-                    if (ids < idn && !engine.requireIntersectionsTwoSided())
+                    if (ids < idn && !engine.requireSkeletonTwoSided())
                       continue;
 
                     lfsun.bind(*(iit->outside()));
@@ -108,27 +108,27 @@ public:
                     engine.onBindLFSUOutside(skeletonIntersectionWrapper,lfsun);
                     engine.onBindLFSVOutside(skeletonIntersectionWrapper,lfsvn);
 
-                    engine.assembleAlphaSkeleton(skeletonIntersectionWrapper,lfsu,lfsv,lfsun,lfsvn);
-                    engine.assembleLambdaSkeleton(skeletonIntersectionWrapper,lfsv,lfsvn);
+                    engine.assembleUVSkeleton(skeletonIntersectionWrapper,lfsu,lfsv,lfsun,lfsvn);
+                    engine.assembleVSkeleton(skeletonIntersectionWrapper,lfsv,lfsvn);
 
                     bool unbindLFSVCoupling = false;
-                    if (engine.requireLambdaEnrichedCoupling() || engine.requireAlphaEnrichedCoupling())
+                    if (engine.requireVEnrichedCoupling() || engine.requireUVEnrichedCoupling())
                       {
                         unbindLFSVCoupling = true;
                         couplinglfsv.bind(*iit);
                         engine.onBindLFSVCoupling(skeletonIntersectionWrapper,couplinglfsv);
                       }
 
-                    if (engine.requireLambdaEnrichedCoupling())
+                    if (engine.requireVEnrichedCoupling())
                       {
-                      engine.assembleLambdaEnrichedCoupling(skeletonIntersectionWrapper,lfsv,lfsvn,couplinglfsv);
+                      engine.assembleVEnrichedCoupling(skeletonIntersectionWrapper,lfsv,lfsvn,couplinglfsv);
                       }
 
-                    if (engine.requireAlphaEnrichedCoupling())
+                    if (engine.requireUVEnrichedCoupling())
                       {
                         couplinglfsu.bind(*iit);
                         engine.onBindLFSUCoupling(skeletonIntersectionWrapper,couplinglfsu);
-                        engine.assembleAlphaEnrichedCoupling(skeletonIntersectionWrapper,lfsu,lfsv,lfsun,lfsvn,couplinglfsu,couplinglfsv);
+                        engine.assembleUVEnrichedCoupling(skeletonIntersectionWrapper,lfsu,lfsv,lfsun,lfsvn,couplinglfsu,couplinglfsv);
                         engine.onUnbindLFSUCoupling(skeletonIntersectionWrapper,couplinglfsu);
                       }
 
@@ -147,16 +147,16 @@ public:
                     BoundaryIntersectionWrapper boundaryIntersectionWrapper(*iit,intersection_index,elementWrapper.subDomains());
                     engine.onBindLFSUOutside(boundaryIntersectionWrapper,lfsun);
                     engine.onBindLFSVOutside(boundaryIntersectionWrapper,lfsvn);
-                    engine.assembleAlphaBoundary(boundaryIntersectionWrapper,lfsu,lfsv);
-                    engine.assembleLambdaBoundary(boundaryIntersectionWrapper,lfsv);
+                    engine.assembleUVBoundary(boundaryIntersectionWrapper,lfsu,lfsv);
+                    engine.assembleVBoundary(boundaryIntersectionWrapper,lfsv);
                     engine.onUnbindLFSUOutside(boundaryIntersectionWrapper,lfsun);
                     engine.onUnbindLFSVOutside(boundaryIntersectionWrapper,lfsvn);
                   }
               }
           }
 
-        engine.assembleAlphaVolumePostSkeleton(elementWrapper,lfsu,lfsv);
-        engine.assembleLambdaVolumePostSkeleton(elementWrapper,lfsv);
+        engine.assembleUVVolumePostSkeleton(elementWrapper,lfsu,lfsv);
+        engine.assembleVVolumePostSkeleton(elementWrapper,lfsv);
 
         engine.onUnbindLFSU(elementWrapper,lfsu);
         engine.onUnbindLFSV(elementWrapper,lfsv);

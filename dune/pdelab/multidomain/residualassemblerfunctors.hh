@@ -1,6 +1,8 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_RESIDUALASSEMBLERFUNCTORS_HH
 #define DUNE_PDELAB_MULTIDOMAIN_RESIDUALASSEMBLERFUNCTORS_HH
 
+#include <dune/pdelab/multidomain/datawrappers.hh>
+
 namespace Dune {
 namespace PDELab {
 namespace MultiDomain {

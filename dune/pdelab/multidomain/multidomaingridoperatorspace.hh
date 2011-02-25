@@ -292,227 +292,178 @@ DUNE_PDELAB_MULTIDOMAIN_CREATE_DATA_CONTAINER(neighbor_accessed)
 DUNE_PDELAB_MULTIDOMAIN_CREATE_DATA_CONTAINER(coupling_accessed)
 
 
-template<typename X, typename R>
-class ResidualAssemblerEngine
-{
 
-  template<typename EG, typename LFSU>
-  void onBindLFSU(const EG& eg, const LFSU& lfsu)
+
+  void residual (const X& x, R& r) const
   {
-    // read local data
-    xl.resize(lfsu.size);
-    lfsu.vread(x,xl);
-  }
+    // visit each face only once
+    const int chunk=1<<28;
+    int offset = 0;
+    const typename GV::IndexSet& is=gfsu.gridview().indexSet();
+    std::map<Dune::GeometryType,int> gtoffset;
 
-  template<typename EG, typename LFSV>
-  void onBindLFSV(const EG& eg, const LFSV& lfsv)
-  {
-    // clear local residual
-    rl.resize(lfsv.size);
-    std::fill(rl.begin(),rl.end(),0.0);
-  }
+    // make local function spaces
+    typedef typename GFSU::LocalFunctionSpace LFSU;
+    LFSU lfsu(gfsu);
+    typedef typename GFSV::LocalFunctionSpace LFSV;
+    LFSV lfsv(gfsv);
 
-  template<typename EG, typename LFSU>
-  void onUnbindLFSU(const EG& eg, const LFSU& lfsu)
-  {}
+    operator_applier_all_data apply_operator(*this);
+    apply_operator.setlfsu(lfsu);
+    apply_operator.setlfsv(lfsv);
 
-  template<typename EG, typename LFSV>
-  void onUnbindLFSV(const EG& eg, const LFSV& lfsv)
-  {
-    // accumulate local residual into global residual
-    lfsv.vadd(rl,r);
-  }
+    // traverse grid view
+    for (ElementIterator it = gfsu.gridview().template begin<0>();
+         it!=gfsu.gridview().template end<0>(); ++it)
+      {
+        // assign offset for geometry type;
+        if (gtoffset.find(it->type())==gtoffset.end())
+          {
+            gtoffset[it->type()] = offset;
+            offset += chunk;
+          }
 
+        // compute unique id
+        int id = is.index(*it)+gtoffset[it->type()];
 
-  template<typename IG, typename LFSU_N>
-  void onBindLFSUOutside(const IG& ig, const LFSU_N& lfsu_n)
-  {
-    // read local data
-    xn.resize(lfsu_n.size);
-    lfsu_n.vread(x,xn);
-  }
+        // skip ghost and overlap
+        if (nonoverlapping_mode && it->partitionType()!=Dune::InteriorEntity)
+          continue;
 
-  template<typename IG, typename LFSV_N>
-  void onBindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
-  {
-    // clear local residual
-    rn.resize(lfsv_n.size);
-    std::fill(rn.begin(),rn.end(),0.0);
-  }
+        // bind local function spaces to element
+        lfsu.bind(*it);
+        lfsv.bind(*it);
+        apply_operator.setElement(*it);
+        apply_operator.setElementSubDomains(is.subDomains(*it));
 
-  template<typename IG, typename LFSU_N>
-  void onUnbindLFSUOutside(const IG& ig, const LFSU_N& lfsu_n)
-  {}
+        // allocate local data container
+        typedef std::vector<typename X::ElementType> XL;
+        XL xl(lfsu.size());
+        typedef std::vector<typename R::ElementType> RL;
+        RL rl(lfsv.size(),0.0);
 
-  template<typename IG, typename LFSV_N>
-  void onUnbindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
-  {
-    // accumulate local residual into global residual
-    lfsv_n.vadd(rn,r); // TODO: check if necessary
-  }
+        // read coefficents
+        lfsu.vread(x,xl);
 
+        // volume evaluation
+        apply_operator.template conditional<SubProblems,do_alpha_volume<> >(InvokeAlphaVolume<XL,RL>(xl,rl));
+        apply_operator.template conditional<SubProblems,do_lambda_volume<> >(InvokeLambdaVolume<RL>(rl));
 
-  template<typename IG, typename LFSU_C>
-  void onBindLFSUCoupling(const IG& ig, const LFSU_C& lfsu_c)
-  {
-    // read local data
-    xc.resize(lfsu_c.size);
-    lfsu_c.vread(x,xc);
-  }
+        // skip if no intersection iterator is needed
+        if (any_child<MultiDomainGridOperatorSpace,SubProblems,do_alpha_skeleton<> >::value ||
+            any_child<MultiDomainGridOperatorSpace,SubProblems,do_alpha_boundary<> >::value ||
+            any_child<MultiDomainGridOperatorSpace,SubProblems,do_lambda_boundary<> >::value ||
+            any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_coupling<> >::value ||
+            any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_enriched_coupling<> >::value)
+          {
+            // local function spaces in neighbor
+            LFSU lfsun(gfsu);
+            LFSV lfsvn(gfsv);
+            apply_operator.setlfsun(lfsun);
+            apply_operator.setlfsvn(lfsvn);
 
-  template<typename IG, typename LFSV_C>
-  void onBindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
-  {
-    // clear local residual
-    rc.resize(lfsv_c.size);
-    std::fill(rc.begin(),rc.end(),0.0);
-  }
+            typedef typename GFSU::CouplingLocalFunctionSpace CouplingLFSU;
+            CouplingLFSU couplinglfsu(gfsu);
+            typedef typename GFSV::CouplingLocalFunctionSpace CouplingLFSV;
+            CouplingLFSV couplinglfsv(gfsv);
+            apply_operator.setcouplinglfsu(couplinglfsu);
+            apply_operator.setcouplinglfsv(couplinglfsv);
 
-  template<typename IG, typename LFSU_C>
-  void onUnbindLFSUCoupling(const IG& ig, const LFSU_C& lfsu_c)
-  {}
+            // traverse intersections
+            unsigned int intersection_index = 0;
+            IntersectionIterator endit = gfsu.gridview().iend(*it);
+            for (IntersectionIterator iit = gfsu.gridview().ibegin(*it);
+                 iit!=endit; ++iit, ++intersection_index)
+              {
+                apply_operator.setIntersection(*iit,intersection_index);
+                // skeleton term
+                if (iit->neighbor())
+                  {
+                    // assign offset for geometry type;
+                    Dune::GeometryType gtn = iit->outside()->type();
+                    if (gtoffset.find(gtn)==gtoffset.end())
+                      {
+                        gtoffset[gtn] = offset;
+                        offset += chunk;
+                      }
 
-  template<typename IG, typename LFSV_C>
-  void onUnbindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
-  {
-    // accumulate local residual into global residual
-    lfsv_c.vadd(rc,r); // TODO: check if necessary
-  }
+                    // compute unique id for neighbor
+                    int idn = is.index(*(iit->outside()))+gtoffset[gtn];
+                    lfsun.bind(*(iit->outside()));
+                    lfsvn.bind(*(iit->outside()));
+                    apply_operator.setNeighborSubDomains(gfsu.gridview().indexSet().subDomains(*(iit->outside())));
 
+                    // allocate local data container
+                    XL xn(lfsun.size());
+                    RL rn(lfsvn.size(),0.0);
 
-  template<typename EG, typename LFSU, typename LFSV>
-  void assembleAlphaVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
-  {
-    typedef visitor<invoke_alpha_volume,do_alpha_volume> Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
-                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
-  }
+                    XL xcoupling;
+                    RL rcoupling;
 
-  template<typename EG, typename LFSV>
-  void assembleLambdaVolume(const EG& eg, const LFSV& lfsv)
-  {
-    typedef visitor<invoke_lambda_volume,do_lambda_volume> Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
-                                         wrap_lfsv(lfsv),wrap_r(r_s)));
-  }
+                    // only bind the coupling local function spaces if anyone is going to use them
+                    if (any_child<MultiDomainGridOperatorSpace,Couplings,do_alpha_enriched_coupling<> >::value)
+                      {
+                        couplinglfsu.bind(*iit);
+                        couplinglfsv.bind(*iit);
+                        couplinglfsu.vread(x,xcoupling);
+                        rcoupling.resize(couplinglfsv.size(),0.0);
+                      }
 
+                    // read coefficents
+                    lfsun.vread(x,xn);
 
-  template<typename IG, typename LFSU_S, typename LFSV_S, typename LFSU_N, typename LFSV_N>
-  void assembleAlphaSkeleton(const IG& ig,
-                             const LFSU_S& lfsu_s, const LFSV_S& lfsv_s,
-                             const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
-  {
-    typedef visitor<invoke_alpha_skeleton_or_boundary,do_alpha_skeleton_or_boundary> SubProblemVisitor;
-    applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
-                                                   store_neighbor_accessed(false),
-                                                   wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
-                                                   wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),wrap_r_n(r_n)));
+                    // unique vist of intersection
+                    apply_operator.template conditional<SubProblems,do_alpha_skeleton_or_boundary<> >
+                      (InvokeAlphaSkeletonOrBoundary<XL,RL>(xl,xn,rl,rn,
+                                                            id > idn ||
+                                                            (nonoverlapping_mode && (iit->inside())->partitionType()!=Dune::InteriorEntity)
+                                                            )
+                       );
+                    apply_operator.template conditional<Couplings,do_alpha_coupling<> >
+                      (InvokeAlphaCoupling<XL,RL>(xl,xn,rl,rn));
+                    apply_operator.template conditional<Couplings,do_alpha_enriched_coupling<> >
+                      (InvokeAlphaEnrichedCoupling<XL,RL>(xl,xn,xcoupling,rl,rn,rcoupling));
+                    if (apply_operator.alphaSkeletonInvoked())
+                      {
+                        lfsvn.vadd(rn,r);
+                        apply_operator.clearAlphaSkeletonInvoked();
+                      }
+                    if (apply_operator.alphaEnrichedCouplingInvoked())
+                      {
+                        couplinglfsv.vadd(rcoupling,r);
+                        apply_operator.clearAlphaEnrichedCouplingInvoked();
+                      }
+                  }
 
-    typedef visitor<invoke_alpha_coupling,do_alpha_coupling> CouplingVisitor;
-    applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
-                                               store_neighbor_accessed(false),
-                                               wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
-                                               wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),wrap_r_n(r_n)));
-  }
+                // boundary term
+                if (iit->boundary())
+                  {
+                    apply_operator.template conditional<SubProblems,do_alpha_boundary<> >(InvokeAlphaBoundary<XL,RL>(xl,rl));
+                    apply_operator.template conditional<SubProblems,do_lambda_boundary<> >(InvokeLambdaBoundary<RL>(rl));
+                  }
+              }
+          }
 
-  template<typename IG, typename LFSV_S, typename LFSV_N>
-  void assembleLambdaSkeleton(const IG& ig,
-                              const LFSV_S& lfsv_s,
-                              const LFSV_N& lfsv_n)
-  {
-    typedef visitor<invoke_lambda_skeleton_or_boundary,do_lambda_skeleton_or_boundary> Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
-                                         wrap_lfsv_s(lfsv_s),wrap_r_s(r_s),
-                                         wrap_lfsv_n(lfsv_n),wrap_r_n(r_n)));
-  }
+        apply_operator.template conditional<SubProblems,do_alpha_volume_post_skeleton<> >(InvokeAlphaVolumePostSkeleton<XL,RL>(xl,rl));
+        apply_operator.template conditional<SubProblems,do_lambda_volume_post_skeleton<> >(InvokeLambdaVolumePostSkeleton<RL>(rl));
 
+        // accumulate result (note: r needs to be cleared outside)
+        lfsv.vadd(rl,r);
+      }
 
-  template<typename IG, typename LFSU, typename LFSV>
-  void assembleAlphaBoundary(const IG& ig, const LFSU& lfsu, const LFSV& lfsv)
-  {
-    typedef visitor<invoke_alpha_boundary,do_alpha_boundary> Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
-                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
-  }
-
-  template<typename IG, typename LFSV>
-  void assembleLambdaBoundary(const IG& ig, const LFSV& lfsv)
-  {
-    typedef visitor<invoke_lambda_boundary,do_lambda_boundary> Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
-                                         wrap_lfsv(lfsv),wrap_r(r_s)));
-  }
-
-
-  template<typename IG,
-           typename LFSU_S, typename LFSV_S,
-           typename LFSU_N, typename LFSV_N,
-           typename LFSU_C, typename LFSV_C>
-  void assembleAlphaEnrichedCoupling(const IG& ig,
-                                     const LFSU_S& lfsu_s, const LFSV_S& lfsv_s,
-                                     const LFSU_N& lfsu_n, const LFSV_N& lfsv_n,
-                                     const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
-  {
-    typedef visitor<invoke_alpha_enriched_coupling,do_alpha_enriched_coupling> CouplingVisitor;
-    applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
-                                               wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
-                                               wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),wrap_r_n(r_n),
-                                               wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),wrap_x_c(x_c),wrap_r_c(r_c)));
-  }
-
-  template<typename IG,
-           typename LFSV_S,
-           typename LFSV_N,
-           typename LFSV_C>
-  void assembleLambdaEnrichedCoupling(const IG& ig,
-                                      const LFSV_S& lfsv_s,
-                                      const LFSV_N& lfsv_n,
-                                      const LFSV_C& lfsv_c)
-  {
-    typedef visitor<invoke_lambda_enriched_coupling,do_lambda_enriched_coupling> CouplingVisitor;
-    applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
-                                               wrap_lfsv_s(lfsv_s),wrap_r_s(r_s),
-                                               wrap_lfsv_n(lfsv_n),wrap_r_n(r_n),
-                                               wrap_lfsv_c(lfsv_c),wrap_r_c(r_c)));
-  }
-
-
-  template<typename EG, typename LFSU, typename LFSV>
-  void assembleAlphaVolumePostSkeleton(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
-  {
-    typedef visitor<invoke_alpha_volume_post_skeleton,do_alpha_volume_post_skeleton> Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
-                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
-  }
-
-  template<typename EG, typename LFSV>
-  void assembleLambdaVolumePostSkeleton(const EG& eg, const LFSV& lfsv)
-  {
-    typedef visitor<invoke_lambda_volume_post_skeleton,do_lambda_volume_post_skeleton> Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
-                                         wrap_lfsv(lfsv),wrap_r(r_s)));
-  }
-
-
-  void preAssembly()
-  {}
-
-  void postAssembly()
-  {
+    // set residual to zero on constrained dofs
     Dune::PDELab::constrain_residual(*pconstraintsv,r);
-  }
 
-  const X& x;
-  R& r;
 
-  LocalVector<typename X::ElementType, TrialSpaceTag> x_s;
-  LocalVector<typename R::ElementType, TestSpaceTag> r_s;
-  LocalVector<typename X::ElementType, TrialSpaceTag> x_n;
-  LocalVector<typename R::ElementType, TestSpaceTag> r_n;
-  LocalVector<typename X::ElementType, TrialSpaceTag> x_c;
-  LocalVector<typename R::ElementType, TestSpaceTag> r_c;
 
-};
+
+
+
+
+
+
+
+
 
 //================================================
 // The operator

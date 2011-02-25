@@ -49,3 +49,6 @@ stokesdarcy2_LDFLAGS = $(AM_LDFLAGS) $(SUPERLU_LDFLAGS)
 stokesdarcy2_LDADD = $(AM_LIBS) $(SUPERLU_LIBS)
 
 testcouplinggfs_SOURCES = testcouplinggfs.cc
+
+check_PROGRAMS += testvisitor
+testvisitor_SOURCES = testvisitor.cc

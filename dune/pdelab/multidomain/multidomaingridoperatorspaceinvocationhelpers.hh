@@ -323,342 +323,381 @@ struct BuildEnrichedCouplingPattern
   P& globalpattern;
 };
 
+namespace LFS {
 
-template<typename XL, typename RL, typename Operator=SpatialOperator>
-struct InvokeAlphaVolume
+template<typename Data, typename SubProblem>
+struct LFSU
+{
+  typedef typename SubProblem::Traits::TrialLocalFunctionSpace type;
+};
+
+template<typename Data, typename SubProblem>
+inline typename LFSU<Data,SubProblem>::type
+lfsu(const Data& data, const SubProblem& subProblem)
+{
+  typedef typename LFSU<Data,SubProblem>::type LFS;
+  LFSU lfs(data.lfsu(),subProblem,subProblem.trialGridFunctionSpaceConstraints());
+  lfs.bind();
+  return lfs;
+}
+
+template<typename Data, typename SubProblem>
+struct LFSV
+{
+  typedef typename SubProblem::Traits::TestLocalFunctionSpace type;
+};
+
+template<typename Data, typename SubProblem>
+inline typename LFSV<Data,SubProblem>::type
+lfsv(const Data& data, const SubProblem& subProblem)
+{
+  typedef typename LFSV<Data,SubProblem>::type LFS;
+  LFS lfs(data.lfsv(),subProblem,subProblem.testGridFunctionSpaceConstraints());
+  lfs.bind();
+  return lfs;
+}
+
+template<typename Data, typename SubProblem>
+struct LFSU_S
+{
+  typedef typename SubProblem::Traits::TrialLocalFunctionSpace type;
+};
+
+template<typename Data, typename SubProblem>
+inline typename LFSU_S<Data,SubProblem>::type
+lfsu_s(const Data& data, const SubProblem& subProblem)
+{
+  typedef typename LFSU_S<Data,SubProblem>::type LFS;
+  LFS lfs(data.lfsu_s(),subProblem,subProblem.trialGridFunctionSpaceConstraints());
+  lfs.bind();
+  return lfs;
+}
+
+template<typename Data, typename SubProblem>
+struct LFSV_S
+{
+  typedef typename SubProblem::Traits::TestLocalFunctionSpace type;
+};
+
+template<typename Data, typename SubProblem>
+inline typename LFSV_S<Data,SubProblem>::type
+lfsv_s(const Data& data, const SubProblem& subProblem)
+{
+  typedef typename LFSV_S<Data,SubProblem>::type LFS;
+  LFS lfs(data.lfsv_s(),subProblem,subProblem.testGridFunctionSpaceConstraints());
+  lfs.bind();
+  return lfs;
+}
+
+template<typename Data, typename SubProblem>
+struct LFSU_N
+{
+  typedef typename SubProblem::Traits::TrialLocalFunctionSpace type;
+};
+
+template<typename Data, typename SubProblem>
+inline typename LFSU_N<Data,SubProblem>::type
+lfsu_n(const Data& data, const SubProblem& subProblem)
+{
+  typedef typename LFSU_N<Data,SubProblem>::type LFS;
+  LFS lfs(data.lfsu_n(),subProblem,subProblem.trialGridFunctionSpaceConstraints());
+  lfs.bind();
+  return lfs;
+}
+
+template<typename Data, typename SubProblem>
+struct LFSV_N
+{
+  typedef typename SubProblem::Traits::TestLocalFunctionSpace type;
+};
+
+template<typename Data, typename SubProblem>
+inline typename LFSV_N<Data,SubProblem>::type
+lfsv_n(const Data& data, const SubProblem& subProblem)
+{
+  typedef typename LFSV_N<Data,SubProblem>::type LFS;
+  LFS lfs(data.lfsv_n(),subProblem,subProblem.testGridFunctionSpaceConstraints());
+  lfs.bind();
+  return lfs;
+}
+
+template<typename Data, typename Coupling>
+struct LFSU_C
+{
+  typedef typename Coupling::Traits::TrialLocalFunctionSpace type;
+};
+
+template<typename Data, typename Coupling>
+inline typename LFSU_C<Data,Coupling>::type
+lfsu_c(const Data& data, const Coupling& coupling)
+{
+  typedef typename LFSU_C<Data,Coupling>::type LFS;
+  LFS lfs(data.lfsu_c(),coupling,coupling.trialGridFunctionSpaceConstraints());
+  lfs.bind();
+  return lfs;
+}
+
+template<typename Data, typename Coupling>
+struct LFSV_C
+{
+  typedef typename Coupling::Traits::TestLocalFunctionSpace type;
+};
+
+template<typename Data, typename Coupling>
+inline typename LFSV_C<Data,Coupling>::type
+lfsv_c(const Data& data, const Coupling& coupling)
+{
+  typedef typename LFSV_C<Data,Coupling>::type LFS;
+  LFS lfs(data.lfsv_c(),coupling,coupling.testGridFunctionSpaceConstraints());
+  lfs.bind();
+  return lfs;
+}
+
+} // namespace LFS
+
+
+template<typename data_container>
+struct invoke_alpha_volume
+  : public data_accessor<data_container>
 {
 
-  InvokeAlphaVolume(const XL& xl, RL& rl) :
-    x(xl),
-    r(rl)
-  {}
+  typedef typename data_accessor<data_container> Data;
+  using data_accessor<data_container>::data;
 
-  template<typename Data, typename Child>
-  void operator()(Data& data, const Child& child)
+  template<typename SubProblem>
+  void operator()(const SubProblem& subProblem)
   {
-    if (!child.appliesTo(data.elementSubDomains()))
+    if (!subProblem.appliesTo(data().eg()))
       return;
-    typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-    typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-    LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-    LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-    lfsu.bind();
-    lfsv.bind();
-    Operator::extract(child).alpha_volume(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,r);
+    Data::Operator::extract(subProblem).alpha_volume(data().eg(),
+                                                     LFS::lfsu(data(),subProblem),
+                                                     data().xl(),
+                                                     LFS::lfsv(data(),subProblem),
+                                                     data().rl());
   }
 
-  const XL& x;
-  RL& r;
 };
 
 
-template<typename RL, typename Operator=SpatialOperator>
-struct InvokeLambdaVolume
+template<typename data_container>
+struct invoke_lambda_volume
+  : public data_accessor<data_container>
 {
 
-  InvokeLambdaVolume(RL& rl) :
-    r(rl)
-  {}
+  typedef typename data_accessor<data_container> Data;
+  using data_accessor<data_container>::data;
 
-  template<typename Data, typename Child>
-  void operator()(Data& data, const Child& child)
+  template<typename SubProblem>
+  void operator()(const SubProblem& subProblem)
   {
-    if (!child.appliesTo(data.elementSubDomains()))
+    if (!subProblem.appliesTo(data().eg()))
       return;
-    typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-    LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-    lfsv.bind();
-    Operator::extract(child).lambda_volume(ElementGeometry<typename Data::Element>(data.element()),lfsv,r);
+    Data::Operator::extract(subProblem).lambda_volume(data().eg(),
+                                                      LFS::LFSV(data(),subProblem),
+                                                      data().rl());
   }
 
-  RL& r;
 };
 
 
-template<typename XL, typename RL, typename Operator=SpatialOperator>
-struct InvokeAlphaSkeletonOrBoundary
+template<typename data_container>
+struct invoke_alpha_skeleton_or_boundary
+  : public data_accessor<data_container>
 {
 
-  InvokeAlphaSkeletonOrBoundary(const XL& xl, const XL& xn, RL& rl, RL& rn, bool applyOneSided) :
-    _xl(xl),
-    _xn(xn),
-    _rl(rl),
-    _rn(rn),
-    _applyOneSided(applyOneSided)
-  {}
+  typedef typename data_accessor<data_container> Data;
+  using data_accessor<data_container>::data;
 
-  template<typename Data, typename Child>
-  void operator()(Data& data, const Child& child)
+  template<typename SubProblem>
+  void operator()(const SubProblem& subProblem)
   {
-    if (!child.appliesTo(data.elementSubDomains()))
+    if (!subProblem.appliesTo(data().ig().innerElement()))
       return;
-    typedef typename Operator::template ExtractType<Child>::Type LOP;
-    typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-    typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-    LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-    LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-    lfsu.bind();
-    lfsv.bind();
-    if (child.appliesTo(data.neighborSubDomains()))
+    typedef typename Data::Operator::template ExtractType<SubProblem>::Type LOP;
+    typename LFS::LFSU_S<Data,SubProblem>::type lfsu_s = LFS::lfsu_s(data(),subProblem);
+    typename LFS::LFSV_S<Data,SubProblem>::type lfsv_s = LFS::lfsv_s(data(),subProblem);
+
+    if (subProblem.appliesTo(data().ig().outerElement()))
       {
         if (_applyOneSided || LOP::doSkeletonTwoSided)
           {
-            LFSU lfsun(data.lfsun(),child,child.trialGridFunctionSpaceConstraints());
-            LFSV lfsvn(data.lfsvn(),child,child.testGridFunctionSpaceConstraints());
-            lfsun.bind();
-            lfsvn.bind();
             LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
-              alpha_skeleton(Operator::extract(child),
-                             IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                               data.intersectionIndex()),
-                             lfsu,_xl,lfsv,lfsun,_xn,lfsvn,_rl,_rn);
+              alpha_skeleton(Data::Operator::extract(subProblem),data().ig(),
+                             lfsu_s,data().xl(),lfsv_s,
+                             LFS::lfsu_n(data(),subProblem),data().xn(),LFS::lfsv_n(data(),subProblem),
+                             data().rl(),data().rn());
             if(LOP::doAlphaSkeleton)
-              data.setAlphaSkeletonInvoked();
+              data().alpha_skeleton_invoked() = true;
           }
       }
     else
       {
         LocalAssemblerCallSwitch<LOP,LOP::doAlphaBoundary>::
-          alpha_boundary(Operator::extract(child),
-                         IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                           data.intersectionIndex()),
-                         lfsu,_xl,lfsv,_rl);
-        LocalAssemblerCallSwitch<LOP,LOP::doLambdaBoundary>::
-          lambda_boundary(Operator::extract(child),
-                          IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                            data.intersectionIndex()),
-                          lfsv,_rl);
+          alpha_boundary(Data::Operator::extract(subProblem),
+                         data().ig(),
+                         lfsu_s,data().xl(),lfsv_s,data().rl());
       }
   }
-
-  const XL& _xl;
-  const XL& _xn;
-  RL& _rl;
-  RL& _rn;
-  const bool _applyOneSided;
 };
 
 
-template<typename XL, typename RL, typename Operator=SpatialOperator>
-struct InvokeAlphaBoundary
+template<typename data_container>
+struct invoke_alpha_boundary
+  : public data_accessor<data_container>
 {
 
-  InvokeAlphaBoundary(const XL& xl, RL& rl) :
-    x(xl),
-    r(rl)
-  {}
+  typedef typename data_accessor<data_container> Data;
+  using data_accessor<data_container>::data;
 
-  template<typename Data, typename Child>
-  void operator()(Data& data, const Child& child)
+  template<typename SubProblem>
+  void operator()(const SubProblem& subProblem)
   {
-    if (!child.appliesTo(data.elementSubDomains()))
+    if (!subProblem.appliesTo(data().eg()))
       return;
-    typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-    typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-    LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-    LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
+    Data::Operator::extract(subProblem).alpha_boundary(data().ig(),
+                                                       LFS::lfsu(data(),subProblem),
+                                                       data().xl(),
+                                                       LFS::lfsv(data(),subProblem),
+                                                       data().rl());
+  }
+
+};
+
+
+template<typename data_container>
+struct invoke_alpha_coupling
+  : public data_accessor<data_container>
+{
+
+  typedef typename data_accessor<data_container> Data;
+  using data_accessor<data_container>::data;
+
+  template<typename Coupling>
+  void operator()(const Coupling& coupling)
+  {
+    if (!coupling.appliesTo(data().ig()))
+      return;
+    typedef typename Data::Operator::template ExtractType<Coupling>::Type LOP;
+    typedef typename Coupling::Traits::LocalSubProblem LocalSubProblem;
+    typedef typename Coupling::Traits::RemoteSubProblem RemoteSubProblem;
+    const LocalSubProblem& localSubProblem = coupling.localSubProblem();
+    const RemoteSubProblem& remoteSubProblem = coupling.remoteSubProblem();
+    Data::Operator::extract(coupling).alpha_coupling(data().ig(),
+                                                     LFS::lfsu_s(data(),localSubProblem),
+                                                     data().xl(),
+                                                     LFS::lfsv_s(data(),localSubProblem),
+                                                     LFS::lfsu_n(data(),RemoteSubProblem),
+                                                     data().xl(),
+                                                     LFS::lfsv_n(data(),remoteSubProblem),
+                                                     data().rl(),data().rn());
+    data().alpha_skeleton_invoked() = true;
+  }
+
+};
+
+
+template<typename data_container>
+struct invoke_alpha_enriched_coupling
+  : public data_accessor<data_container>
+{
+
+  typedef typename data_accessor<data_container> Data;
+  using data_accessor<data_container>::data;
+
+  template<typename Coupling>
+  void operator()(const Coupling& coupling)
+  {
+    if (!coupling.appliesTo(data().ig()))
+      return;
+    typedef typename Data::Operator::template ExtractType<Coupling>::Type LOP;
+    typedef typename Coupling::Traits::LocalSubProblem LocalSubProblem;
+    typedef typename Coupling::Traits::RemoteSubProblem RemoteSubProblem;
+    typename
+    Data::Operator::extract(coupling).alpha_enriched_coupling_first(data().ig(),
+                                                                    LFS::lfsu_s(data(),localSubProblem),
+                                                                    data().xl(),
+                                                                    LFS::lfsv_s(data(),localSubProblem),
+                                                                    lfsu_c,data().xc(),lfsv_c,
+                                                                    data().rl(),data().rc());
+    Data::Operator::extract(coupling).alpha_enriched_coupling_second(data().ig(),
+                                                                     LFS::lfsu_n(data(),remoteSubProblem),
+                                                                     data().xl(),
+                                                                     LFS::lfsv_n(data(),remoteSubProblem),
+                                                                     lfsu_c,data().xc(),lfsv_c,
+                                                                     data().rn(),data().rc());
+    data().alphaSkeletonInvoked() = true;
+    data().alphaEnrichedCouplingInvoked() = true;
+  }
+
+};
+
+
+template<typename data_container>
+struct invoke_lambda_boundary
+  : public data_accessor<data_container>
+{
+
+  typedef typename data_accessor<data_container> Data;
+  using data_accessor<data_container>::data;
+
+  template<typename SubProblem>
+  void operator()(const SubProblem& subProblem)
+  {
+    if (!subProblem.appliesTo(data().ig().inside()))
+      return;
+    typedef typename SubProblem::Traits::TestLocalFunctionSpace LFSV;
+    LFSV lfsv(data().lfsv(),subProblem,subProblem.testGridFunctionSpaceConstraints());
+    lfsv.bind();
+    Data::Operator::extract(subProblem).lambda_boundary(data().ig(),lfsv,data().rl());
+  }
+
+};
+
+
+template<typename data_container>
+struct invoke_alpha_volume_post_skeleton
+  : public data_accessor<data_container>
+{
+
+  typedef typename data_accessor<data_container> Data;
+  using data_accessor<data_container>::data;
+
+  template<typename SubProblem>
+  void operator()(const SubProblem& subProblem)
+  {
+    if (!subProblem.appliesTo(data().eg()))
+      return;
+    typedef typename SubProblem::Traits::TrialLocalFunctionSpace LFSU;
+    typedef typename SubProblem::Traits::TestLocalFunctionSpace LFSV;
+    LFSU lfsu(data().lfsu(),subProblem,subProblem.trialGridFunctionSpaceConstraints());
+    LFSV lfsv(data().lfsv(),subProblem,subProblem.testGridFunctionSpaceConstraints());
     lfsu.bind();
     lfsv.bind();
-    Operator::extract(child).alpha_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsu,x,lfsv,r);
+    Operator::extract(subProblem).alpha_volume_post_skeleton(data().eg(),lfsu,data().xl(),lfsv,data().rl());
   }
 
-  const XL& x;
-  RL& r;
 };
 
 
-template<typename XL, typename RL, typename Operator=CouplingOperator>
-struct InvokeAlphaCoupling
+template<typename data_container>
+struct invoke_lambda_volume_post_skeleton
+  : public data_accessor<data_container>
 {
 
-  InvokeAlphaCoupling(const XL& xl, const XL& xn, RL& rl, RL& rn) :
-    _local_x(xl),
-    _remote_x(xn),
-    _local_r(rl),
-    _remote_r(rn)
-  {}
+  typedef typename data_accessor<data_container> Data;
+  using data_accessor<data_container>::data;
 
-  template<typename Data, typename Child>
-  void operator()(Data& data, const Child& child)
+  template<typename SubProblem>
+  void operator()(const SubProblem& subProblem)
   {
-    if (!child.appliesTo(data.elementSubDomains(),data.neighborSubDomains()))
+    if (!subProblem.appliesTo(data().eg()))
       return;
-    typedef typename Operator::template ExtractType<Child>::Type LOP;
-    typedef typename Child::Traits::LocalSubProblem LocalSubProblem;
-    typedef typename Child::Traits::RemoteSubProblem RemoteSubProblem;
-    typedef typename LocalSubProblem::Traits::TrialLocalFunctionSpace LocalLFSU;
-    typedef typename LocalSubProblem::Traits::TestLocalFunctionSpace LocalLFSV;
-    typedef typename RemoteSubProblem::Traits::TrialLocalFunctionSpace RemoteLFSU;
-    typedef typename RemoteSubProblem::Traits::TestLocalFunctionSpace RemoteLFSV;
-    const LocalSubProblem& localSubProblem = child.localSubProblem();
-    const RemoteSubProblem& remoteSubProblem = child.remoteSubProblem();
-    LocalLFSU local_lfsu(data.lfsu(),localSubProblem,localSubProblem.trialGridFunctionSpaceConstraints());
-    LocalLFSV local_lfsv(data.lfsv(),localSubProblem,localSubProblem.testGridFunctionSpaceConstraints());
-    local_lfsu.bind();
-    local_lfsv.bind();
-    RemoteLFSU remote_lfsu(data.lfsun(),remoteSubProblem,remoteSubProblem.trialGridFunctionSpaceConstraints());
-    RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
-    remote_lfsu.bind();
-    remote_lfsv.bind();
-    Operator::extract(child).alpha_coupling(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                              data.intersectionIndex()),
-                                            local_lfsu,
-                                            _local_x,
-                                            local_lfsv,
-                                            remote_lfsu,
-                                            _remote_x,
-                                            remote_lfsv,
-                                            _local_r,
-                                            _remote_r);
-    data.setAlphaSkeletonInvoked();
-  }
-
-  const XL& _local_x;
-  const XL& _remote_x;
-  RL& _local_r;
-  RL& _remote_r;
-};
-
-
-template<typename XL, typename RL, typename Operator=CouplingOperator>
-struct InvokeAlphaEnrichedCoupling
-{
-
-  InvokeAlphaEnrichedCoupling(const XL& xl, const XL& xn, const XL& xc, RL& rl, RL& rn, RL& rc) :
-    _local_x(xl),
-    _remote_x(xn),
-    _coupling_x(xc),
-    _local_r(rl),
-    _remote_r(rn),
-    _coupling_r(rc)
-  {}
-
-  template<typename Data, typename Child>
-  void operator()(Data& data, const Child& child)
-  {
-    if (!child.appliesTo(data.elementSubDomains(),data.neighborSubDomains()))
-      return;
-    typedef typename Operator::template ExtractType<Child>::Type LOP;
-    typedef typename Child::Traits::LocalSubProblem LocalSubProblem;
-    typedef typename Child::Traits::RemoteSubProblem RemoteSubProblem;
-    typedef typename LocalSubProblem::Traits::TrialLocalFunctionSpace LocalLFSU;
-    typedef typename LocalSubProblem::Traits::TestLocalFunctionSpace LocalLFSV;
-    typedef typename RemoteSubProblem::Traits::TrialLocalFunctionSpace RemoteLFSU;
-    typedef typename RemoteSubProblem::Traits::TestLocalFunctionSpace RemoteLFSV;
-    const LocalSubProblem& localSubProblem = child.localSubProblem();
-    const RemoteSubProblem& remoteSubProblem = child.remoteSubProblem();
-    LocalLFSU local_lfsu(data.lfsu(),localSubProblem,localSubProblem.trialGridFunctionSpaceConstraints());
-    LocalLFSV local_lfsv(data.lfsv(),localSubProblem,localSubProblem.testGridFunctionSpaceConstraints());
-    local_lfsu.bind();
-    local_lfsv.bind();
-    RemoteLFSU remote_lfsu(data.lfsun(),remoteSubProblem,remoteSubProblem.trialGridFunctionSpaceConstraints());
-    RemoteLFSV remote_lfsv(data.lfsvn(),remoteSubProblem,remoteSubProblem.testGridFunctionSpaceConstraints());
-    remote_lfsu.bind();
-    remote_lfsv.bind();
-    Operator::extract(child).alpha_enriched_coupling_first(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                                             data.intersectionIndex()),
-                                                           local_lfsu,
-                                                           _local_x,
-                                                           local_lfsv,
-                                                           child.couplingLocalFunctionSpace(data.couplinglfsu()),
-                                                           _coupling_x,
-                                                           child.couplingLocalFunctionSpace(data.couplinglfsv()),
-                                                           _local_r,
-                                                           _coupling_r);
-    Operator::extract(child).alpha_enriched_coupling_second(IntersectionGeometry<typename Data::Intersection>(data.intersection(),
-                                                                                                              data.intersectionIndex()),
-                                                            remote_lfsu,
-                                                            _remote_x,
-                                                            remote_lfsv,
-                                                            child.couplingLocalFunctionSpace(data.couplinglfsu()),
-                                                            _coupling_x,
-                                                            child.couplingLocalFunctionSpace(data.couplinglfsv()),
-                                                            _remote_r,
-                                                            _coupling_r);
-    data.setAlphaSkeletonInvoked();
-    data.setAlphaEnrichedCouplingInvoked();
-  }
-
-  const XL& _local_x;
-  const XL& _remote_x;
-  const XL& _coupling_x;
-  RL& _local_r;
-  RL& _remote_r;
-  RL& _coupling_r;
-};
-
-
-template<typename RL, typename Operator=SpatialOperator>
-struct InvokeLambdaBoundary
-{
-
-  InvokeLambdaBoundary(RL& rl) :
-    r(rl)
-  {}
-
-  template<typename Data, typename Child>
-  void operator()(Data& data, const Child& child)
-  {
-    if (!child.appliesTo(data.elementSubDomains()))
-      return;
-    typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-    LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
+    typedef typename SubProblem::Traits::TestLocalFunctionSpace LFSV;
+    LFSV lfsv(data().lfsv(),subProblem,subProblem.testGridFunctionSpaceConstraints());
     lfsv.bind();
-    Operator::extract(child).lambda_boundary(IntersectionGeometry<typename Data::Intersection>(data.intersection(),data.intersectionIndex()),lfsv,r);
+    Data::Operator::extract(subProblem).lambda_volume_post_skeleton(data().eg(),lfsv,data().rl());
   }
 
-  RL& r;
-};
-
-
-template<typename XL, typename RL, typename Operator=SpatialOperator>
-struct InvokeAlphaVolumePostSkeleton
-{
-
-  InvokeAlphaVolumePostSkeleton(const XL& xl, RL& rl) :
-    x(xl),
-    r(rl)
-  {}
-
-  template<typename Data, typename Child>
-  void operator()(Data& data, const Child& child)
-  {
-    if (!child.appliesTo(data.elementSubDomains()))
-      return;
-    typedef typename Child::Traits::TrialLocalFunctionSpace LFSU;
-    typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-    LFSU lfsu(data.lfsu(),child,child.trialGridFunctionSpaceConstraints());
-    LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-    lfsu.bind();
-    lfsv.bind();
-    Operator::extract(child).alpha_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsu,x,lfsv,r);
-  }
-
-  const XL& x;
-  RL& r;
-};
-
-
-template<typename RL, typename Operator=SpatialOperator>
-struct InvokeLambdaVolumePostSkeleton
-{
-
-  InvokeLambdaVolumePostSkeleton(RL& rl) :
-    r(rl)
-  {}
-
-  template<typename Data, typename Child>
-  void operator()(Data& data, const Child& child)
-  {
-    if (!child.appliesTo(data.elementSubDomains()))
-      return;
-    typedef typename Child::Traits::TestLocalFunctionSpace LFSV;
-    LFSV lfsv(data.lfsv(),child,child.testGridFunctionSpaceConstraints());
-    lfsv.bind();
-    Operator::extract(child).lambda_volume_post_skeleton(ElementGeometry<typename Data::Element>(data.element()),lfsv,r);
-  }
-
-  RL& r;
 };
 
 

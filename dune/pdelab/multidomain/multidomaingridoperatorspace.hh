@@ -370,13 +370,17 @@ class ResidualAssemblerEngine
   template<typename EG, typename LFSU, typename LFSV>
   void assembleAlphaVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    apply_operator.template conditional<SubProblems,do_alpha_volume<> >(InvokeAlphaVolume<XL,RL>(xl,rl));
+    typedef visitor<invoke_alpha_volume,do_alpha_volume> Visitor;
+    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
+                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_xl(xl),wrap_rl(rl)));
   }
 
   template<typename EG, typename LFSV>
   void assembleLambdaVolume(const EG& eg, const LFSV& lfsv)
   {
-    apply_operator.template conditional<SubProblems,do_lambda_volume<> >(InvokeLambdaVolume<RL>(rl));
+    typedef visitor<invoke_lambda_volume,do_lambda_volume> Visitor;
+    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
+                                         wrap_lfsv(lfsv),wrap_rl(rl)));
   }
 
 
@@ -385,30 +389,45 @@ class ResidualAssemblerEngine
                              const LFSU_S& lfsu_s, const LFSV_S& lfsv_s,
                              const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
-    apply_operator.template conditional<SubProblems,do_alpha_skeleton_or_boundary<> >
-      (InvokeAlphaSkeletonOrBoundary<XL,RL>(xl,xn,rl,rn));
+    typedef visitor<invoke_alpha_skeleton_or_boundary,do_alpha_skeleton_or_boundary> SubProblemVisitor;
+    applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
+                                                   store_alpha_skeleton_invoked(false),
+                                                   wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_xl(xl),wrap_rl(rl),
+                                                   wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_xn(xn),wrap_rn(rn)));
+
+    typedef visitor<invoke_alpha_coupling,do_alpha_coupling> CouplingVisitor;
+    applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
+                                               store_alpha_skeleton_invoked(false),
+                                               wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_xl(xl),wrap_rl(rl),
+                                               wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_xn(xn),wrap_rn(rn)));
   }
 
   template<typename IG, typename LFSV_S, typename LFSV_N>
   void assembleLambdaSkeleton(const IG& ig,
-                             const LFSV_S& lfsv_s,
-                             const LFSV_N& lfsv_n)
+                              const LFSV_S& lfsv_s,
+                              const LFSV_N& lfsv_n)
   {
-    apply_operator.template conditional<SubProblems,do_lambda_skeleton_or_boundary<> >
-      (InvokeLambdaSkeletonOrBoundary<RL>(rl,rn));
+    typedef visitor<invoke_lambda_skeleton_or_boundary,do_lambda_skeleton_or_boundary> Visitor;
+    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
+                                         wrap_lfsv_s(lfsv_s),wrap_rl(rl),
+                                         wrap_lfsv_n(lfsv_n),wrap_rn(rn)));
   }
 
 
   template<typename IG, typename LFSU, typename LFSV>
   void assembleAlphaBoundary(const IG& ig, const LFSU& lfsu, const LFSV& lfsv)
   {
-    apply_operator.template conditional<SubProblems,do_alpha_boundary<> >(InvokeAlphaBoundary<XL,RL>(xl,rl));
+    typedef visitor<invoke_alpha_boundary,do_alpha_boundary> Visitor;
+    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
+                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_xl(xl),wrap_rl(rl)));
   }
 
   template<typename IG, typename LFSV>
   void assembleLambdaBoundary(const IG& ig, const LFSV& lfsv)
   {
-    apply_operator.template conditional<SubProblems,do_lambda_boundary<> >(InvokeLambdaBoundary<RL>(rl));
+    typedef visitor<invoke_lambda_boundary,do_lambda_boundary> Visitor;
+    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
+                                         wrap_lfsv(lfsv),wrap_rl(rl)));
   }
 
 
@@ -421,8 +440,11 @@ class ResidualAssemblerEngine
                                      const LFSU_N& lfsu_n, const LFSV_N& lfsv_n,
                                      const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
-    apply_operator.template conditional<Couplings,do_alpha_enriched_coupling<> >
-      (InvokeAlphaEnrichedCoupling<XL,RL>(xl,xn,xc,rl,rn,rc));
+    typedef visitor<invoke_alpha_enriched_coupling,do_alpha_enriched_coupling> CouplingVisitor;
+    applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
+                                               wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_xl(xl),wrap_rl(rl),
+                                               wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_xn(xn),wrap_rn(rn),
+                                               wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),wrap_xc(xc),wrap_rc(rc)));
   }
 
   template<typename IG,
@@ -434,8 +456,11 @@ class ResidualAssemblerEngine
                                       const LFSV_N& lfsv_n,
                                       const LFSV_C& lfsv_c)
   {
-    apply_operator.template conditional<Couplings,do_lambda_enriched_coupling<> >
-      (InvokeLambdaEnrichedCoupling<RL>(rl,rn,rc));
+    typedef visitor<invoke_lambda_enriched_coupling,do_lambda_enriched_coupling> CouplingVisitor;
+    applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
+                                               wrap_lfsv_s(lfsv_s),wrap_rl(rl),
+                                               wrap_lfsv_n(lfsv_n),wrap_rn(rn),
+                                               wrap_lfsv_c(lfsv_c),wrap_rc(rc)));
   }
 
 

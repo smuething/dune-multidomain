@@ -30,8 +30,8 @@ template<typename X, typename R>
 class ResidualAssemblerEngine
 {
 
-  template<typename EG, typename LFSU>
-  void onBindLFSU(const EG& eg, const LFSU& lfsu)
+  template<typename EG, typename LFSU, typename LFSV>
+  void onBindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
     // read local data
     xl.resize(lfsu.size);
@@ -46,8 +46,8 @@ class ResidualAssemblerEngine
     std::fill(rl.begin(),rl.end(),0.0);
   }
 
-  template<typename EG, typename LFSU>
-  void onUnbindLFSU(const EG& eg, const LFSU& lfsu)
+  template<typename EG, typename LFSU, typename LFSV>
+  void onUnbindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {}
 
   template<typename EG, typename LFSV>
@@ -58,8 +58,8 @@ class ResidualAssemblerEngine
   }
 
 
-  template<typename IG, typename LFSU_N>
-  void onBindLFSUOutside(const IG& ig, const LFSU_N& lfsu_n)
+  template<typename IG, typename LFSU_N, typename LFSV_N>
+  void onBindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
     // read local data
     xn.resize(lfsu_n.size);
@@ -75,7 +75,7 @@ class ResidualAssemblerEngine
   }
 
   template<typename IG, typename LFSU_N>
-  void onUnbindLFSUOutside(const IG& ig, const LFSU_N& lfsu_n)
+  void onUnbindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, typename LFSV_N& lfsv_n)
   {}
 
   template<typename IG, typename LFSV_N>
@@ -86,8 +86,8 @@ class ResidualAssemblerEngine
   }
 
 
-  template<typename IG, typename LFSU_C>
-  void onBindLFSUCoupling(const IG& ig, const LFSU_C& lfsu_c)
+  template<typename IG, typename LFSU_C, typename LFSV_C>
+  void onBindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
     // read local data
     xc.resize(lfsu_c.size);
@@ -102,8 +102,8 @@ class ResidualAssemblerEngine
     std::fill(rc.begin(),rc.end(),0.0);
   }
 
-  template<typename IG, typename LFSU_C>
-  void onUnbindLFSUCoupling(const IG& ig, const LFSU_C& lfsu_c)
+  template<typename IG, typename LFSU_C, typename LFSV_C>
+  void onUnbindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {}
 
   template<typename IG, typename LFSV_C>

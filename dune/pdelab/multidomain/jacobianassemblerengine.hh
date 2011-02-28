@@ -30,48 +30,33 @@ template<typename X>
 class AssemblerEngineBase
 {
 
-  template<typename EG, typename LFSU>
-  void onBindLFSU(const EG& eg, const LFSU& lfsu)
+  template<typename Visitor>
+  const Visitor& applyToSubProblems(Visitor&& v)
   {
-    // read local data
-    x_s.resize(lfsu.size);
-    lfsu.vread(x,x_s);
+    Dune::PDELab::TypeTree::applyToTree(subProblems,v);
+    return v;
   }
 
-  template<typename EG, typename LFSU>
-  void onUnbindLFSU(const EG& eg, const LFSU& lfsu)
-  {}
-
-  template<typename IG, typename LFSU_N>
-  void onBindLFSUOutside(const IG& ig, const LFSU_N& lfsu_n)
+  template<typename Visitor>
+  const Visitor& applyToSubCouplings(Visitor&& v)
   {
-    // read local data
-    xn.resize(lfsu_n.size);
-    lfsu_n.vread(x,xn);
+    Dune::PDELab::TypeTree::applyToTree(couplings,v);
+    return v;
   }
 
-  template<typename IG, typename LFSU_N>
-  void onUnbindLFSUOutside(const IG& ig, const LFSU_N& lfsu_n)
-  {}
-
-  template<typename IG, typename LFSU_C>
-  void onBindLFSUCoupling(const IG& ig, const LFSU_C& lfsu_c)
+  template<typename Visitor>
+  const Visitor& applyToOperators(Visitor&& v)
   {
-    // read local data
-    xc.resize(lfsu_c.size);
-    lfsu_c.vread(x,xc);
+    Dune::PDELab::TypeTree::applyToTree(operators,v);
+    return v;
   }
 
-  template<typename IG, typename LFSU_C>
-  void onUnbindLFSUCoupling(const IG& ig, const LFSU_C& lfsu_c)
-  {}
+
 
 protected:
 
-  const X& x;
-  LocalVector<typename X::ElementType, TrialSpaceTag> x_s;
-  LocalVector<typename X::ElementType, TrialSpaceTag> x_n;
-  LocalVector<typename X::ElementType, TrialSpaceTag> x_c;
+  bool neighbor_accessed;
+  bool coupling_accessed;
 
 };
 
@@ -80,48 +65,85 @@ class JacobianAssemblerEngine
   : public AssemblerEngineBase<X>
 {
 
+  template<typename EG, typename LFSU, typename LFSV>
+  void onBindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
+  {
+    // read local data
+    x_s.resize(lfsu.size());
+    lfsu.vread(x,x_s);
+    // initialize local jacobian matrix
+    a_ss.assign(lfsv.size(),lfsu.size(),0.0);
+  }
+
+  template<typename EG, typename LFSU, typename LFSV>
+  void onUnbindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
+  {
+    // write back local jacobian contributions
+    etadd(lfsv,lfsu,a_ss,a);
+  }
+
+  template<typename IG, typename LFSU_N, typename LFSV_N>
+  void onBindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
+  {
+    // read local data
+    x_n.resize(lfsu_n.size());
+    lfsu_n.vread(x,xn);
+    // initialize local jacobian matrix
+    a_nn.assign(lfsv_n.size(),lfsu_n.size(),0.0);
+  }
+
+  template<typename IG, typename LFSU_N, typename LFSV_N>
+  void onUnbindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
+  {
+    // write back local jacobian contributions
+    etadd(lfsv_n,lfsu_n,a_nn,a);
+  }
+
+  template<typename IG, typename LFSU_C, typename LFSV_C>
+  void onBindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
+  {
+    // read local data
+    xc.resize(lfsu_c.size);
+    lfsu_c.vread(x,xc);
+    // initialize local jacobian matrix
+    a_cc.assign(lfsv_c.size(),lfsu_c.size(),0.0);
+  }
+
+  template<typename IG, typename LFSU_C>
+  void onUnbindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c)
+  {
+    // write back local jacobian contributions
+    etadd(lfsv_c,lfsu_c,a_cc,a);
+  }
+
   template<typename EG, typename LFSV>
   void onBindLFSV(const EG& eg, const LFSV& lfsv)
   {
-    // clear local jacobian matrix
-    a_ss.assign(lfsv.size(),x_s.size(),0.0);
   }
 
   template<typename EG, typename LFSV>
   void onUnbindLFSV(const EG& eg, const LFSV& lfsv)
   {
-    // accumulate local jacobian into global jacobian
-    etadd(lfsu,lfsv,a_ss,a);
   }
 
   template<typename IG, typename LFSV_N>
   void onBindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
   {
-    // clear local residual
-    rn.resize(lfsv_n.size);
-    std::fill(rn.begin(),rn.end(),0.0);
   }
 
   template<typename IG, typename LFSV_N>
   void onUnbindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
   {
-    // accumulate local residual into global residual
-    lfsv_n.vadd(rn,r); // TODO: check if necessary
   }
 
   template<typename IG, typename LFSV_C>
   void onBindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
   {
-    // clear local residual
-    rc.resize(lfsv_c.size);
-    std::fill(rc.begin(),rc.end(),0.0);
   }
 
   template<typename IG, typename LFSV_C>
   void onUnbindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
   {
-    // accumulate local residual into global residual
-    lfsv_c.vadd(rc,r); // TODO: check if necessary
   }
 
 
@@ -235,6 +257,12 @@ class JacobianAssemblerEngine
   {
     Dune::PDELab::constrain_residual(*pconstraintsv,r);
   }
+
+  const X& x;
+
+  LocalVector<typename X::ElementType, TrialSpaceTag> x_s;
+  LocalVector<typename X::ElementType, TrialSpaceTag> x_n;
+  LocalVector<typename X::ElementType, TrialSpaceTag> x_c;
 
   A& a;
 

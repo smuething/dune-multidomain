@@ -30,29 +30,6 @@ template<typename X>
 class AssemblerEngineBase
 {
 
-  template<typename Visitor>
-  const Visitor& applyToSubProblems(Visitor&& v)
-  {
-    Dune::PDELab::TypeTree::applyToTree(subProblems,v);
-    return v;
-  }
-
-  template<typename Visitor>
-  const Visitor& applyToSubCouplings(Visitor&& v)
-  {
-    Dune::PDELab::TypeTree::applyToTree(couplings,v);
-    return v;
-  }
-
-  template<typename Visitor>
-  const Visitor& applyToOperators(Visitor&& v)
-  {
-    Dune::PDELab::TypeTree::applyToTree(operators,v);
-    return v;
-  }
-
-
-
 protected:
 
   bool neighbor_accessed;

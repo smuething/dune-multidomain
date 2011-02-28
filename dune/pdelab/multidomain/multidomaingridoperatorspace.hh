@@ -256,6 +256,27 @@ class MultiDomainLocalAssembler
     _weight = weight;
   }
 
+  template<typename Visitor>
+  const Visitor& applyToSubProblems(Visitor&& v)
+  {
+    Dune::PDELab::TypeTree::applyToTree(_subProblems,v);
+    return v;
+  }
+
+  template<typename Visitor>
+  const Visitor& applyToSubCouplings(Visitor&& v)
+  {
+    Dune::PDELab::TypeTree::applyToTree(_couplings,v);
+    return v;
+  }
+
+  template<typename Visitor>
+  const Visitor& applyToParticipants(Visitor&& v)
+  {
+    Dune::PDELab::TypeTree::applyToTree(_assemblyParticipants,v);
+    return v;
+  }
+
 };
 
 

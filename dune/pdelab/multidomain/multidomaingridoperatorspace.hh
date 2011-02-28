@@ -190,7 +190,45 @@ struct CouplingFilter
   };
 };
 
+namespace functors {
 
+  template<typename data_container>
+  struct set_time
+    : public data_accessor<data_container>
+  {
+
+    typedef typename data_accessor<data_container> Data;
+    using data_accessor<data_container>::data;
+
+    template<typename Participant>
+    void operator()(const Participant& participant)
+    {
+      participant.setTime(data().time());
+    }
+
+  };
+
+
+  template<typename data_container>
+  struct set_weight
+    : public data_accessor<data_container>
+  {
+
+    typedef typename data_accessor<data_container> Data;
+    using data_accessor<data_container>::data;
+
+    template<typename Participant>
+    void operator()(const Participant& participant)
+    {
+      participant.setWeight(data().weight());
+    }
+
+  };
+
+}
+
+
+template<...>
 class MultiDomainLocalAssembler
 {
 
@@ -265,13 +303,13 @@ class MultiDomainLocalAssembler
   template<typename TReal>
   void setTime(TReal time)
   {
-    apply_operator.template apply<AllChildren>(SetTime<TReal>(time));
+    applyToParticipants(visitor<functors::set_time>::add_data(wrap_time(time)));
   }
 
   template<typename RF>
   void setWeight(RF weight)
   {
-    _weight = weight;
+    applyToParticipants(visitor<functors::set_weight>::add_data(wrap_weight(weight)));
   }
 
   template<typename Visitor>

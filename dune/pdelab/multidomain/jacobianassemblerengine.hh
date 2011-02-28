@@ -166,6 +166,8 @@ class JacobianAssemblerEngine
                           const LFSU_S& lfsu_s, const LFSV_S& lfsv_s,
                           const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
+    a_sn.assign(lfsv_s.size(),lfsu_n.size(),0.0);
+    a_ns.assign(lfsv_n.size(),lfsu_s.size(),0.0);
     typedef visitor<invoke_jacobian_skeleton_or_boundary,do_alpha_skeleton_or_boundary> SubProblemVisitor;
     applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
                                                    store_neighbor_accessed(false),
@@ -181,6 +183,8 @@ class JacobianAssemblerEngine
                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
                                                wrap_a_ss(a_ss),wrap_a_sn(a_sn),
                                                wrap_a_ns(a_ns),wrap_a_nn(a_nn)));
+    etadd(lfsv_s,lfsu_n,a_sn,a);
+    etadd(lfsv_n,lfsu_s,a_ns,a);
   }
 
   template<typename IG, typename LFSV_S, typename LFSV_N>
@@ -214,6 +218,10 @@ class JacobianAssemblerEngine
                                   const LFSU_N& lfsu_n, const LFSV_N& lfsv_n,
                                   const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
+    a_sc.assign(lfsv_s.size(),lfsu_c.size(),0.0);
+    a_cs.assign(lfsv_c.size(),lfsu_s.size(),0.0);
+    a_nc.assign(lfsv_n.size(),lfsu_c.size(),0.0);
+    a_cn.assign(lfsv_c.size(),lfsu_n.size(),0.0);
     typedef visitor<invoke_jacobian_enriched_coupling,do_alpha_enriched_coupling> CouplingVisitor;
     applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
@@ -222,6 +230,10 @@ class JacobianAssemblerEngine
                                                wrap_a_ss(a_ss),wrap_a_sc(a_sc),
                                                wrap_a_nn(a_nn),wrap_a_nc(a_nc),
                                                wrap_a_cc(a_cc),wrap_a_cs(a_cs),wrap_a_sc(a_sc)));
+    etadd(lfsv_s,lfsu_c,a_sc,a);
+    etadd(lfsv_c,lfsu_s,a_cs,a);
+    etadd(lfsv_n,lfsu_c,a_nc,a);
+    etadd(lfsv_c,lfsu_n,a_cn,a);
   }
 
   template<typename IG,

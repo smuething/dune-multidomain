@@ -172,6 +172,24 @@ public:
 };
 
 
+struct SubProblemFilter
+{
+  template<typename T, std::size_t new_k, std::size_t old_k>
+  struct apply
+  {
+    static const bool value = is_same<typename T::MultiDomainComponentTag,SubProblemTag>::value;
+  };
+};
+
+struct CouplingFilter
+{
+  template<typename T, std::size_t new_k, std::size_t old_k>
+  struct apply
+  {
+    static const bool value = is_same<typename T::MultiDomainComponentTag,CouplingTag>::value;
+  };
+};
+
 
 class MultiDomainLocalAssembler
 {
@@ -276,6 +294,10 @@ class MultiDomainLocalAssembler
     Dune::PDELab::TypeTree::applyToTree(_assemblyParticipants,v);
     return v;
   }
+
+  shared_ptr<AssemblyParticipants> _assemblyParticipants;
+  Dune::PDELab::TypeTree::FilteredCompositeNode<AssemblyParticipants,SubProblemFilter> _subProblems;
+  Dune::PDELab::TypeTree::FilteredCompositeNode<AssemblyParticipants,CouplingFilter> _couplings;
 
 };
 

@@ -117,7 +117,7 @@ class ResidualAssemblerEngine
   template<typename EG, typename LFSU, typename LFSV>
   void assembleUVVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    typedef visitor<invoke_alpha_volume,do_alpha_volume> Visitor;
+    typedef visitor<functors::alpha_volume,do_alpha_volume> Visitor;
     applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
   }
@@ -125,7 +125,7 @@ class ResidualAssemblerEngine
   template<typename EG, typename LFSV>
   void assembleVVolume(const EG& eg, const LFSV& lfsv)
   {
-    typedef visitor<invoke_lambda_volume,do_lambda_volume> Visitor;
+    typedef visitor<functors::lambda_volume,do_lambda_volume> Visitor;
     applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
                                          wrap_lfsv(lfsv),wrap_r(r_s)));
   }
@@ -136,13 +136,13 @@ class ResidualAssemblerEngine
                           const LFSU_S& lfsu_s, const LFSV_S& lfsv_s,
                           const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
-    typedef visitor<invoke_alpha_skeleton_or_boundary,do_alpha_skeleton_or_boundary> SubProblemVisitor;
+    typedef visitor<functors::alpha_skeleton_or_boundary,do_alpha_skeleton_or_boundary> SubProblemVisitor;
     applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
                                                    store_neighbor_accessed(false),
                                                    wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
                                                    wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),wrap_r_n(r_n)));
 
-    typedef visitor<invoke_alpha_coupling,do_alpha_coupling> CouplingVisitor;
+    typedef visitor<functors::alpha_coupling,do_alpha_coupling> CouplingVisitor;
     applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
                                                store_neighbor_accessed(false),
                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
@@ -154,7 +154,7 @@ class ResidualAssemblerEngine
                          const LFSV_S& lfsv_s,
                          const LFSV_N& lfsv_n)
   {
-    typedef visitor<invoke_lambda_skeleton_or_boundary,do_lambda_skeleton_or_boundary> Visitor;
+    typedef visitor<functors::lambda_skeleton_or_boundary,do_lambda_skeleton_or_boundary> Visitor;
     applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
                                          wrap_lfsv_s(lfsv_s),wrap_r_s(r_s),
                                          wrap_lfsv_n(lfsv_n),wrap_r_n(r_n)));
@@ -164,7 +164,7 @@ class ResidualAssemblerEngine
   template<typename IG, typename LFSU, typename LFSV>
   void assembleUVBoundary(const IG& ig, const LFSU& lfsu, const LFSV& lfsv)
   {
-    typedef visitor<invoke_alpha_boundary,do_alpha_boundary> Visitor;
+    typedef visitor<functors::alpha_boundary,do_alpha_boundary> Visitor;
     applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
   }
@@ -172,7 +172,7 @@ class ResidualAssemblerEngine
   template<typename IG, typename LFSV>
   void assembleVBoundary(const IG& ig, const LFSV& lfsv)
   {
-    typedef visitor<invoke_lambda_boundary,do_lambda_boundary> Visitor;
+    typedef visitor<functors::lambda_boundary,do_lambda_boundary> Visitor;
     applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
                                          wrap_lfsv(lfsv),wrap_r(r_s)));
   }
@@ -187,7 +187,7 @@ class ResidualAssemblerEngine
                                   const LFSU_N& lfsu_n, const LFSV_N& lfsv_n,
                                   const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
-    typedef visitor<invoke_alpha_enriched_coupling,do_alpha_enriched_coupling> CouplingVisitor;
+    typedef visitor<functors::alpha_enriched_coupling,do_alpha_enriched_coupling> CouplingVisitor;
     applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),wrap_r_n(r_n),
@@ -203,7 +203,7 @@ class ResidualAssemblerEngine
                                  const LFSV_N& lfsv_n,
                                  const LFSV_C& lfsv_c)
   {
-    typedef visitor<invoke_lambda_enriched_coupling,do_lambda_enriched_coupling> CouplingVisitor;
+    typedef visitor<functors::lambda_enriched_coupling,do_lambda_enriched_coupling> CouplingVisitor;
     applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
                                                wrap_lfsv_s(lfsv_s),wrap_r_s(r_s),
                                                wrap_lfsv_n(lfsv_n),wrap_r_n(r_n),
@@ -214,7 +214,7 @@ class ResidualAssemblerEngine
   template<typename EG, typename LFSU, typename LFSV>
   void assembleUVVolumePostSkeleton(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    typedef visitor<invoke_alpha_volume_post_skeleton,do_alpha_volume_post_skeleton> Visitor;
+    typedef visitor<functors::alpha_volume_post_skeleton,do_alpha_volume_post_skeleton> Visitor;
     applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
   }
@@ -222,7 +222,7 @@ class ResidualAssemblerEngine
   template<typename EG, typename LFSV>
   void assembleVVolumePostSkeleton(const EG& eg, const LFSV& lfsv)
   {
-    typedef visitor<invoke_lambda_volume_post_skeleton,do_lambda_volume_post_skeleton> Visitor;
+    typedef visitor<functors::lambda_volume_post_skeleton,do_lambda_volume_post_skeleton> Visitor;
     applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
                                          wrap_lfsv(lfsv),wrap_r(r_s)));
   }

@@ -5,6 +5,7 @@ namespace Dune {
 namespace PDELab {
 namespace MultiDomain {
 
+#include <dune/pdelab/common/typetree.hh>
 
 template<typename data_container>
 struct data_accessor
@@ -25,18 +26,34 @@ struct data_accessor
 };
 
 
-template<template<typename data> class visitor_template, typename condition>
+template<template<typename data> class functor_template, typename condition>
 struct visitor
 {
 
   template<typename... data_wrappers>
   struct data_enriched_visitor
-    : public visitor_template<data_enriched_visitor<data_wrappers...> >
+    : public functor_template<data_enriched_visitor<data_wrappers...> >
+    , public Dune::PDELab::TypeTree::TreeVisitor
+    , public Dune::PDELab::TypeTree::DynamicTraversal
     , public data_wrappers...
   {
+
     data_enriched_visitor(data_wrappers... wrappers)
       : data_wrappers(wrappers)...
     {}
+
+    template<typename Node, typename TreePath>
+    typename enable_if<condition::template test<Node>::value == true>::type
+    leaf(const Node& node, TreePath treePath)
+    {
+      (*this)(node,treePath);
+    }
+
+    template<typename Node, typename TreePath>
+    typename enable_if<condition::template test<Node>::value == false>::type
+    leaf(const Node& node, TreePath treePath)
+    {}
+
   };
 
   template<typename... data_wrappers>
@@ -47,6 +64,11 @@ struct visitor
   }
 
 };
+
+
+
+
+
 
 #define DUNE_PDELAB_MULTIDOMAIN_CREATE_DATA_WRAPPER(TYPE_NAME,VARIABLE_NAME) \
 template<typename TYPE_NAME##_> \

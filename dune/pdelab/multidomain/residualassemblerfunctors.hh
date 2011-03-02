@@ -9,13 +9,12 @@ namespace MultiDomain {
 
 namespace functors {
 
-  template<typename data_container>
+  template<typename Data>
   struct alpha_volume
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename SubProblem>
     void operator()(const SubProblem& subProblem)
@@ -32,13 +31,12 @@ namespace functors {
   };
 
 
-  template<typename data_container>
+  template<typename Data>
   struct lambda_volume
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename SubProblem>
     void operator()(const SubProblem& subProblem)
@@ -53,13 +51,12 @@ namespace functors {
   };
 
 
-  template<typename data_container>
+  template<typename Data>
   struct alpha_skeleton_or_boundary
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename SubProblem>
     void operator()(const SubProblem& subProblem)
@@ -91,13 +88,12 @@ namespace functors {
   };
 
 
-  template<typename data_container>
+  template<typename Data>
   struct lambda_skeleton_or_boundary
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename SubProblem>
     void operator()(const SubProblem& subProblem)
@@ -128,13 +124,12 @@ namespace functors {
   };
 
 
-  template<typename data_container>
+  template<typename Data>
   struct alpha_boundary
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename SubProblem>
     void operator()(const SubProblem& subProblem)
@@ -151,13 +146,12 @@ namespace functors {
   };
 
 
-  template<typename data_container>
+  template<typename Data>
   struct lambda_boundary
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename SubProblem>
     void operator()(const SubProblem& subProblem)
@@ -172,13 +166,12 @@ namespace functors {
   };
 
 
-  template<typename data_container>
+  template<typename Data>
   struct alpha_coupling
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename Coupling>
     void operator()(const Coupling& coupling)
@@ -204,13 +197,12 @@ namespace functors {
   };
 
 
-  template<typename data_container>
+  template<typename Data>
   struct lambda_coupling
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename Coupling>
     void operator()(const Coupling& coupling)
@@ -232,13 +224,12 @@ namespace functors {
   };
 
 
-  template<typename data_container>
+  template<typename Data>
   struct alpha_enriched_coupling
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename Coupling>
     void operator()(const Coupling& coupling)
@@ -271,13 +262,12 @@ namespace functors {
   };
 
 
-  template<typename data_container>
+  template<typename Data>
   struct lambda_enriched_coupling
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename Coupling>
     void operator()(const Coupling& coupling)
@@ -305,13 +295,12 @@ namespace functors {
   };
 
 
-  template<typename data_container>
+  template<typename Data>
   struct alpha_volume_post_skeleton
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename SubProblem>
     void operator()(const SubProblem& subProblem)
@@ -328,13 +317,12 @@ namespace functors {
   };
 
 
-  template<typename data_container>
+  template<typename Data>
   struct lambda_volume_post_skeleton
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename SubProblem>
     void operator()(const SubProblem& subProblem)

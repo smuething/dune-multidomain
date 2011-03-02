@@ -6,13 +6,12 @@ namespace PDELab {
 namespace MultiDomain {
 
 
-template<typename data_container>
+template<typename Data>
 struct invoke_jacobian_volume
-  : public data_accessor<data_container>
+  : public data_accessor<Data>
 {
 
-  typedef typename data_accessor<data_container> Data;
-  using data_accessor<data_container>::data;
+  using data_accessor<Data>::data;
 
   template<typename SubProblem>
   void operator()(const SubProblem& subProblem)
@@ -29,13 +28,12 @@ struct invoke_jacobian_volume
 };
 
 
-template<typename data_container>
+template<typename Data>
 struct invoke_jacobian_skeleton_or_boundary
-  : public data_accessor<data_container>
+  : public data_accessor<Data>
 {
 
-  typedef typename data_accessor<data_container> Data;
-  using data_accessor<data_container>::data;
+  using data_accessor<Data>::data;
 
   template<typename SubProblem>
   void operator()(const SubProblem& subProblem)
@@ -67,13 +65,12 @@ struct invoke_jacobian_skeleton_or_boundary
 };
 
 
-template<typename data_container>
+template<typename Data>
 struct invoke_jacobian_boundary
-  : public data_accessor<data_container>
+  : public data_accessor<Data>
 {
 
-  typedef typename data_accessor<data_container> Data;
-  using data_accessor<data_container>::data;
+  using data_accessor<Data>::data;
 
   template<typename SubProblem>
   void operator()(const SubProblem& subProblem)
@@ -88,13 +85,12 @@ struct invoke_jacobian_boundary
 };
 
 
-template<typename data_container>
+template<typename Data>
 struct invoke_jacobian_coupling
-  : public data_accessor<data_container>
+  : public data_accessor<Data>
 {
 
-  typedef typename data_accessor<data_container> Data;
-  using data_accessor<data_container>::data;
+  using data_accessor<Data>::data;
 
   template<typename Coupling>
   void operator()(const Coupling& coupling)
@@ -120,13 +116,12 @@ struct invoke_jacobian_coupling
 };
 
 
-template<typename data_container>
+template<typename Data>
 struct invoke_jacobian_enriched_coupling
-  : public data_accessor<data_container>
+  : public data_accessor<Data>
 {
 
-  typedef typename data_accessor<data_container> Data;
-  using data_accessor<data_container>::data;
+  using data_accessor<Data>::data;
 
   template<typename Coupling>
   void operator()(const Coupling& coupling)
@@ -159,13 +154,12 @@ struct invoke_jacobian_enriched_coupling
 };
 
 
-template<typename data_container>
+template<typename Data>
 struct invoke_jacobian_volume_post_skeleton
-  : public data_accessor<data_container>
+  : public data_accessor<Data>
 {
 
-  typedef typename data_accessor<data_container> Data;
-  using data_accessor<data_container>::data;
+  using data_accessor<Data>::data;
 
   template<typename SubProblem>
   void operator()(const SubProblem& subProblem)

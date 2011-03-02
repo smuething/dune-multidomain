@@ -60,7 +60,7 @@ struct VerifyChildren
     typedef typename Child::Traits::GridViewType::Grid ChildGrid;
     dune_static_assert((is_same<MultiDomainGrid,ChildGrid>::value || is_same<SubDomainGrid,ChildGrid>::value),
                        "MultiDomainGridFunctionSpace only works with a MultiDomainGrid and its associated SubDomainGrids.");
-    doVerify<T>(t.grid(),t.template getChild<i>().gridview().grid());
+    doVerify<T>(t.grid(),child.gridview().grid());
   }
 
   template<typename T>
@@ -76,7 +76,7 @@ struct VerifyChildren
   }
 
   template<typename T, typename ST>
-  static void doVerify(const typename T::Traits::GridType& g, const ST& cg)
+  static void adoVerify(const typename T::Traits::GridType& g, const ST& cg)
   {
     // this is only here to keep the compiler from complaining about a missing function
     // if ST is not a Multi-/SubDomainGrid
@@ -119,12 +119,19 @@ class MultiDomainGridFunctionSpace
   typedef TypeTree::VariadicCompositeNode<Children...> BaseT;
 
   friend class
-  PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<Children...>,
+  PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Children...>,
                                       typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
                                       typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::BackendType,
                                       GridFunctionSpaceLexicographicMapper,
                                       sizeof...(Children)
                                       >;
+
+  typedef PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Children...>,
+                                              typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
+                                              typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::BackendType,
+                                              GridFunctionSpaceLexicographicMapper,
+                                              sizeof...(Children)
+                                              > ImplementationBase;
 
 public:
 
@@ -179,7 +186,7 @@ public:
   //! export traits class
   typedef MultiDomainGridFunctionSpaceTraits<G,
                                              typename BaseT::template Child<0>::Type::Traits::BackendType,
-                                             CopyStoragePolicy,
+                                             void,
                                              !ChildEntryMap::has_duplicate_entries, // duplicate entries would lead to ambiguous type lookups
                                              sizeof...(Children)>
   Traits;

@@ -52,7 +52,7 @@ struct ComputeSizeVisitorBase
   template<typename LFS, typename Child, typename TreePath, typename ChildIndex>
   void beforeChild(LFS& lfs, Child& child, TreePath treePath, ChildIndex childIndex)
   {
-    impl().compute_size(child,typename LFS::Traits::GridFunctionSpaceType::template ChildInfo<i>::Type::Tag());
+    impl().compute_size(child,typename gfs_flavor_tag<Child>::type());
   }
 
   Impl& impl()
@@ -84,13 +84,15 @@ struct ComputeSizeVisitor<Entity,StandardLFSTag>
 {
 
   typedef ComputeSizeVisitorBase<Entity, ComputeSizeVisitor<Entity,StandardLFSTag> > BaseT;
+  using BaseT::e;
+  using BaseT::offset;
 
   ComputeSizeVisitor(const Entity& entity, std::size_t offset_ = 0)
     : BaseT(entity,offset_)
   {}
 
   template<typename Child>
-  void compute_size(Child& child, MultiDomainTag tag)
+  void compute_size(Child& child, MultiDomainGFSTag tag)
   {
     Dune::PDELab::ComputeSizeVisitor<Entity> child_visitor(e,offset);
     Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
@@ -98,12 +100,12 @@ struct ComputeSizeVisitor<Entity,StandardLFSTag>
   }
 
   template<typename Child>
-  void compute_size(Child& child, SubDomainTag tag)
+  void compute_size(Child& child, SubDomainGFSTag tag)
   {
     typedef typename Child::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
     typedef typename SDEP::Entity SDE;
-    const SDEP ep = child.gfs().gridview().grid().subDomainEntityPointer(e);
-    if (child.gfs().gridview().indexSet().contains(*ep))
+    const SDEP ep = child.gridFunctionSpace().gridview().grid().subDomainEntityPointer(e);
+    if (child.gridFunctionSpace().gridview().indexSet().contains(*ep))
       {
         Dune::PDELab::ComputeSizeVisitor<SDE> child_visitor(*ep,offset);
         Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
@@ -120,15 +122,17 @@ struct ComputeSizeVisitor<Intersection,CouplingLFSTag>
 {
 
   typedef ComputeSizeVisitorBase<Intersection, ComputeSizeVisitor<Intersection,CouplingLFSTag> > BaseT;
+  using BaseT::e;
+  using BaseT::offset;
 
   ComputeSizeVisitor(const Intersection& intersection, std::size_t offset_ = 0)
     : BaseT(intersection,offset_)
   {}
 
   template<typename Child>
-  void compute_size(Child& child, CouplingTag tag)
+  void compute_size(Child& child, CouplingGFSTag tag)
   {
-    if (child.gridFunctionSpace().contains(is))
+    if (child.gridFunctionSpace().contains(e))
       {
         // TODO: Fix this - it is definitely wrong!
         Dune::PDELab::ComputeSizeVisitor<Intersection> child_visitor(e,offset);
@@ -140,18 +144,18 @@ struct ComputeSizeVisitor<Intersection,CouplingLFSTag>
 };
 
 
-template<typename Impl>
+template<typename Impl, typename GFS, typename Container>
 struct FillIndicesVisitorBase
   : public Dune::PDELab::TypeTree::DirectChildrenVisitor
   , public Dune::PDELab::TypeTree::DynamicTraversal
 {
 
-  template<typename GFS, typename Child, typename TreePath, typename ChildIndex>
-  void afterChild(GFS& gfs, Child& child, TreePath treePath, ChildIndex childIndex)
+  template<typename LFS, typename Child, typename TreePath, typename ChildIndex>
+  void afterChild(LFS& lfs, Child& child, TreePath treePath, ChildIndex childIndex)
   {
-    impl().fill_indices(child,typename LFS::Traits::GridFunctionSpaceType::template ChildInfo<i>::Type::Tag());
-    for (std::size_t i = 0; i<child.n; ++i)
-      (*lfs.global)[child.offset+i] = lfs.pgfs->subMap(childIndex,(*lfs.global)[child.offset+i]);
+    impl().fill_indices(child,typename gfs_flavor_tag<Child>::type());
+    for (std::size_t i = 0; i<child.size(); ++i)
+      (*lfs.global)[child.localIndex(i)] = lfs.pgfs->subMap(childIndex,(*lfs.global)[child.localIndex(i)]);
   }
 
   Impl& impl()
@@ -163,39 +167,62 @@ struct FillIndicesVisitorBase
   void fill_indices(Child& child, Tag tag)
   {}
 
+  FillIndicesVisitorBase(const GFS& gfs_, Container& container_)
+    : gfs(gfs_)
+    , container(container_)
+  {}
+
+  const GFS& gfs;
+  Container& container;
+
 };
 
 
-template<typename Entity, typename SizeType, typename LFSTag>
+template<typename Entity, typename GFS, typename Container, typename LFSTag>
 struct FillIndicesVisitor;
 
-template<typename Entity, typename SizeType>
-struct FillIndicesVisitor<Entity,SizeType,StandardLFSTag>
-  : public FillIndicesVisitorBase<FillIndicesVisitor<Entity,StandardLFSTag> >
+template<typename Entity, typename GFS, typename Container>
+struct FillIndicesVisitor<Entity,GFS,Container,StandardLFSTag>
+  : public FillIndicesVisitorBase<FillIndicesVisitor<
+                                    Entity,
+                                    GFS,
+                                    Container,
+                                    StandardLFSTag>,
+                                  GFS,
+                                  Container>
 {
 
-  FillIndicesVisitor(const Entity& entity)
-    : e(entity)
+  typedef FillIndicesVisitorBase<FillIndicesVisitor<
+                                   Entity,
+                                   GFS,
+                                   Container,
+                                   StandardLFSTag>,
+                                 GFS,
+                                 Container> BaseT;
+
+  FillIndicesVisitor(const Entity& entity, const GFS& gfs, Container& container)
+    : BaseT(gfs,container)
+    , e(entity)
   {}
 
   const Entity& e;
 
   template<typename Child>
-  void fill_indices(Child& child, MultiDomainTag tag)
+  void fill_indices(Child& child, MultiDomainGFSTag tag)
   {
-    Dune::PDELab::FillIndicesVisitor<Entity,SizeType> child_visitor(e,child.maxLocalSize());
+    Dune::PDELab::FillIndicesVisitor<Entity> child_visitor(e);
     Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
   }
 
   template<typename Child>
-  void fill_indices(Child& child, SubDomainTag tag)
+  void fill_indices(Child& child, SubDomainGFSTag tag)
   {
     typedef typename Child::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
     typedef typename SDEP::Entity SDE;
-    const SDEP ep = child.gfs().gridview().grid().subDomainEntityPointer(e);
-    if (child.gfs().gridview().indexSet().contains(*ep))
+    const SDEP ep = child.gridFunctionSpace().gridview().grid().subDomainEntityPointer(e);
+    if (child.gridFunctionSpace().gridview().indexSet().contains(*ep))
       {
-        Dune::PDELab::FillIndicesVisitor<SDE,SizeType> child_visitor(*ep,child.maxLocalSize());
+        Dune::PDELab::FillIndicesVisitor<SDE> child_visitor(*ep);
         Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
       }
   }
@@ -203,22 +230,39 @@ struct FillIndicesVisitor<Entity,SizeType,StandardLFSTag>
 };
 
 
-template<typename Intersection, typename SizeType>
-struct FillIndicesVisitor<Intersection,SizeType,CouplingLFSTag>
-  : public FillIndicesVisitorBase<FillIndicesVisitor<Intersection,CouplingLFSTag> >
+template<typename Intersection, typename GFS, typename Container>
+struct FillIndicesVisitor<Intersection,GFS,Container,CouplingLFSTag>
+  : public FillIndicesVisitorBase<FillIndicesVisitor<
+                                    Intersection,
+                                    GFS,
+                                    Container,
+                                    CouplingLFSTag>,
+                                  GFS,
+                                  Container>
 {
 
-  FillIndicesVisitor(const Intersection& intersection)
-    : is(intersection)
+  typedef FillIndicesVisitorBase<FillIndicesVisitor<
+                                   Intersection,
+                                   GFS,
+                                   Container,
+                                   CouplingLFSTag>,
+                                 GFS,
+                                 Container> BaseT;
+
+  FillIndicesVisitor(const Intersection& is_, const GFS& gfs, Container& container)
+    : BaseT(gfs,container)
+    , is(is_)
   {}
 
+  const Intersection& is;
+
   template<typename Child>
-  void fill_indices(Child& child, CouplingTag tag)
+  void fill_indices(Child& child, CouplingGFSTag tag)
   {
     if (child.gridFunctionSpace().contains(is))
       {
         // TODO: Fix this - it is definitely wrong!
-        Dune::PDELab::FillIndicesVisitor<Intersection,SizeType> child_visitor(is,child.maxLocalSize());
+        Dune::PDELab::FillIndicesVisitor<Intersection> child_visitor(is);
         Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
       }
   }
@@ -274,13 +318,17 @@ public:
 
 public:
 
+  template<typename Transformation>
   MultiDomainLocalFunctionSpaceNode(shared_ptr<const GFS> gfs,
+                                    const Transformation& t,
                                     shared_ptr<Children>... children)
     : BaseT(gfs)
     , TypeTree::VariadicCompositeNode<Children...>(children...)
   {}
 
+  template<typename Transformation>
   MultiDomainLocalFunctionSpaceNode(const GFS& gfs,
+                                    const Transformation& t,
                                     shared_ptr<Children>... children)
     : BaseT(stackobject_to_shared_ptr(gfs))
     , TypeTree::VariadicCompositeNode<Children...>(children...)
@@ -289,6 +337,8 @@ public:
   using BaseT::global_storage;
   using BaseT::n;
   using BaseT::offset;
+  using BaseT::global;
+  using BaseT::pgfs;
 
   template<typename Element>
   void bind (const Element& e)
@@ -299,12 +349,12 @@ public:
     global_storage.resize(n);
 
     // initialize iterators and fill indices
-    FillIndicesVisitor<Element,typename Traits::IndexContainer::size_type,LFSTag> fiv(e,this->maxSize());
+    FillIndicesVisitor<Element,GFS,typename BaseT::Traits::IndexContainer,LFSTag> fiv(e,*pgfs,global_storage);
     Dune::PDELab::TypeTree::applyToTree(*this,fiv);
 
     // apply upMap
     for (typename Traits::IndexContainer::size_type i=0; i<offset; ++i)
-      global_storage[i] = this->gfs().upMap(global_storage[i]);
+      global_storage[i] = pgfs->upMap(global_storage[i]);
   }
 
 };
@@ -322,7 +372,7 @@ struct MultiDomainLocalFunctionSpaceTransformationTemplate
 };
 
 template<typename MultiDomainGFS>
-Dune::PDELab::TypeTree::TemplatizedWrappingVariadicCompositeNodeTransformation<
+Dune::PDELab::TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
   MultiDomainGFS,
   Dune::PDELab::gfs_to_lfs,
   MultiDomainLocalFunctionSpaceTransformationTemplate<MultiDomainGFS,StandardLFSTag>::template result
@@ -334,12 +384,12 @@ struct gfs_to_coupling_lfs {};
 
 
 template<typename MultiDomainGFS>
-Dune::PDELab::TypeTree::TemplatizedWrappingVariadicCompositeNodeTransformation<
+Dune::PDELab::TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
   MultiDomainGFS,
-  Dune::PDELab::gfs_to_coupling_lfs,
+  gfs_to_coupling_lfs,
   MultiDomainLocalFunctionSpaceTransformationTemplate<MultiDomainGFS,CouplingLFSTag>::template result
   >
-lookupNodeTransformation(MultiDomainGFS*, Dune::PDELab::gfs_to_coupling_lfs*, MultiDomainGridFunctionSpaceTag);
+lookupNodeTransformation(MultiDomainGFS*, gfs_to_coupling_lfs*, MultiDomainGridFunctionSpaceTag);
 
 
 #if 0

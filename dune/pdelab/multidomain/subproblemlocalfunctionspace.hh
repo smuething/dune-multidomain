@@ -42,7 +42,7 @@ namespace {
   {
 
     template<typename SPLFS, typename ChildLFS, typename TreePath, typename ChildIndex>
-    void afterChild(SPLFS& splfs, const ChildLFS& childLFS, TreePath treePath, ChildIndex childIndex) const
+    void afterChild(SPLFS& splfs, const ChildLFS& childLFS, TreePath treePath, ChildIndex childIndex)
     {
       for(std::size_t i = 0; i < childLFS.size(); ++i, ++offset)
         splfs.global[offset] = childLFS.global(i);
@@ -139,10 +139,10 @@ namespace {
   };
 
   template<typename T, T t, T v, T... values>
-  struct arg_pack_contains_value<T,t,v,values>
+  struct arg_pack_contains_value<T,t,v,values...>
   {
     static const bool value = (t == v) || arg_pack_contains_value<T,t,values...>::value;
-  }
+  };
 
   // Test whether the argument pack values... contains duplicates
   template<typename T, T... values>
@@ -151,13 +151,14 @@ namespace {
     static const bool value = false;
   };
 
-  template<typename T, T v, ... values>
+  template<typename T, T v, T... values>
   struct arg_pack_contains_duplicate_values<T,v,values...>
   {
     static const bool value = arg_pack_contains_value<T,v,values...>::value ||
       arg_pack_contains_duplicate_values<T,values...>::value;
   };
 
+} // anonymous namespace
 
 // ********************************************************************************
 // LocalFunctionSpace for subproblems - multi-component version
@@ -251,6 +252,10 @@ public:
 
 private:
 
+  using BaseT::offset;
+  using BaseT::global;
+  using BaseT::n;
+
   const MDLFS mdlfs() const
   {
     return unfiltered();
@@ -284,7 +289,7 @@ public:
   typedef typename Traits::Constraints Constraints;
 
   //! \brief initialize with grid function space
-  SubProblemLocalFunctionSpaceCommonBase (const SubProblem& subProblem, const Constraints& constraints)
+  SubProblemLocalFunctionSpaceProxy (const SubProblem& subProblem, const Constraints& constraints)
     : _subProblem(subProblem)
     , _constraints(constraints)
   {

@@ -2,6 +2,7 @@
 #define DUNE_MULTIDOMAIN_COUPLINGGRIDFUNCTIONSPACE_HH
 
 #include <dune/pdelab/multidomain/couplinglocalfunctionspace.hh>
+#include <dune/pdelab/common/typetree.hh>
 
 namespace Dune {
 namespace PDELab {
@@ -119,7 +120,8 @@ typename DOFMapper<GV>::VertexListMap DOFMapper<GV>::vertexListMap_;
 
 template<typename GV, typename LFEM, typename Predicate_, typename CE=NoConstraints,
          typename B=StdVectorBackend>
-class CouplingGridFunctionSpace : public Countable, public LeafNode
+class CouplingGridFunctionSpace
+  : public Dune::PDELab::TypeTree::LeafNode
 {
 public:
   //! export Traits class
@@ -156,14 +158,14 @@ public:
 
   //! constructor
   CouplingGridFunctionSpace (const GV& gridview, const LFEM& lfem, const Predicate& predicate, const CE& ce_)
-    : defaultce(ce_), gv(gridview), plfem(&lfem), predicate_(predicate), ce(ce_)
+    : defaultce(ce_), gv(gridview), plfem(stackobject_to_shared_ptr(lfem)), predicate_(predicate), ce(ce_)
   {
     update();
   }
 
   //! constructor
   CouplingGridFunctionSpace (const GV& gridview, const LFEM& lfem, const Predicate& predicate)
-    : gv(gridview), plfem(&lfem), ce(defaultce), predicate_(predicate)
+    : gv(gridview), plfem(stackobject_to_shared_ptr(lfem)), ce(defaultce), predicate_(predicate)
   {
     update();
   }
@@ -411,7 +413,7 @@ public:
 private:
   CE defaultce;
   const GV& gv;
-  CountingPointer<LFEM const> plfem;
+  shared_ptr<LFEM const> plfem;
   typename Traits::SizeType nlocal;
   typename Traits::SizeType nglobal;
   const CE& ce;

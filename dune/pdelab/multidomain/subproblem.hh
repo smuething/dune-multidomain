@@ -2,6 +2,7 @@
 #define DUNE_MULTIDOMAIN_SUBPROBLEM_HH
 
 #include <dune/pdelab/multidomain/subdomainset.hh>
+#include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 
 namespace Dune {
 

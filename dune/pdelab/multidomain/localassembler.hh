@@ -8,16 +8,9 @@
 #include<dune/common/exceptions.hh>
 #include<dune/common/geometrytype.hh>
 
-#include <dune/pdelab/common/geometrywrapper.hh>
-//#include"../gridfunctionspace/gridfunctionspace.hh"
-#include <dune/pdelab/gridfunctionspace/constraints.hh>
-#include <dune/pdelab/gridoperatorspace/localmatrix.hh>
-#include <dune/pdelab/gridoperatorspace/gridoperatorspaceutilities.hh>
-
 #include <dune/pdelab/multidomain/multidomaingridoperatorspaceutilities.hh>
-#include <dune/pdelab/multidomain/operatorapplier.hh>
-
-#include <dune/pdelab/multidomain/multidomaingridoperatorspaceinvocationhelpers.hh>
+#include <dune/pdelab/multidomain/visitor.hh>
+#include <dune/pdelab/multidomain/datawrappers.hh>
 
 namespace Dune {
 

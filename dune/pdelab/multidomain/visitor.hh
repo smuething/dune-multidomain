@@ -11,8 +11,6 @@ template<typename data_container>
 struct data_accessor
 {
 
-  typedef data_container Data;
-
   data_container& data()
   {
     return static_cast<data_container&>(*this);

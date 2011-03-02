@@ -39,13 +39,12 @@ struct CouplingFilter
 
 namespace functors {
 
-  template<typename data_container>
+  template<typename Data>
   struct set_time
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename Participant>
     void operator()(const Participant& participant)
@@ -56,13 +55,12 @@ namespace functors {
   };
 
 
-  template<typename data_container>
+  template<typename Data>
   struct set_weight
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename Participant>
     void operator()(const Participant& participant)

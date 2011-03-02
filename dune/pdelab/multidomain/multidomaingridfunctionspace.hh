@@ -9,6 +9,7 @@
 #include <dune/pdelab/multidomain/multidomainlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/typemap.hh>
 #include <dune/grid/multidomaingrid.hh>
+#include <dune/pdelab/multidomain/utility.hh>
 #include <dune/pdelab/multidomain/couplinggridfunctionspace.hh>
 #include <utility>
 
@@ -84,12 +85,30 @@ struct VerifyChildren
 };
 
 
-struct MultiDomainGridFunctionSpaceTag {};
+template<typename GFS>
+struct gfs_flavor_tag
+{
+
+  static const Dune::mdgrid::MultiDomainGridType gridType = Dune::mdgrid::GridType<typename GFS::Traits::GridViewType::Grid>::v;
+
+  typedef typename Dune::SelectType<gridType == Dune::mdgrid::multiDomainGrid,
+                                    MultiDomainGFSTag,
+                                    SubDomainGFSTag
+                                    >::Type type;
+
+};
+
+template<typename GV, typename LFEM, typename Predicate_, typename CE, typename B>
+struct gfs_flavor_tag<CouplingGridFunctionSpace<GV,LFEM,Predicate_,CE,B> >
+{
+  typedef CouplingGFSTag type;
+};
+
 
 template<typename G, typename... Children>
 class MultiDomainGridFunctionSpace
   : public TypeTree::VariadicCompositeNode<Children...>
-  , public PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<Children...>,
+  , public PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Children...>,
                                                typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
                                                typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::BackendType,
                                                GridFunctionSpaceLexicographicMapper,
@@ -118,28 +137,12 @@ public:
     typedef T type;
     typedef T key;
     typedef Tag_ Tag;
-    static const bool definedOnSubDomain = std::is_same<Tag,SubDomainTag>::value;
-    static const bool isCouplingSpace = std::is_same<Tag,CouplingTag>::value;
-    static const bool isNormalSpace = std::is_same<Tag,MultiDomainTag>::value || std::is_same<Tag,SubDomainTag>::value;
+    static const bool definedOnSubDomain = std::is_same<Tag,SubDomainGFSTag>::value;
+    static const bool isCouplingSpace = std::is_same<Tag,CouplingGFSTag>::value;
+    static const bool isNormalSpace = std::is_same<Tag,MultiDomainGFSTag>::value || std::is_same<Tag,SubDomainGFSTag>::value;
   };
 
 private:
-
-  template<typename T>
-  struct determine_tag
-  {
-    typedef typename Dune::SelectType<std::is_same<G,typename std::remove_const<typename T::Traits::GridViewType::Grid>::type>::value,
-                                      MultiDomainTag,
-                                      SubDomainTag
-                                      >::Type type;
-
-  };
-
-  template<typename GV, typename LFEM, typename Predicate_, typename CE, typename B>
-  struct determine_tag<CouplingGridFunctionSpace<GV,LFEM,Predicate_,CE,B> >
-  {
-    typedef CouplingTag type;
-  };
 
   template<typename Grid, template<typename...> class Container>
   struct tagger
@@ -149,7 +152,7 @@ private:
     struct transform {
       typedef GFSChild<T,
                        i,
-                       typename determine_tag<T>::type
+                       typename gfs_flavor_tag<T>::type
                        > type;
     };
 

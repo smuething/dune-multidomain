@@ -22,11 +22,14 @@ namespace MultiDomain {
     //=======================================
 
 
-struct MultiDomainTag {};
-struct SubDomainTag {};
-struct CouplingTag {};
+struct MultiDomainGFSTag {};
+struct SubDomainGFSTag {};
+struct CouplingGFSTag {};
 struct StandardLFSTag {};
 struct CouplingLFSTag {};
+
+template<typename GFS>
+struct gfs_flavor_tag;
 
 template<typename Entity, typename Impl>
 struct ComputeSizeVisitorBase

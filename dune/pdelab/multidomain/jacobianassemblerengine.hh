@@ -247,7 +247,9 @@ class JacobianAssemblerEngine
 
   void postAssembly()
   {
-    Dune::PDELab::constrain_residual(*pconstraintsv,r);
+    typedef typename CV::const_iterator global_row_iterator;
+    for (global_row_iterator cit=pconstraintsv->begin(); cit!=pconstraintsv->end(); ++cit)
+      set_trivial_row(cit->first,cit->second,*a);
   }
 
   void setSolution(const X& x_)

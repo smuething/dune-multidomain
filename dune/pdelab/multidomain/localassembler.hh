@@ -70,6 +70,77 @@ namespace functors {
 
   };
 
+  template<typename Data>
+  struct pre_step
+    : public data_accessor<Data>
+  {
+
+    using data_accessor<Data>::data;
+
+    template<typename Participant>
+    void operator()(const Participant& participant)
+    {
+      participant.preStep(data().time(),data().dt(),data().stages());
+    }
+
+  };
+
+  template<typename Data>
+  struct post_step
+  {
+
+    template<typename Participant>
+    void operator()(const Participant& participant)
+    {
+      participant.postStep();
+    }
+
+  };
+
+  template<typename Data>
+  struct pre_stage
+    : public data_accessor<Data>
+  {
+
+    using data_accessor<Data>::data;
+
+    template<typename Participant>
+    void operator()(const Participant& participant)
+    {
+      participant.preStage(data().time(),data().stage());
+    }
+
+  };
+
+  template<typename data_container>
+  struct post_stage
+    : public data_accessor<data_container>
+  {
+
+    template<typename Participant>
+    void operator()(const Participant& participant)
+    {
+      participant.postStage();
+    }
+
+  };
+
+  template<typename data_container>
+  struct suggest_time_step
+    : public data_accessor<data_container>
+  {
+
+    typedef typename data_accessor<data_container> Data;
+    using data_accessor<data_container>::data;
+
+    template<typename Participant>
+    void operator()(const Participant& participant)
+    {
+      participant.postStage();
+    }
+
+  };
+
 }
 
 
@@ -155,6 +226,38 @@ class MultiDomainLocalAssembler
   void setWeight(RF weight)
   {
     applyToParticipants(visitor<functors::set_weight>::add_data(wrap_weight(weight)));
+  }
+
+  template<typename TReal>
+  void preStep (TReal time, TReal dt, std::size_t stages)
+  {
+    applyToParticipants(visitor<functors::pre_step>::add_data(wrap_time(time),
+                                                              wrap_dt(dt),
+                                                              wrap_stages(stages)));
+  }
+
+  void postStep ()
+  {
+    applyToParticipants(visitor<functors::post_step>::add_data());
+  }
+
+  template<typename TReal>
+  void preStage (TReal time, std::size_t stage)
+  {
+    applyToParticipants(visitor<functors::pre_stage>::add_data(wrap_time(time),
+                                                               wrap_stage(stage)));
+  }
+
+  void postStage ()
+  {
+    applyToParticipants(visitor<functors::post_stage>::add_data());
+  }
+
+
+  template<typename TReal>
+  TReal suggestTimestep (TReal dt) const
+  {
+    return applyToParticipants(visitor<functors::suggest_time_step>::add_data(wrap_dt(dt))).dt();
   }
 
   template<typename Visitor>

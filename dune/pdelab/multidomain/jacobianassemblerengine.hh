@@ -250,6 +250,16 @@ class JacobianAssemblerEngine
     Dune::PDELab::constrain_residual(*pconstraintsv,r);
   }
 
+  void setSolution(const X& x_)
+  {
+    x = &x_;
+  }
+
+  void setJacobian(A& a_)
+  {
+    a = &a_;
+  }
+
   const X* x;
 
   LocalVector<typename X::ElementType, TrialSpaceTag> x_s;

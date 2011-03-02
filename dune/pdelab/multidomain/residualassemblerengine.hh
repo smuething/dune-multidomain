@@ -251,6 +251,16 @@ class ResidualAssemblerEngine
     Dune::PDELab::constrain_residual(*pconstraintsv,*r);
   }
 
+  void setSolution(const X& x_)
+  {
+    x = &x_;
+  }
+
+  void setResidual(R& r_)
+  {
+    r = &r_;
+  }
+
   const X* x;
   R* r;
 

@@ -26,7 +26,17 @@ struct data_accessor
 };
 
 
-template<template<typename data> class functor_template, typename condition>
+struct match_all_condition
+{
+  template<typename T>
+  struct test
+  {
+    static const value = true;
+  };
+};
+
+
+template<template<typename data> class functor_template, typename condition = match_all_condition>
 struct visitor
 {
 

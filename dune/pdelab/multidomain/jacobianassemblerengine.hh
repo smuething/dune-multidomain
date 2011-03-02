@@ -26,17 +26,6 @@ namespace PDELab {
 namespace MultiDomain {
 
 
-template<typename X>
-class AssemblerEngineBase
-{
-
-protected:
-
-  bool neighbor_accessed;
-  bool coupling_accessed;
-
-};
-
 template<typename X, typename R>
 class JacobianAssemblerEngine
   : public AssemblerEngineBase<X>

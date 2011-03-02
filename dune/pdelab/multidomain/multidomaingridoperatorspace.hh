@@ -67,7 +67,7 @@ public:
 
         ElementWrapper elementWrapper(*it,is.subDomains(*it));
 
-        engine.onBindLFSU(elementWrapper,lfsu);
+        engine.onBindLFSUV(elementWrapper,lfsu,lfsv);
         engine.onBindLFSV(elementWrapper,lfsv);
 
         engine.assembleUVVolume(elementWrapper,lfsu,lfsv);
@@ -105,7 +105,7 @@ public:
                                                                             elementWrapper.subDomains(),
                                                                             is.subDomains(*(iit->outside())));
 
-                    engine.onBindLFSUOutside(skeletonIntersectionWrapper,lfsun);
+                    engine.onBindLFSUVOutside(skeletonIntersectionWrapper,lfsun,lfsvn);
                     engine.onBindLFSVOutside(skeletonIntersectionWrapper,lfsvn);
 
                     engine.assembleUVSkeleton(skeletonIntersectionWrapper,lfsu,lfsv,lfsun,lfsvn);
@@ -127,9 +127,9 @@ public:
                     if (engine.requireUVEnrichedCoupling())
                       {
                         couplinglfsu.bind(*iit);
-                        engine.onBindLFSUCoupling(skeletonIntersectionWrapper,couplinglfsu);
+                        engine.onBindLFSUVCoupling(skeletonIntersectionWrapper,couplinglfsu,couplinglfsv);
                         engine.assembleUVEnrichedCoupling(skeletonIntersectionWrapper,lfsu,lfsv,lfsun,lfsvn,couplinglfsu,couplinglfsv);
-                        engine.onUnbindLFSUCoupling(skeletonIntersectionWrapper,couplinglfsu);
+                        engine.onUnbindLFSUVCoupling(skeletonIntersectionWrapper,couplinglfsu,couplinglfsv);
                       }
 
                     if (unbindLFSVCoupling)
@@ -137,7 +137,7 @@ public:
                         engine.onUnbindLFSVCoupling(skeletonIntersectionWrapper,couplinglfsv);
                       }
 
-                    engine.onUnbindLFSUOutside(skeletonIntersectionWrapper,lfsun);
+                    engine.onUnbindLFSUVOutside(skeletonIntersectionWrapper,lfsun,lfsvn);
                     engine.onUnbindLFSVOutside(skeletonIntersectionWrapper,lfsvn);
                   }
 
@@ -145,11 +145,11 @@ public:
                 if (iit->boundary())
                   {
                     BoundaryIntersectionWrapper boundaryIntersectionWrapper(*iit,intersection_index,elementWrapper.subDomains());
-                    engine.onBindLFSUOutside(boundaryIntersectionWrapper,lfsun);
+                    engine.onBindLFSUVOutside(boundaryIntersectionWrapper,lfsun,lfsvn);
                     engine.onBindLFSVOutside(boundaryIntersectionWrapper,lfsvn);
                     engine.assembleUVBoundary(boundaryIntersectionWrapper,lfsu,lfsv);
                     engine.assembleVBoundary(boundaryIntersectionWrapper,lfsv);
-                    engine.onUnbindLFSUOutside(boundaryIntersectionWrapper,lfsun);
+                    engine.onUnbindLFSUVOutside(boundaryIntersectionWrapper,lfsun,lfsvn);
                     engine.onUnbindLFSVOutside(boundaryIntersectionWrapper,lfsvn);
                   }
               }
@@ -158,7 +158,7 @@ public:
         engine.assembleUVVolumePostSkeleton(elementWrapper,lfsu,lfsv);
         engine.assembleVVolumePostSkeleton(elementWrapper,lfsv);
 
-        engine.onUnbindLFSU(elementWrapper,lfsu);
+        engine.onUnbindLFSUV(elementWrapper,lfsu,lfsv);
         engine.onUnbindLFSV(elementWrapper,lfsv);
 
       }

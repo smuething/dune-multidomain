@@ -34,9 +34,7 @@ class JacobianAssemblerEngine
   template<typename EG, typename LFSU, typename LFSV>
   void onBindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    // read local data
     x_s.resize(lfsu.size());
-    lfsu.vread(x,x_s);
     // initialize local jacobian matrix
     a_ss.assign(lfsv.size(),lfsu.size(),0.0);
   }
@@ -45,15 +43,13 @@ class JacobianAssemblerEngine
   void onUnbindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
     // write back local jacobian contributions
-    etadd(lfsv,lfsu,a_ss,a);
+    etadd(lfsv,lfsu,a_ss,*a);
   }
 
   template<typename IG, typename LFSU_N, typename LFSV_N>
   void onBindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
-    // read local data
     x_n.resize(lfsu_n.size());
-    lfsu_n.vread(x,xn);
     // initialize local jacobian matrix
     a_nn.assign(lfsv_n.size(),lfsu_n.size(),0.0);
   }
@@ -62,15 +58,13 @@ class JacobianAssemblerEngine
   void onUnbindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
     // write back local jacobian contributions
-    etadd(lfsv_n,lfsu_n,a_nn,a);
+    etadd(lfsv_n,lfsu_n,a_nn,*a);
   }
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
   void onBindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
-    // read local data
-    xc.resize(lfsu_c.size);
-    lfsu_c.vread(x,xc);
+    x_c.resize(lfsu_c.size());
     // initialize local jacobian matrix
     a_cc.assign(lfsv_c.size(),lfsu_c.size(),0.0);
   }
@@ -79,7 +73,7 @@ class JacobianAssemblerEngine
   void onUnbindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c)
   {
     // write back local jacobian contributions
-    etadd(lfsv_c,lfsu_c,a_cc,a);
+    etadd(lfsv_c,lfsu_c,a_cc,*a);
   }
 
   template<typename EG, typename LFSV>
@@ -112,6 +106,26 @@ class JacobianAssemblerEngine
   {
   }
 
+  template<typename LFSU>
+  void loadCoefficientsLFSUInside(const LFSU& lfsu_s)
+  {
+    // read local data
+    lfsu_s.vread(*x,x_s);
+  }
+
+  template<typename LFSU_N>
+  void loadCoefficientsLFSUOutside(const LFSU_N& lfsu_n)
+  {
+    // read local data
+    lfsu_n.vread(*x,x_n);
+  }
+
+  template<typename LFSU_C>
+  void loadCoefficientsLFSUCoupling(const LFSU_C& lfsu_c)
+  {
+    // read local data
+    lfsu_c.vread(*x,x_c);
+  }
 
   template<typename EG, typename LFSU, typename LFSV>
   void assembleUVVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
@@ -236,13 +250,13 @@ class JacobianAssemblerEngine
     Dune::PDELab::constrain_residual(*pconstraintsv,r);
   }
 
-  const X& x;
+  const X* x;
 
   LocalVector<typename X::ElementType, TrialSpaceTag> x_s;
   LocalVector<typename X::ElementType, TrialSpaceTag> x_n;
   LocalVector<typename X::ElementType, TrialSpaceTag> x_c;
 
-  A& a;
+  A* a;
 
   LocalMatrix<typename R::ElementType> a_ss;
   LocalMatrix<typename R::ElementType> a_sn;

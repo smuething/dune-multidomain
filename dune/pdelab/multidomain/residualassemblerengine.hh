@@ -33,17 +33,15 @@ class ResidualAssemblerEngine
   template<typename EG, typename LFSU, typename LFSV>
   void onBindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    // read local data
-    xl.resize(lfsu.size);
-    lfsu.vread(x,xl);
+    x_s.resize(lfsu.size());
   }
 
   template<typename EG, typename LFSV>
   void onBindLFSV(const EG& eg, const LFSV& lfsv)
   {
     // clear local residual
-    rl.resize(lfsv.size);
-    std::fill(rl.begin(),rl.end(),0.0);
+    r_s.resize(lfsv.size);
+    std::fill(r_s.begin(),r_s.end(),0.0);
   }
 
   template<typename EG, typename LFSU, typename LFSV>
@@ -54,24 +52,22 @@ class ResidualAssemblerEngine
   void onUnbindLFSV(const EG& eg, const LFSV& lfsv)
   {
     // accumulate local residual into global residual
-    lfsv.vadd(rl,r);
+    lfsv.vadd(r_s,*r);
   }
 
 
   template<typename IG, typename LFSU_N, typename LFSV_N>
   void onBindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
-    // read local data
-    xn.resize(lfsu_n.size);
-    lfsu_n.vread(x,xn);
+    x_n.resize(lfsu_n.size());
   }
 
   template<typename IG, typename LFSV_N>
   void onBindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
   {
     // clear local residual
-    rn.resize(lfsv_n.size);
-    std::fill(rn.begin(),rn.end(),0.0);
+    r_n.resize(lfsv_n.size());
+    std::fill(r_n.begin(),r_n.end(),0.0);
   }
 
   template<typename IG, typename LFSU_N>
@@ -82,24 +78,22 @@ class ResidualAssemblerEngine
   void onUnbindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
   {
     // accumulate local residual into global residual
-    lfsv_n.vadd(rn,r); // TODO: check if necessary
+    lfsv_n.vadd(r_n,*r); // TODO: check if necessary
   }
 
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
   void onBindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
-    // read local data
-    xc.resize(lfsu_c.size);
-    lfsu_c.vread(x,xc);
+    x_c.resize(lfsu_c.size());
   }
 
   template<typename IG, typename LFSV_C>
   void onBindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
   {
     // clear local residual
-    rc.resize(lfsv_c.size);
-    std::fill(rc.begin(),rc.end(),0.0);
+    r_c.resize(lfsv_c.size());
+    std::fill(r_c.begin(),r_c.end(),0.0);
   }
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
@@ -110,7 +104,28 @@ class ResidualAssemblerEngine
   void onUnbindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
   {
     // accumulate local residual into global residual
-    lfsv_c.vadd(rc,r); // TODO: check if necessary
+    lfsv_c.vadd(r_c,*r); // TODO: check if necessary
+  }
+
+  template<typename LFSU>
+  void loadCoefficientsLFSUInside(const LFSU& lfsu_s)
+  {
+    // read local data
+    lfsu_s.vread(*x,x_s);
+  }
+
+  template<typename LFSU_N>
+  void loadCoefficientsLFSUOutside(const LFSU_N& lfsu_n)
+  {
+    // read local data
+    lfsu_n.vread(*x,x_n);
+  }
+
+  template<typename LFSU_C>
+  void loadCoefficientsLFSUCoupling(const LFSU_C& lfsu_c)
+  {
+    // read local data
+    lfsu_c.vread(*x,x_c);
   }
 
 
@@ -233,11 +248,11 @@ class ResidualAssemblerEngine
 
   void postAssembly()
   {
-    Dune::PDELab::constrain_residual(*pconstraintsv,r);
+    Dune::PDELab::constrain_residual(*pconstraintsv,*r);
   }
 
-  const X& x;
-  R& r;
+  const X* x;
+  R* r;
 
   LocalVector<typename X::ElementType, TrialSpaceTag> x_s;
   LocalVector<typename R::ElementType, TestSpaceTag> r_s;

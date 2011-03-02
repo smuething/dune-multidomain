@@ -39,9 +39,11 @@ struct CouplingLocalFunctionSpaceTraits
 
 };
 
+#if 0
+
 template <typename GFS>
 class CouplingLocalFunctionSpaceNode
-  : public LeafNode
+  : public Dune::PDELab::TypeTree::LeafNode
 {
   typedef typename GFS::Traits::BackendType B;
 
@@ -217,6 +219,8 @@ private:
   typename Traits::IndexContainer::size_type lvsize;
   const typename Traits::FiniteElementType* plfem;
 };
+
+#endif
 
 } // namespace MultiDomain
 } // namespace PDELab

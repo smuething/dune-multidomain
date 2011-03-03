@@ -21,6 +21,8 @@
 #include "functionmacros.hh"
 
 #include <dune/pdelab/multidomain/globalassembler.hh>
+#include <dune/pdelab/multidomain/localassembler.hh>
+
 
 // source term
 SIMPLE_ANALYTIC_FUNCTION(F,x,y)

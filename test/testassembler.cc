@@ -226,6 +226,23 @@ int main(int argc, char** argv) {
 
     typedef Dune::PDELab::MultiDomain::GlobalAssembler<MultiGFS,MultiGFS> GlobalAssembler;
     GlobalAssembler globalAssembler(multigfs,multigfs);
+
+    typedef Dune::PDELab::MultiDomain::LocalAssembler<
+      Dune::PDELab::ISTLBCRSMatrixBackend<1,1>,
+      Dune::PDELab::EmptyTransformation,
+      Dune::PDELab::EmptyTransformation,
+      SubProblem0,
+      SubProblem1,
+      SubProblem2> LocalAssembler;
+
+    LocalAssembler localAssembler(sp0,sp1,sp2/*,sp3,sp4*/);
+    localAssembler.setTime(1.3);
+    std::cout << localAssembler.suggestTimestep(3.1) << std::endl;
+    localAssembler.preStep(0.0,1.0,2);
+    localAssembler.preStage(0.0,1);
+    localAssembler.postStage();
+    localAssembler.postStep();
+    localAssembler.requireIntersections();
   }
   catch (Dune::Exception &e){
     std::cerr << "Dune reported error: " << e << std::endl;

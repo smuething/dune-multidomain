@@ -20,6 +20,8 @@ struct CouplingTraits
 };
 
 
+struct CouplingTag;
+
 template<
   typename LocalSubProblem,
   typename RemoteSubProblem,
@@ -29,6 +31,8 @@ class Coupling
 {
 
 public:
+
+  typedef CouplingTag MultiDomainComponentTag;
 
   typedef CouplingTraits<LocalSubProblem,RemoteSubProblem,CouplingOperator> Traits;
 
@@ -77,8 +81,6 @@ struct is_coupling<Coupling<LocalSubProblem,RemoteSubProblem,CouplingOperator> >
 };
 
 
-
-
 template<
   typename LocalSubProblem_,
   typename RemoteSubProblem_,
@@ -95,6 +97,8 @@ struct EnrichedCouplingTraits
 };
 
 
+struct EnrichedCouplingTag;
+
 template<
   typename LocalSubProblem,
   typename RemoteSubProblem,
@@ -105,6 +109,8 @@ class EnrichedCoupling
 {
 
 public:
+
+  typedef EnrichedCouplingTag MultiDomainComponentTag;
 
   typedef EnrichedCouplingTraits<LocalSubProblem,RemoteSubProblem,CouplingOperator,couplingLFSIndex> Traits;
 

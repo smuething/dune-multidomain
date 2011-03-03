@@ -40,6 +40,8 @@ struct SubProblemTraits
 };
 
 
+struct SubProblemTag;
+
 template<
   typename GFSU,
   typename CONU,
@@ -55,6 +57,8 @@ class SubProblem
   dune_static_assert(sizeof...(Indices) >= 1,"You need to provide at least one index");
 
 public:
+
+  typedef SubProblemTag MultiDomainComponentTag;
 
   typedef SubProblemTraits<SubProblem,GFSU,CONU,GFSV,CONV,LocalOperator,Condition,Indices...> Traits;
 

@@ -52,9 +52,9 @@ struct visitor
 
     template<typename Node, typename TreePath>
     typename enable_if<condition::template test<Node>::value == true>::type
-    leaf(const Node& node, TreePath treePath)
+    leaf(Node&& node, TreePath treePath)
     {
-      (*this)(node,treePath);
+      (*this)(std::forward<Node>(node));
     }
 
     template<typename Node, typename TreePath>

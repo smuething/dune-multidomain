@@ -4,6 +4,7 @@
 
 #include <dune/pdelab/common/typetree.hh>
 #include <dune/pdelab/common/typetree/filteredcompositenode.hh>
+#include <dune/pdelab/gridoperator/common/assemblerutilities.hh>
 
 #include <dune/pdelab/multidomain/multidomaingridoperatorspaceutilities.hh>
 #include <dune/pdelab/multidomain/visitor.hh>
@@ -131,16 +132,20 @@ namespace functors {
 }
 
 
-template<typename... AssemblyParticipants>
+template<typename B, typename CU, typename CV, typename... AssemblyParticipants>
 class LocalAssembler
   : public Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...>
+  , public Dune::PDELab::LocalAssemblerBase<B,CU,CV>
 {
 
   typedef Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...> NodeT;
+  typedef Dune::PDELab::LocalAssemblerBase<B,CU,CV> BaseT;
   typedef Dune::PDELab::TypeTree::FilteredCompositeNode<LocalAssembler,SubProblemFilter> SubProblems;
   typedef Dune::PDELab::TypeTree::FilteredCompositeNode<LocalAssembler,CouplingFilter> Couplings;
 
 public:
+
+  typedef typename BaseT::Traits Traits;
 
   bool requireIntersections() const
   {
@@ -303,6 +308,15 @@ public:
     , _couplings(*this)
     , _weight(1.0)
   {}
+
+  LocalAssembler(const CU& cu, const CV& cv, AssemblyParticipants&... participants)
+    : NodeT(stackobject_to_shared_ptr(participants)...)
+    , BaseT(cu,cv)
+    , _subProblems(*this)
+    , _couplings(*this)
+    , _weight(1.0)
+  {}
+
 
 private:
 

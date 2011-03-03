@@ -52,3 +52,6 @@ testcouplinggfs_SOURCES = testcouplinggfs.cc
 
 check_PROGRAMS += testvisitor
 testvisitor_SOURCES = testvisitor.cc
+
+check_PROGRAMS += testassembler
+testassembler_SOURCES = testassembler.cc

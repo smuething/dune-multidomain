@@ -8,3 +8,4 @@ testmatrixconstruction
 testlocalfunctionspace
 stokesdarcy
 testcouplinggfs
+testassembler

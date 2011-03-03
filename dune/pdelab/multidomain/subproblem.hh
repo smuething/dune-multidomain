@@ -1,6 +1,7 @@
 #ifndef DUNE_MULTIDOMAIN_SUBPROBLEM_HH
 #define DUNE_MULTIDOMAIN_SUBPROBLEM_HH
 
+#include <dune/pdelab/common/typetree.hh>
 #include <dune/pdelab/multidomain/subdomainset.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 
@@ -52,6 +53,7 @@ template<
   std::size_t... Indices
   >
 class SubProblem
+  : public Dune::PDELab::TypeTree::LeafNode
 {
 
   dune_static_assert(sizeof...(Indices) >= 1,"You need to provide at least one index");

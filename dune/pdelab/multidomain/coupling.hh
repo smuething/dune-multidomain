@@ -1,6 +1,8 @@
 #ifndef DUNE_MULTIDOMAIN_COUPLING_HH
 #define DUNE_MULTIDOMAIN_COUPLING_HH
 
+#include <dune/pdelab/common/typetree.hh>
+
 namespace Dune {
 
 namespace PDELab {
@@ -28,6 +30,7 @@ template<
   typename CouplingOperator
   >
 class Coupling
+  : public Dune::PDELab::TypeTree::LeafNode
 {
 
 public:
@@ -106,6 +109,7 @@ template<
   std::size_t couplingLFSIndex
   >
 class EnrichedCoupling
+  : public Dune::PDELab::TypeTree::LeafNode
 {
 
 public:

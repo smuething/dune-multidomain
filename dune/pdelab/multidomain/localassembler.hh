@@ -151,6 +151,8 @@ class LocalAssembler
 {
 
   typedef Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...> NodeT;
+  typedef Dune::PDELab::TypeTree::FilteredCompositeNode<LocalAssembler,SubProblemFilter> SubProblems;
+  typedef Dune::PDELab::TypeTree::FilteredCompositeNode<LocalAssembler,CouplingFilter> Couplings;
 
 public:
 
@@ -287,8 +289,8 @@ public:
     return v;
   }
 
-  Dune::PDELab::TypeTree::FilteredCompositeNode<LocalAssembler,SubProblemFilter> _subProblems;
-  Dune::PDELab::TypeTree::FilteredCompositeNode<LocalAssembler,CouplingFilter> _couplings;
+  SubProblems _subProblems;
+  Couplings _couplings;
 
 };
 

@@ -2,11 +2,8 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_LOCALASSEMBLER_HH
 #define DUNE_PDELAB_MULTIDOMAIN_LOCALASSEMBLER_HH
 
-#include<map>
-#include<tuple>
-
-#include<dune/common/exceptions.hh>
-#include<dune/common/geometrytype.hh>
+#include <dune/pdelab/common/typetree.hh>
+#include <dune/pdelab/common/typetree/filteredcompositenode.hh>
 
 #include <dune/pdelab/multidomain/multidomaingridoperatorspaceutilities.hh>
 #include <dune/pdelab/multidomain/visitor.hh>

@@ -2,15 +2,10 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_GLOBALASSEMBLER_HH
 #define DUNE_PDELAB_MULTIDOMAIN_GLOBALASSEMBLER_HH
 
-#include<map>
-#include<tuple>
-
 #include<dune/common/exceptions.hh>
 #include<dune/common/geometrytype.hh>
 
-#include <dune/pdelab/common/geometrywrapper.hh>
-
-#include <dune/pdelab/multidomain/multidomaingridoperatorspaceutilities.hh>
+#include <dune/pdelab/multidomain/entitywrappers.hh>
 
 namespace Dune {
 
@@ -19,15 +14,23 @@ namespace PDELab {
 namespace MultiDomain {
 
 
-template<typename GFSU, typename GFSV>
+  template<typename GFSU, typename GFSV, bool nonoverlapping_mode = false>
 class GlobalAssembler
 {
+
+  typedef typename GFSU::Traits::GridViewType GV;
+  typedef typename GV::IndexSet IndexSet;
+  typedef typename GV::template Codim<0>::Iterator ElementIterator;
+  typedef typename GV::IntersectionIterator IntersectionIterator;
 
 public:
 
   template<typename LocalAssemblerEngine>
   void assemble(LocalAssemblerEngine& engine)
   {
+
+    GV gv = gfsu.gridview();
+    const IndexSet& is = gv.indexSet();
 
     engine.preAssembly();
 
@@ -37,14 +40,16 @@ public:
     typedef LocalFunctionSpace<GFSV> LFSV;
     LFSV lfsv(gfsv);
 
-    typedef ElementGeometry<Element> ElementWrapper;
+    typedef Dune::PDELab::MultiDomain::ElementWrapper<GV> ElementWrapper;
+    typedef Dune::PDELab::MultiDomain::BoundaryIntersectionWrapper<GV> BoundaryIntersectionWrapper;
+    typedef Dune::PDELab::MultiDomain::SkeletonIntersectionWrapper<GV> SkeletonIntersectionWrapper;
 
-    MultiGeomUniqueIDMapper<GV> cell_mapper(gfsu.gridview());
+    MultiGeomUniqueIDMapper<GV> cell_mapper(gv);
 
-    const ElementIterator endit = gfsu.gridview().template end<0>();
+    const ElementIterator endit = gv.template end<0>();
 
     // traverse grid view
-    for (ElementIterator it = gfsu.gridview().template begin<0>();
+    for (ElementIterator it = gv.template begin<0>();
          it!=endit; ++it)
       {
 
@@ -81,8 +86,8 @@ public:
 
             // traverse intersections
             unsigned int intersection_index = 0;
-            IntersectionIterator endiit = gfsu.gridview().iend(*it);
-            for (IntersectionIterator iit = gfsu.gridview().ibegin(*it);
+            IntersectionIterator endiit = gv.iend(*it);
+            for (IntersectionIterator iit = gv.ibegin(*it);
                  iit!=endiit; ++iit, ++intersection_index)
               {
                 // skeleton term
@@ -96,7 +101,7 @@ public:
                     lfsvn.bind(*(iit->outside()));
 
                     SkeletonIntersectionWrapper skeletonIntersectionWrapper(*iit,intersection_index,
-                                                                            elementWrapper.subDomains(),
+                                                                            elementWrapper,
                                                                             is.subDomains(*(iit->outside())));
 
                     engine.onBindLFSUVOutside(skeletonIntersectionWrapper,lfsun,lfsvn);
@@ -140,7 +145,7 @@ public:
                 // boundary term
                 if (iit->boundary())
                   {
-                    BoundaryIntersectionWrapper boundaryIntersectionWrapper(*iit,intersection_index,elementWrapper.subDomains());
+                    BoundaryIntersectionWrapper boundaryIntersectionWrapper(*iit,intersection_index,elementWrapper);
                     engine.onBindLFSUVOutside(boundaryIntersectionWrapper,lfsun,lfsvn);
                     engine.loadCoefficientsOutside(lfsun);
                     engine.onBindLFSVOutside(boundaryIntersectionWrapper,lfsvn);
@@ -162,6 +167,11 @@ public:
 
     engine.postAssembly();
   }
+
+  GlobalAssembler(const GFSU& gfsu_, const GFSV& gfsv_)
+    : gfsu(gfsu_)
+    , gfsv(gfsv_)
+  {}
 
   const GFSU& gfsu;
   const GFSV& gfsv;

@@ -11,6 +11,8 @@
 #include <dune/pdelab/multidomain/multidomaingridoperatorspaceutilities.hh>
 #include <dune/pdelab/multidomain/visitor.hh>
 #include <dune/pdelab/multidomain/datawrappers.hh>
+#include <dune/pdelab/multidomain/operatorapplier.hh>
+
 
 namespace Dune {
 
@@ -189,68 +191,70 @@ public:
   bool requireIntersections() const
   {
     return requireUVSkeleton() || requireVSkeleton() ||
-      requireUVEnrichedCoupling() || requireVEnrichedCoupling();
+      requireUVEnrichedCoupling() || requireVEnrichedCoupling() ||
+      requireUVBoundary() || requireVBoundary();
   }
 
   bool requireIntersectionsTwoSided() const
   {
-    return any_child<MultiDomainLocalAssembler,SubProblems,require_intersections_two_sided<> >::value;
+    return requireUVBoundary() || requireVBoundary() ||
+      any_child<SubProblems,do_skeleton_two_sided<> >::value;
   }
 
   bool requireUVVolume() const
   {
-    return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_volume<> >::value;
+    return any_child<SubProblems,do_alpha_volume<> >::value;
   }
 
   bool requireVVolume() const
   {
-    return any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_volume<> >::value;
+    return any_child<SubProblems,do_lambda_volume<> >::value;
   }
 
   bool requireUVSkeleton() const
   {
-    return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_skeleton<> >::value ||
-      any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_boundary<> >::value ||
-      any_child<MultiDomainLocalAssembler,Couplings,do_alpha_coupling<> >::value ||
-      any_child<MultiDomainLocalAssembler,Couplings,do_alpha_enriched_coupling<> >::value;
+    return any_child<SubProblems,do_alpha_skeleton<> >::value ||
+      any_child<SubProblems,do_alpha_boundary<> >::value ||
+      any_child<Couplings,do_alpha_coupling<> >::value ||
+      any_child<Couplings,do_alpha_enriched_coupling<> >::value;
   }
 
   bool requireVSkeleton() const
   {
-    return any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_skeleton<> >::value ||
-      any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_boundary<> >::value ||
-      any_child<MultiDomainLocalAssembler,Couplings,do_lambda_coupling<> >::value ||
-      any_child<MultiDomainLocalAssembler,Couplings,do_lambda_enriched_coupling<> >::value;
+    return any_child<SubProblems,do_lambda_skeleton<> >::value ||
+      any_child<SubProblems,do_lambda_boundary<> >::value ||
+      any_child<Couplings,do_lambda_coupling<> >::value ||
+      any_child<Couplings,do_lambda_enriched_coupling<> >::value;
   }
 
   bool requireUVBoundary() const
   {
-    return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_boundary<> >::value;
+    return any_child<SubProblems,do_alpha_boundary<> >::value;
   }
 
   bool requireVBoundary() const
   {
-    return any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_boundary<> >::value;
+    return any_child<SubProblems,do_lambda_boundary<> >::value;
   }
 
   bool requireUVEnrichedCoupling() const
   {
-    return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_enriched_coupling<> >::value;
+    return any_child<SubProblems,do_alpha_enriched_coupling<> >::value;
   }
 
   bool requireVEnrichedCoupling() const
   {
-    return any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_enriched_coupling<> >::value;
+    return any_child<SubProblems,do_lambda_enriched_coupling<> >::value;
   }
 
   bool requireUVVolumePostSkeleton() const
   {
-    return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_volume_post_skeleton<> >::value;
+    return any_child<SubProblems,do_alpha_volume_post_skeleton<> >::value;
   }
 
   bool requireVVolumePostSkeleton() const
   {
-    return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_volume_post_skeleton<> >::value;
+    return any_child<SubProblems,do_alpha_volume_post_skeleton<> >::value;
   }
 
 

@@ -10,6 +10,7 @@
 #include <dune/pdelab/multidomain/visitor.hh>
 #include <dune/pdelab/multidomain/datawrappers.hh>
 #include <dune/pdelab/multidomain/operatorflagtests.hh>
+#include <dune/pdelab/multidomain/residualassemblerengine.hh>
 
 
 namespace Dune {
@@ -132,7 +133,7 @@ namespace functors {
 }
 
 
-template<typename B, typename CU, typename CV, typename... AssemblyParticipants>
+template<typename V, typename B, typename CU, typename CV, typename... AssemblyParticipants>
 class LocalAssembler
   : public Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...>
   , public Dune::PDELab::LocalAssemblerBase<B,CU,CV>
@@ -146,6 +147,7 @@ class LocalAssembler
 public:
 
   typedef typename BaseT::Traits Traits;
+  typedef Dune::PDELab::MultiDomain::ResidualAssemblerEngine<LocalAssembler,V,V> ResidualAssemblerEngine;
 
   bool requireIntersections() const
   {
@@ -260,6 +262,14 @@ public:
     return applyToParticipants(visitor<functors::suggest_time_step>::add_data(store_dt(dt))).dt();
   }
 
+
+  ResidualAssemblerEngine& residualAssemblerEngine(const V& x, V& r)
+  {
+    _residualAssemblerEngine.setSolution(x);
+    _residualAssemblerEngine.setResidual(r);
+    return _residualAssemblerEngine;
+  }
+
   template<typename Visitor>
   const Visitor& applyToSubProblems(Visitor&& v)
   {
@@ -307,6 +317,7 @@ public:
     , _subProblems(*this)
     , _couplings(*this)
     , _weight(1.0)
+    , _residualAssemblerEngine(*this)
   {}
 
   LocalAssembler(const CU& cu, const CV& cv, AssemblyParticipants&... participants)
@@ -315,6 +326,7 @@ public:
     , _subProblems(*this)
     , _couplings(*this)
     , _weight(1.0)
+    , _residualAssemblerEngine(*this)
   {}
 
 
@@ -323,6 +335,8 @@ private:
   SubProblems _subProblems;
   Couplings _couplings;
   double _weight;
+
+  ResidualAssemblerEngine _residualAssemblerEngine;
 
 };
 

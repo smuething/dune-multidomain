@@ -26,9 +26,13 @@ namespace PDELab {
 namespace MultiDomain {
 
 
-template<typename X, typename R>
+template<typename LocalAssembler_, typename X, typename R>
 class ResidualAssemblerEngine
 {
+
+public:
+
+  typedef LocalAssembler_ LocalAssembler;
 
   template<typename EG, typename LFSU, typename LFSV>
   void onBindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
@@ -260,6 +264,21 @@ class ResidualAssemblerEngine
   {
     r = &r_;
   }
+
+  const LocalAssembler& localAssembler() const
+  {
+    return _localAssembler;
+  }
+
+  ResidualAssemblerEngine(const LocalAssembler& localAssembler)
+    : _localAssembler(localAssembler)
+    , x(nullptr)
+    , r(nullptr)
+  {}
+
+private:
+
+  const LocalAssembler& _localAssembler;
 
   const X* x;
   R* r;

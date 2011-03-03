@@ -163,10 +163,6 @@ struct FillIndicesVisitorBase
     return static_cast<Impl&>(*this);
   }
 
-  template<typename Child, typename Tag>
-  void fill_indices(Child& child, Tag tag)
-  {}
-
   FillIndicesVisitorBase(const GFS& gfs_, Container& container_)
     : gfs(gfs_)
     , container(container_)
@@ -206,6 +202,10 @@ struct FillIndicesVisitor<Entity,GFS,Container,StandardLFSTag>
   {}
 
   const Entity& e;
+
+  template<typename Child, typename Tag>
+  void fill_indices(Child& child, Tag tag)
+  {}
 
   template<typename Child>
   void fill_indices(Child& child, MultiDomainGFSTag tag)
@@ -255,6 +255,10 @@ struct FillIndicesVisitor<Intersection,GFS,Container,CouplingLFSTag>
   {}
 
   const Intersection& is;
+
+  template<typename Child, typename Tag>
+  void fill_indices(Child& child, Tag tag)
+  {}
 
   template<typename Child>
   void fill_indices(Child& child, CouplingGFSTag tag)

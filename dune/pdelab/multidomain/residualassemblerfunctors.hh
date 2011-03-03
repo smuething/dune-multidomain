@@ -2,6 +2,8 @@
 #define DUNE_PDELAB_MULTIDOMAIN_RESIDUALASSEMBLERFUNCTORS_HH
 
 #include <dune/pdelab/multidomain/datawrappers.hh>
+#include <dune/pdelab/multidomain/localfunctionspaceutility.hh>
+
 
 namespace Dune {
 namespace PDELab {
@@ -44,7 +46,7 @@ namespace functors {
       if (!subProblem.appliesTo(data().eg()))
         return;
       Data::Operator::extract(subProblem).lambda_volume(data().eg(),
-                                                        LFS::LFSV(data(),subProblem),
+                                                        LFS::lfsv(data(),subProblem),
                                                         data().r());
     }
 
@@ -61,20 +63,18 @@ namespace functors {
     template<typename SubProblem>
     void operator()(const SubProblem& subProblem)
     {
+      typedef typename Data::Operator::template ExtractType<SubProblem>::Type LOP;
       if (!subProblem.appliesTo(data().ig().insideElement()))
         return;
       if (subProblem.appliesTo(data().ig().outsideElement()))
         {
-          if (_applyOneSided || LOP::doSkeletonTwoSided)
-            {
-              LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
-                alpha_skeleton(Data::Operator::extract(subProblem),data().ig(),
-                               LFS::lfsu_s(data(),subProblem),data().x_s(),LFS::lfsv_s(data(),subProblem),
-                               LFS::lfsu_n(data(),subProblem),data().x_n(),LFS::lfsv_n(data(),subProblem),
-                               data().r_s(),data().r_n());
-              if(LOP::doAlphaSkeleton)
-                data().neighbor_accessed() = true;
-            }
+          LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
+            alpha_skeleton(Data::Operator::extract(subProblem),data().ig(),
+                           LFS::lfsu_s(data(),subProblem),data().x_s(),LFS::lfsv_s(data(),subProblem),
+                           LFS::lfsu_n(data(),subProblem),data().x_n(),LFS::lfsv_n(data(),subProblem),
+                           data().r_s(),data().r_n());
+          if(LOP::doAlphaSkeleton)
+            data().neighbor_accessed() = true;
         }
       else
         {
@@ -98,20 +98,18 @@ namespace functors {
     template<typename SubProblem>
     void operator()(const SubProblem& subProblem)
     {
+      typedef typename Data::Operator::template ExtractType<SubProblem>::Type LOP;
       if (!subProblem.appliesTo(data().ig().insideElement()))
         return;
       if (subProblem.appliesTo(data().ig().outsideElement()))
         {
-          if (_applyOneSided || LOP::doSkeletonTwoSided)
-            {
-              LocalAssemblerCallSwitch<LOP,LOP::doLambdaSkeleton>::
-                lambda_skeleton(Data::Operator::extract(subProblem),data().ig(),
-                                LFS::lfsv_s(data(),subProblem),
-                                LFS::lfsv_n(data(),subProblem),
-                                data().r_s(),data().r_n());
-              if(LOP::doAlphaSkeleton)
-                data().neighbor_accessed() = true;
-            }
+          LocalAssemblerCallSwitch<LOP,LOP::doLambdaSkeleton>::
+            lambda_skeleton(Data::Operator::extract(subProblem),data().ig(),
+                            LFS::lfsv_s(data(),subProblem),
+                            LFS::lfsv_n(data(),subProblem),
+                            data().r_s(),data().r_n());
+          if(LOP::doAlphaSkeleton)
+            data().neighbor_accessed() = true;
         }
       else
         {
@@ -187,7 +185,7 @@ namespace functors {
                                                        LFS::lfsu_s(data(),localSubProblem),
                                                        data().x_s(),
                                                        LFS::lfsv_s(data(),localSubProblem),
-                                                       LFS::lfsu_n(data(),RemoteSubProblem),
+                                                       LFS::lfsu_n(data(),remoteSubProblem),
                                                        data().x_n(),
                                                        LFS::lfsv_n(data(),remoteSubProblem),
                                                        data().r_s(),data().r_n());
@@ -241,8 +239,8 @@ namespace functors {
       typedef typename Coupling::Traits::RemoteSubProblem RemoteSubProblem;
       const LocalSubProblem& localSubProblem = coupling.localSubProblem();
       const RemoteSubProblem& remoteSubProblem = coupling.remoteSubProblem();
-      typename LFS::LFSU_C<Data,SubProblem> lfsu_c = LFS::lfsu_c(data(),coupling);
-      typename LFS::LFSV_C<Data,SubProblem> lfsv_c = LFS::lfsv_c(data(),coupling);
+      typename LFS::LFSU_C<Data,Coupling> lfsu_c = LFS::lfsu_c(data(),coupling);
+      typename LFS::LFSV_C<Data,Coupling> lfsv_c = LFS::lfsv_c(data(),coupling);
       Data::Operator::extract(coupling).alpha_enriched_coupling_first(data().ig(),
                                                                       LFS::lfsu_s(data(),localSubProblem),
                                                                       data().x_s(),
@@ -279,11 +277,11 @@ namespace functors {
       typedef typename Coupling::Traits::RemoteSubProblem RemoteSubProblem;
       const LocalSubProblem& localSubProblem = coupling.localSubProblem();
       const RemoteSubProblem& remoteSubProblem = coupling.remoteSubProblem();
-      typename LFS::LFSV_C<Data,SubProblem> lfsv_c = LFS::lfsv_c(data(),coupling);
+      typename LFS::LFSV_C<Data,Coupling> lfsv_c = LFS::lfsv_c(data(),coupling);
       Data::Operator::extract(coupling).alpha_enriched_coupling_first(data().ig(),
                                                                       LFS::lfsv_s(data(),localSubProblem),
                                                                       lfsv_c,
-                                                                      data().r_s(),data().r-c());
+                                                                      data().r_s(),data().r_c());
       Data::Operator::extract(coupling).alpha_enriched_coupling_second(data().ig(),
                                                                        LFS::lfsv_n(data(),remoteSubProblem),
                                                                        lfsv_c,

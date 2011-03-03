@@ -50,9 +50,9 @@ namespace functors {
     using data_accessor<Data>::data;
 
     template<typename Participant>
-    void operator()(const Participant& participant)
+    void operator()(Participant& participant)
     {
-      participant.setTime(data().time());
+      participant.localOperator().setTime(data().time());
     }
 
   };
@@ -68,7 +68,7 @@ namespace functors {
     template<typename Participant>
     void operator()(const Participant& participant)
     {
-      participant.preStep(data().time(),data().dt(),data().stages());
+      participant.localOperator().preStep(data().time(),data().dt(),data().stages());
     }
 
   };
@@ -80,7 +80,7 @@ namespace functors {
     template<typename Participant>
     void operator()(const Participant& participant)
     {
-      participant.postStep();
+      participant.localOperator().postStep();
     }
 
   };
@@ -95,7 +95,7 @@ namespace functors {
     template<typename Participant>
     void operator()(const Participant& participant)
     {
-      participant.preStage(data().time(),data().stage());
+      participant.localOperator().preStage(data().time(),data().stage());
     }
 
   };
@@ -108,7 +108,7 @@ namespace functors {
     template<typename Participant>
     void operator()(const Participant& participant)
     {
-      participant.postStage();
+      participant.localOperator().postStage();
     }
 
   };
@@ -123,7 +123,7 @@ namespace functors {
     template<typename Participant>
     void operator()(const Participant& participant)
     {
-      participant.postStage();
+      data().dt() = participant.localOperator().suggestTimeStep(data().dt());
     }
 
   };

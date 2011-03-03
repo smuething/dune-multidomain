@@ -18,6 +18,36 @@ namespace PDELab {
 
 namespace MultiDomain {
 
+template<typename Predicate>
+struct predicate_wrapper
+{
+
+  typedef bool result_type;
+
+  template<typename Node, typename TreePath>
+  struct doVisit
+  {
+    static const bool value = Node::isLeaf;
+  };
+
+  template<typename Node, typename TreePath>
+  struct visit
+  {
+    static const bool result = Predicate::template test<Node>::value;
+  };
+
+};
+
+
+template<typename Tree, typename Predicate>
+struct any_child
+{
+  static const bool value = Dune::PDELab::TypeTree::AccumulateValue<Tree,
+                                                                    predicate_wrapper<Predicate>,
+                                                                    Dune::PDELab::TypeTree::or_<bool>,
+                                                                    false>::result;
+};
+
 
 struct SubProblemFilter
 {

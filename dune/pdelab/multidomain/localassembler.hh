@@ -112,9 +112,9 @@ namespace functors {
 
   };
 
-  template<typename data_container>
+  template<typename Data>
   struct post_stage
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
     template<typename Participant>
@@ -125,13 +125,12 @@ namespace functors {
 
   };
 
-  template<typename data_container>
+  template<typename Data>
   struct suggest_time_step
-    : public data_accessor<data_container>
+    : public data_accessor<Data>
   {
 
-    typedef typename data_accessor<data_container> Data;
-    using data_accessor<data_container>::data;
+    using data_accessor<Data>::data;
 
     template<typename Participant>
     void operator()(const Participant& participant)

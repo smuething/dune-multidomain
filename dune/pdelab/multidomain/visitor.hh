@@ -29,7 +29,7 @@ struct match_all_condition
   template<typename T>
   struct test
   {
-    static const value = true;
+    static const bool value = true;
   };
 };
 
@@ -171,7 +171,7 @@ private: \
 template<typename T> \
 VARIABLE_NAME##_container<T> store_##VARIABLE_NAME(const T & VARIABLE_NAME) \
 { \
-  return VARIABLE_NAME##_wrapper<T>(VARIABLE_NAME); \
+  return VARIABLE_NAME##_container<T>(VARIABLE_NAME); \
 } \
 // end DATA_CONTAINER macro
 

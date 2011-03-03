@@ -183,8 +183,10 @@ int main(int argc, char** argv) {
     MultiGFS multigfs(grid,gfs0,gfs1,gfs2,powergfs,compositegfs);
 
     Dune::PDELab::LocalFunctionSpace<MultiGFS> multilfs(multigfs);
-
     multilfs.bind(*mdgv.begin<0>());
+
+    Dune::PDELab::MultiDomain::CouplingLocalFunctionSpace<MultiGFS> couplinglfs(multigfs);
+    couplinglfs.bind(*mdgv.ibegin(*mdgv.begin<0>()));
 
 
     typedef DirichletBoundary BType;

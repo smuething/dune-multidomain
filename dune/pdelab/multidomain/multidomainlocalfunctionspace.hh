@@ -340,6 +340,11 @@ public:
   using BaseT::global;
   using BaseT::pgfs;
 
+  shared_ptr<const GFS> gridFunctionSpaceStorage() const
+  {
+    return pgfs;
+  }
+
   template<typename Element>
   void bind (const Element& e)
   {

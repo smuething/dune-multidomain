@@ -28,14 +28,21 @@ namespace {
   {
 
     template<typename SPLFS, typename ChildLFS, typename TreePath, typename ChildIndex>
-    void afterChild(SPLFS& splfs, const ChildLFS& childLFS, TreePath treePath, ChildIndex childIndex) const
+    void afterChild(SPLFS& splfs, const ChildLFS& childLFS, TreePath treePath, ChildIndex childIndex)
     {
-      splfs.n += childLFS.size();
+      size += childLFS.size();
     }
+
+    AccumulateSize()
+      : size(0)
+    {}
+
+    std::size_t size;
 
   };
 
 
+  template<typename Container>
   struct FillIndices
     : public Dune::PDELab::TypeTree::DirectChildrenVisitor
     , public Dune::PDELab::TypeTree::DynamicTraversal
@@ -45,14 +52,16 @@ namespace {
     void afterChild(SPLFS& splfs, const ChildLFS& childLFS, TreePath treePath, ChildIndex childIndex)
     {
       for(std::size_t i = 0; i < childLFS.size(); ++i, ++offset)
-        splfs.global[offset] = childLFS.global(i);
+        container[offset] = childLFS.globalIndex(i);
     }
 
-    FillIndices()
+    FillIndices(Container& container_)
       : offset(0)
+      , container(container_)
     {}
 
     std::size_t offset;
+    Container& container;
 
   };
 
@@ -165,7 +174,7 @@ namespace {
 
 template<typename MDLFS, typename SubProblem, typename Constraints, std::size_t... ChildIndices>
 class SubProblemLocalFunctionSpace
-  : public Dune::PDELab::TypeTree::FilteredCompositeNode<MDLFS,Dune::PDELab::TypeTree::IndexFilter<ChildIndices...> >
+  : public Dune::PDELab::TypeTree::FilteredCompositeNode<const MDLFS,Dune::PDELab::TypeTree::IndexFilter<ChildIndices...> >
   , public Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType>
 {
 
@@ -175,11 +184,8 @@ class SubProblemLocalFunctionSpace
   dune_static_assert((!arg_pack_contains_duplicate_values<std::size_t,ChildIndices...>::value),
                      "All child indices have to be distinct");
 
-  typedef Dune::PDELab::TypeTree::FilteredCompositeNode<MDLFS,Dune::PDELab::TypeTree::IndexFilter<ChildIndices...> > NodeT;
+  typedef Dune::PDELab::TypeTree::FilteredCompositeNode<const MDLFS,Dune::PDELab::TypeTree::IndexFilter<ChildIndices...> > NodeT;
   typedef Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType> BaseT;
-
-  using BaseT::offset;
-  using NodeT::unfiltered;
 
   typedef typename MDLFS::Traits::GridFunctionSpaceType GFS;
 
@@ -206,8 +212,17 @@ public:
 
   //! \brief initialize with grid function space
   SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const SubProblem& subProblem, const Constraints& constraints)
+    : NodeT(stackobject_to_shared_ptr(mdlfs))
+    , BaseT(mdlfs.gridFunctionSpaceStorage())
+    , _subProblem(subProblem)
+    , _constraints(constraints)
+  {
+    bind();
+  }
+
+  SubProblemLocalFunctionSpace (shared_ptr<const MDLFS> mdlfs, const SubProblem& subProblem, const Constraints& constraints)
     : NodeT(mdlfs)
-    , BaseT(mdlfs.gridFunctionSpace())
+    , BaseT(mdlfs.gridFunctionSpaceStorage())
     , _subProblem(subProblem)
     , _constraints(constraints)
   {
@@ -232,9 +247,12 @@ public:
   {
     // make offset
     offset = 0;
-    Dune::PDELab::TypeTree::applyToTree(*this,AccumulateSize());
-    global.resize(n);
-    Dune::PDELab::TypeTree::applyToTree(*this,FillIndices());
+    AccumulateSize accumulateSize
+;
+    Dune::PDELab::TypeTree::applyToTree(*this,accumulateSize);
+    n = accumulateSize.size;
+    global_storage.resize(n);
+    Dune::PDELab::TypeTree::applyToTree(*this,FillIndices<typename Traits::IndexContainer>(global_storage));
   }
 
   const SubProblem& subProblem() const {
@@ -254,7 +272,10 @@ private:
 
   using BaseT::offset;
   using BaseT::global;
+  using BaseT::global_storage;
   using BaseT::n;
+  using NodeT::unfiltered;
+
 
   const MDLFS mdlfs() const
   {
@@ -374,10 +395,10 @@ private:
 // single-component version base - this needs to be specialized for each supported base LFS
 
 
-template<typename LFS, typename BaseLFS, typename SubProblem, typename Constraints, typename LFSTag>
+  template<typename MDLFS, typename LFS, typename BaseLFS, typename SubProblem, typename Constraints, typename LFSTag>
 class SubProblemLocalFunctionSpaceBase
   : public SubProblemLocalFunctionSpaceProxy<SubProblemLocalFunctionSpaceTraits<
-                                               typename LFS::MDLFS::Traits::GridFunctionSpaceType,
+                                               typename MDLFS::Traits::GridFunctionSpaceType,
                                                LFS,
                                                BaseLFS,
                                                SubProblem,
@@ -387,7 +408,7 @@ class SubProblemLocalFunctionSpaceBase
 {
 
   typedef SubProblemLocalFunctionSpaceProxy<SubProblemLocalFunctionSpaceTraits<
-                                              typename LFS::MDLFS::Traits::GridFunctionSpaceType,
+                                              typename MDLFS::Traits::GridFunctionSpaceType,
                                               LFS,
                                               BaseLFS,
                                               SubProblem,
@@ -406,10 +427,10 @@ protected:
 
 // single-component version base - specialization for leaf function space
 
-template<typename LFS, typename BaseLFS, typename SubProblem, typename Constraints>
-class SubProblemLocalFunctionSpaceBase<LFS,BaseLFS,SubProblem,Constraints,LeafLocalFunctionSpaceTag>
+  template<typename MDLFS, typename LFS, typename BaseLFS, typename SubProblem, typename Constraints>
+  class SubProblemLocalFunctionSpaceBase<MDLFS,LFS,BaseLFS,SubProblem,Constraints,LeafLocalFunctionSpaceTag>
   : public SubProblemLocalFunctionSpaceProxy<SubProblemLeafLocalFunctionSpaceTraits<
-                                               typename LFS::MDLFS::Traits::GridFunctionSpaceType,
+                                               typename MDLFS::Traits::GridFunctionSpaceType,
                                                LFS,
                                                BaseLFS,
                                                SubProblem,
@@ -421,7 +442,7 @@ class SubProblemLocalFunctionSpaceBase<LFS,BaseLFS,SubProblem,Constraints,LeafLo
 public:
 
   typedef SubProblemLocalFunctionSpaceProxy<SubProblemLeafLocalFunctionSpaceTraits<
-                                              typename LFS::MDLFS::Traits::GridFunctionSpaceType,
+                                              typename MDLFS::Traits::GridFunctionSpaceType,
                                               LFS,
                                               BaseLFS,
                                                SubProblem,
@@ -446,10 +467,11 @@ protected:
 
 
 
-template<typename MDLFS, typename SubProblem, typename Constraints, int ChildIndex>
+template<typename MDLFS, typename SubProblem, typename Constraints, std::size_t ChildIndex>
 class SubProblemLocalFunctionSpace<MDLFS,SubProblem,Constraints,ChildIndex>
-  : public Dune::PDELab::TypeTree::ProxyNode<typename MDLFS::template Child<ChildIndex>::Type>
-  , public SubProblemLocalFunctionSpaceBase<SubProblemLocalFunctionSpace<MDLFS,SubProblem,Constraints,ChildIndex>,
+  : public Dune::PDELab::TypeTree::ProxyNode<const typename MDLFS::template Child<ChildIndex>::Type>
+  , public SubProblemLocalFunctionSpaceBase<MDLFS,
+                                            SubProblemLocalFunctionSpace<MDLFS,SubProblem,Constraints,ChildIndex>,
                                             typename MDLFS::template Child<ChildIndex>::Type,
                                             SubProblem,
                                             Constraints,
@@ -457,9 +479,10 @@ class SubProblemLocalFunctionSpace<MDLFS,SubProblem,Constraints,ChildIndex>
                                             >
 {
 
-  typedef Dune::PDELab::TypeTree::ProxyNode<typename MDLFS::template Child<ChildIndex>::Type> NodeT;
+  typedef Dune::PDELab::TypeTree::ProxyNode<const typename MDLFS::template Child<ChildIndex>::Type> NodeT;
 
-  typedef SubProblemLocalFunctionSpaceBase<SubProblemLocalFunctionSpace<MDLFS,SubProblem,Constraints,ChildIndex>,
+  typedef SubProblemLocalFunctionSpaceBase<MDLFS,
+                                           SubProblemLocalFunctionSpace<MDLFS,SubProblem,Constraints,ChildIndex>,
                                            typename MDLFS::template Child<ChildIndex>::Type,
                                            SubProblem,
                                            Constraints,

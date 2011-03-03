@@ -150,8 +150,8 @@ class MultiDomainLocalAssembler
 
   bool requireIntersections() const
   {
-    return requireAlphaSkeleton() || requireLambdaSkeleton() ||
-      requireAlphaEnrichedCoupling() || requireLambdaEnrichedCoupling();
+    return requireUVSkeleton() || requireVSkeleton() ||
+      requireUVEnrichedCoupling() || requireVEnrichedCoupling();
   }
 
   bool requireIntersectionsTwoSided() const
@@ -159,17 +159,17 @@ class MultiDomainLocalAssembler
     return any_child<MultiDomainLocalAssembler,SubProblems,require_intersections_two_sided<> >::value;
   }
 
-  bool requireAlphaVolume() const
+  bool requireUVVolume() const
   {
     return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_volume<> >::value;
   }
 
-  bool requireLambdaVolume() const
+  bool requireVVolume() const
   {
     return any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_volume<> >::value;
   }
 
-  bool requireAlphaSkeleton() const
+  bool requireUVSkeleton() const
   {
     return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_skeleton<> >::value ||
       any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_boundary<> >::value ||
@@ -177,7 +177,7 @@ class MultiDomainLocalAssembler
       any_child<MultiDomainLocalAssembler,Couplings,do_alpha_enriched_coupling<> >::value;
   }
 
-  bool requireLambdaSkeleton() const
+  bool requireVSkeleton() const
   {
     return any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_skeleton<> >::value ||
       any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_boundary<> >::value ||
@@ -185,32 +185,32 @@ class MultiDomainLocalAssembler
       any_child<MultiDomainLocalAssembler,Couplings,do_lambda_enriched_coupling<> >::value;
   }
 
-  bool requireAlphaBoundary() const
+  bool requireUVBoundary() const
   {
     return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_boundary<> >::value;
   }
 
-  bool requireLambdaBoundary() const
+  bool requireVBoundary() const
   {
     return any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_boundary<> >::value;
   }
 
-  bool requireAlphaEnrichedCoupling() const
+  bool requireUVEnrichedCoupling() const
   {
     return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_enriched_coupling<> >::value;
   }
 
-  bool requireLambdaEnrichedCoupling() const
+  bool requireVEnrichedCoupling() const
   {
     return any_child<MultiDomainLocalAssembler,SubProblems,do_lambda_enriched_coupling<> >::value;
   }
 
-  bool requireAlphaVolumePostSkeleton() const
+  bool requireUVVolumePostSkeleton() const
   {
     return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_volume_post_skeleton<> >::value;
   }
 
-  bool requireAlphaVolumePostSkeleton() const
+  bool requireVVolumePostSkeleton() const
   {
     return any_child<MultiDomainLocalAssembler,SubProblems,do_alpha_volume_post_skeleton<> >::value;
   }

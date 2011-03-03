@@ -59,21 +59,6 @@ namespace functors {
 
 
   template<typename Data>
-  struct set_weight
-    : public data_accessor<Data>
-  {
-
-    using data_accessor<Data>::data;
-
-    template<typename Participant>
-    void operator()(const Participant& participant)
-    {
-      participant.setWeight(data().weight());
-    }
-
-  };
-
-  template<typename Data>
   struct pre_step
     : public data_accessor<Data>
   {
@@ -233,10 +218,9 @@ public:
     applyToParticipants(visitor<functors::set_time>::add_data(store_time(time)));
   }
 
-  template<typename RF>
-  void setWeight(RF weight)
+  void setWeight(double weight)
   {
-    applyToParticipants(visitor<functors::set_weight>::add_data(store_weight(weight)));
+    _weight = weight;
   }
 
   template<typename TReal>
@@ -296,12 +280,14 @@ public:
     : NodeT(stackobject_to_shared_ptr(participants)...)
     , _subProblems(*this)
     , _couplings(*this)
+    , _weight(1.0)
   {}
 
 private:
 
   SubProblems _subProblems;
   Couplings _couplings;
+  double _weight;
 
 };
 

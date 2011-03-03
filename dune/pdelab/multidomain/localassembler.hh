@@ -145,9 +145,14 @@ namespace functors {
 }
 
 
-template<...>
-class MultiDomainLocalAssembler
+template<typename... AssemblyParticipants>
+class LocalAssembler
+  : public Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...>
 {
+
+  typedef Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...> NodeT;
+
+public:
 
   bool requireIntersections() const
   {
@@ -282,9 +287,8 @@ class MultiDomainLocalAssembler
     return v;
   }
 
-  shared_ptr<AssemblyParticipants> _assemblyParticipants;
-  Dune::PDELab::TypeTree::FilteredCompositeNode<AssemblyParticipants,SubProblemFilter> _subProblems;
-  Dune::PDELab::TypeTree::FilteredCompositeNode<AssemblyParticipants,CouplingFilter> _couplings;
+  Dune::PDELab::TypeTree::FilteredCompositeNode<LocalAssembler,SubProblemFilter> _subProblems;
+  Dune::PDELab::TypeTree::FilteredCompositeNode<LocalAssembler,CouplingFilter> _couplings;
 
 };
 

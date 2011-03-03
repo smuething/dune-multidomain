@@ -231,21 +231,21 @@ public:
   template<typename TReal>
   void setTime(TReal time)
   {
-    applyToParticipants(visitor<functors::set_time>::add_data(wrap_time(time)));
+    applyToParticipants(visitor<functors::set_time>::add_data(store_time(time)));
   }
 
   template<typename RF>
   void setWeight(RF weight)
   {
-    applyToParticipants(visitor<functors::set_weight>::add_data(wrap_weight(weight)));
+    applyToParticipants(visitor<functors::set_weight>::add_data(store_weight(weight)));
   }
 
   template<typename TReal>
   void preStep (TReal time, TReal dt, std::size_t stages)
   {
-    applyToParticipants(visitor<functors::pre_step>::add_data(wrap_time(time),
-                                                              wrap_dt(dt),
-                                                              wrap_stages(stages)));
+    applyToParticipants(visitor<functors::pre_step>::add_data(store_time(time),
+                                                              store_dt(dt),
+                                                              store_stages(stages)));
   }
 
   void postStep ()
@@ -256,8 +256,8 @@ public:
   template<typename TReal>
   void preStage (TReal time, std::size_t stage)
   {
-    applyToParticipants(visitor<functors::pre_stage>::add_data(wrap_time(time),
-                                                               wrap_stage(stage)));
+    applyToParticipants(visitor<functors::pre_stage>::add_data(store_time(time),
+                                                               store_stage(stage)));
   }
 
   void postStage ()
@@ -269,7 +269,7 @@ public:
   template<typename TReal>
   TReal suggestTimestep (TReal dt) const
   {
-    return applyToParticipants(visitor<functors::suggest_time_step>::add_data(wrap_dt(dt))).dt();
+    return applyToParticipants(visitor<functors::suggest_time_step>::add_data(store_dt(dt))).dt();
   }
 
   template<typename Visitor>

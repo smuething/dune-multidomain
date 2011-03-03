@@ -19,6 +19,7 @@ namespace MultiDomain {
 
 
 struct SubProblemFilter
+  : public Dune::PDELab::TypeTree::SimpleFilter
 {
   template<typename T, std::size_t new_k, std::size_t old_k>
   struct apply
@@ -28,6 +29,7 @@ struct SubProblemFilter
 };
 
 struct CouplingFilter
+  : public Dune::PDELab::TypeTree::SimpleFilter
 {
   template<typename T, std::size_t new_k, std::size_t old_k>
   struct apply
@@ -289,6 +291,14 @@ public:
     Dune::PDELab::TypeTree::applyToTree(*this,v);
     return v;
   }
+
+  LocalAssembler(AssemblyParticipants&... participants)
+    : NodeT(stackobject_to_shared_ptr(participants)...)
+    , _subProblems(*this)
+    , _couplings(*this)
+  {}
+
+private:
 
   SubProblems _subProblems;
   Couplings _couplings;

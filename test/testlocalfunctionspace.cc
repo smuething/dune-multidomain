@@ -7,11 +7,10 @@
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/backend/istlmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
-#include <dune/pdelab/multidomain/multidomaingridoperatorspace.hh>
 #include <dune/pdelab/multidomain/subproblem.hh>
 #include <dune/pdelab/finiteelementmap/conformingconstraints.hh>
-#include <dune/pdelab/multidomain/constraints.hh>
-#include <dune/pdelab/multidomain/interpolate.hh>
+//#include <dune/pdelab/multidomain/constraints.hh>
+//#include <dune/pdelab/multidomain/interpolate.hh>
 #include <dune/pdelab/backend/istlsolverbackend.hh>
 #include <dune/pdelab/localoperator/laplacedirichletp12d.hh>
 #include <dune/pdelab/localoperator/poisson.hh>
@@ -34,31 +33,33 @@ SIMPLE_ANALYTIC_FUNCTION(F,x,y)
 END_SIMPLE_ANALYTIC_FUNCTION
 
 
-// boundary condition type
-SIMPLE_BOUNDARYTYPE_FUNCTION(B,ig,x,y)
+struct DirichletBoundary :
+  public Dune::PDELab::DirichletConstraintsParameters
 {
-  Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
-    xg = ig.geometry().global(x);
+  template<typename I>
+  bool isDirichlet(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x)
+  {
+    Dune::FieldVector<typename I::ctype,I::dimension>
+      xg = ig.geometry().global(x);
 
-  if (!ig.boundary())
-    {
-      y = Traits::None; // no bc on subdomain interface
-      return;
-    }
+    if (!ig.boundary())
+      {
+        return false;
+      }
 
-  if (xg[1]<1E-6 || xg[1]>1.0-1E-6)
-    {
-      y = Traits::Neumann; // Neumann
-      return;
-    }
-  if (xg[0]>1.0-1E-6 && xg[1]>0.5+1E-6)
-    {
-      y = Traits::Neumann; // Neumann
-      return;
-    }
-  y = Traits::Dirichlet; // Dirichlet
-}
-END_SIMPLE_BOUNDARYTYPE_FUNCTION
+    if (xg[1]<1E-6 || xg[1]>1.0-1E-6)
+      {
+        return false;
+      }
+
+    if (xg[0]>1.0-1E-6 && xg[1]>0.5+1E-6)
+      {
+        return false;
+      }
+
+    return true;
+  }
+};
 
 
 // dirichlet bc
@@ -99,7 +100,6 @@ void instantiateLocalFunctionSpaces(const MDLFS& mdlfs, const SDS& sds, SubProbl
   if (subProblem.appliesTo(sds))
     {
       typename SubProblem::Traits::LocalTrialFunctionSpace lfs(mdlfs,subProblem,subProblem.trialGridFunctionSpaceConstraints());
-      lfs.bind();
       /*int status;
       std::unique_ptr<char> name(abi::__cxa_demangle(typeid(lfs).name(),0,0,&status));
       std::cout << name.get() << std::endl;*/
@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
     typedef Dune::PDELab::Q22DLocalFiniteElementMap<ctype,double> FEM0;
     typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM1;
 
-    typedef FEM0::Traits::LocalFiniteElementType::Traits::
+    typedef FEM0::Traits::FiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
 
     FEM0 fem0;
@@ -182,8 +182,13 @@ int main(int argc, char** argv) {
 
     MultiGFS multigfs(grid,gfs0,gfs1,gfs2,powergfs,compositegfs);
 
-    typedef B<MDGV> BType;
-    BType b(mdgv);
+    Dune::PDELab::LocalFunctionSpace<MultiGFS> multilfs(multigfs);
+
+    multilfs.bind(*mdgv.begin<0>());
+
+
+    typedef DirichletBoundary BType;
+    BType b;
 
     typedef F<MDGV,R> FType;
     FType f(mdgv);
@@ -216,17 +221,15 @@ int main(int argc, char** argv) {
     SubProblem4 sp4(nocon,nocon,lop,c0);
 
     SubProblem0::Traits::LocalTrialFunctionSpace
-      splfs0(sp0,sp0.trialGridFunctionSpaceConstraints());
+      splfs0(multilfs,sp0,sp0.trialGridFunctionSpaceConstraints());
     SubProblem1::Traits::LocalTrialFunctionSpace
-      splfs1(sp1,sp1.trialGridFunctionSpaceConstraints());
+      splfs1(multilfs,sp1,sp1.trialGridFunctionSpaceConstraints());
     SubProblem2::Traits::LocalTrialFunctionSpace
-      splfs2(sp2,sp2.trialGridFunctionSpaceConstraints());
+      splfs2(multilfs,sp2,sp2.trialGridFunctionSpaceConstraints());
     SubProblem3::Traits::LocalTrialFunctionSpace
-      splfs3(sp3,sp3.trialGridFunctionSpaceConstraints());
+      splfs3(multilfs,sp3,sp3.trialGridFunctionSpaceConstraints());
     SubProblem4::Traits::LocalTrialFunctionSpace
-      splfs4(sp4,sp4.trialGridFunctionSpaceConstraints());
-
-    MultiGFS::LocalFunctionSpace multilfs(multigfs);
+      splfs4(multilfs,sp4,sp4.trialGridFunctionSpaceConstraints());
 
     for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
       {
@@ -236,36 +239,36 @@ int main(int argc, char** argv) {
         if (sp0.appliesTo(sds))
           {
             SubProblem0::Traits::LocalTrialFunctionSpace lfs(multilfs,sp0,sp0.trialGridFunctionSpaceConstraints());
-            lfs.localFiniteElement();
+            lfs.finiteElement();
             lfs.localVectorSize();
           }
         if (sp1.appliesTo(sds))
           {
             SubProblem1::Traits::LocalTrialFunctionSpace lfs(multilfs,sp1,sp1.trialGridFunctionSpaceConstraints());
-            lfs.localFiniteElement();
+            lfs.finiteElement();
             lfs.localVectorSize();
           }
         if (sp2.appliesTo(sds))
           {
             SubProblem2::Traits::LocalTrialFunctionSpace lfs(multilfs,sp2,sp2.trialGridFunctionSpaceConstraints());
-            lfs.getChild<0>().localFiniteElement();
-            lfs.getChild<1>().getChild(0).localFiniteElement();
-            lfs.getChild<0>().localVectorSize();
-            lfs.getChild<1>().getChild(1).localVectorSize();
+            lfs.child<0>().finiteElement();
+            lfs.child<1>().child(0).finiteElement();
+            lfs.child<0>().localVectorSize();
+            lfs.child<1>().child(1).localVectorSize();
           }
         if (sp3.appliesTo(sds))
           {
             SubProblem3::Traits::LocalTrialFunctionSpace lfs(multilfs,sp3,sp3.trialGridFunctionSpaceConstraints());
-            lfs.getChild(1).localFiniteElement();
-            lfs.getChild(0).localVectorSize();
+            lfs.child(1).finiteElement();
+            lfs.child(0).localVectorSize();
           }
         if (sp4.appliesTo(sds))
           {
             SubProblem4::Traits::LocalTrialFunctionSpace lfs(multilfs,sp4,sp4.trialGridFunctionSpaceConstraints());
-            lfs.getChild<0>().localFiniteElement();
-            lfs.getChild<1>().getChild(0).localFiniteElement();
-            lfs.getChild<0>().localVectorSize();
-            lfs.getChild<1>().getChild(1).localVectorSize();
+            lfs.child<0>().finiteElement();
+            lfs.child<1>().child(0).finiteElement();
+            lfs.child<0>().localVectorSize();
+            lfs.child<1>().child(1).localVectorSize();
           }
       }
   }

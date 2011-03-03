@@ -168,6 +168,17 @@ struct do_alpha_boundary
   };
 };
 
+template<typename Operator = SpatialOperator>
+struct do_alpha_skeleton_or_boundary
+{
+  template<typename T>
+  struct test {
+    static const bool value =
+      Operator::template ExtractType<T>::Type::doAlphaSkeleton ||
+      Operator::template ExtractType<T>::Type::doAlphaBoundary;
+  };
+};
+
 template<typename Operator = CouplingOperator>
 struct do_alpha_coupling
 {
@@ -221,6 +232,17 @@ struct do_lambda_boundary
   template<typename T>
   struct test {
     static const bool value = Operator::template ExtractType<T>::Type::doLambdaBoundary;
+  };
+};
+
+template<typename Operator = SpatialOperator>
+struct do_lambda_skeleton_or_boundary
+{
+  template<typename T>
+  struct test {
+    static const bool value =
+      Operator::template ExtractType<T>::Type::doLambdaSkeleton ||
+      Operator::template ExtractType<T>::Type::doLambdaBoundary;
   };
 };
 

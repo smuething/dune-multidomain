@@ -289,7 +289,7 @@ public:
   template<typename Visitor>
   const Visitor& applyToParticipants(Visitor&& v)
   {
-    Dune::PDELab::TypeTree::applyToTree(_assemblyParticipants,v);
+    Dune::PDELab::TypeTree::applyToTree(*this,v);
     return v;
   }
 

@@ -34,6 +34,75 @@ public:
 
   typedef LocalAssembler_ LocalAssembler;
 
+  bool requireIntersections() const
+  {
+    return requireUVSkeleton() || requireVSkeleton() ||
+      requireUVEnrichedCoupling() || requireVEnrichedCoupling() ||
+      requireUVBoundary() || requireVBoundary();
+  }
+
+  bool requireIntersectionsTwoSided() const
+  {
+    return requireUVBoundary() || requireVBoundary() ||
+      any_child<typename LocalAssembler::SubProblems,do_skeleton_two_sided<> >::value;
+  }
+
+  bool requireUVVolume() const
+  {
+    return any_child<typename LocalAssembler::SubProblems,do_alpha_volume<> >::value;
+  }
+
+  bool requireVVolume() const
+  {
+    return any_child<typename LocalAssembler::SubProblems,do_lambda_volume<> >::value;
+  }
+
+  bool requireUVSkeleton() const
+  {
+    return any_child<typename LocalAssembler::SubProblems,do_alpha_skeleton<> >::value ||
+      any_child<typename LocalAssembler::SubProblems,do_alpha_boundary<> >::value ||
+      any_child<typename LocalAssembler::Couplings,do_alpha_coupling<> >::value ||
+      any_child<typename LocalAssembler::Couplings,do_alpha_enriched_coupling<> >::value;
+  }
+
+  bool requireVSkeleton() const
+  {
+    return any_child<typename LocalAssembler::SubProblems,do_lambda_skeleton<> >::value ||
+      any_child<typename LocalAssembler::SubProblems,do_lambda_boundary<> >::value ||
+      any_child<typename LocalAssembler::Couplings,do_lambda_coupling<> >::value ||
+      any_child<typename LocalAssembler::Couplings,do_lambda_enriched_coupling<> >::value;
+  }
+
+  bool requireUVBoundary() const
+  {
+    return any_child<typename LocalAssembler::SubProblems,do_alpha_boundary<> >::value;
+  }
+
+  bool requireVBoundary() const
+  {
+    return any_child<typename LocalAssembler::SubProblems,do_lambda_boundary<> >::value;
+  }
+
+  bool requireUVEnrichedCoupling() const
+  {
+    return any_child<typename LocalAssembler::Couplings,do_alpha_enriched_coupling<> >::value;
+  }
+
+  bool requireVEnrichedCoupling() const
+  {
+    return any_child<typename LocalAssembler::Couplings,do_lambda_enriched_coupling<> >::value;
+  }
+
+  bool requireUVVolumePostSkeleton() const
+  {
+    return any_child<typename LocalAssembler::SubProblems,do_alpha_volume_post_skeleton<> >::value;
+  }
+
+  bool requireVVolumePostSkeleton() const
+  {
+    return any_child<typename LocalAssembler::SubProblems,do_alpha_volume_post_skeleton<> >::value;
+  }
+
   template<typename EG, typename LFSU, typename LFSV>
   void onBindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {

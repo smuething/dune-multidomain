@@ -193,12 +193,12 @@ public:
 
   bool requireUVEnrichedCoupling() const
   {
-    return any_child<SubProblems,do_alpha_enriched_coupling<> >::value;
+    return any_child<Couplings,do_alpha_enriched_coupling<> >::value;
   }
 
   bool requireVEnrichedCoupling() const
   {
-    return any_child<SubProblems,do_lambda_enriched_coupling<> >::value;
+    return any_child<Couplings,do_lambda_enriched_coupling<> >::value;
   }
 
   bool requireUVVolumePostSkeleton() const

@@ -23,6 +23,12 @@ class GlobalAssembler
   typedef typename GV::template Codim<0>::Iterator ElementIterator;
   typedef typename GV::IntersectionIterator IntersectionIterator;
 
+  typedef LocalFunctionSpace<GFSU> LFSU;
+  typedef LocalFunctionSpace<GFSV> LFSV;
+  typedef CouplingLocalFunctionSpace<GFSU> CouplingLFSU;
+  typedef CouplingLocalFunctionSpace<GFSV> CouplingLFSV;
+
+
 public:
 
   template<typename LocalAssemblerEngine>
@@ -35,10 +41,6 @@ public:
     engine.preAssembly();
 
     // make local function spaces
-    typedef LocalFunctionSpace<GFSU> LFSU;
-    LFSU lfsu(gfsu);
-    typedef LocalFunctionSpace<GFSV> LFSV;
-    LFSV lfsv(gfsv);
 
     typedef Dune::PDELab::MultiDomain::ElementWrapper<GV> ElementWrapper;
     typedef Dune::PDELab::MultiDomain::BoundaryIntersectionWrapper<GV> BoundaryIntersectionWrapper;
@@ -75,15 +77,6 @@ public:
         // skip if no intersection iterator is needed
         if (engine.requireSkeleton())
           {
-            // local function spaces in neighbor
-            LFSU lfsun(gfsu);
-            LFSV lfsvn(gfsv);
-
-            typedef typename GFSU::CouplingLocalFunctionSpace CouplingLFSU;
-            CouplingLFSU couplinglfsu(gfsu);
-            typedef typename GFSV::CouplingLocalFunctionSpace CouplingLFSV;
-            CouplingLFSV couplinglfsv(gfsv);
-
             // traverse intersections
             unsigned int intersection_index = 0;
             IntersectionIterator endiit = gv.iend(*it);
@@ -171,10 +164,27 @@ public:
   GlobalAssembler(const GFSU& gfsu_, const GFSV& gfsv_)
     : gfsu(gfsu_)
     , gfsv(gfsv_)
+    , lfsu(gfsu)
+    , lfsv(gfsv)
+    , lfsun(gfsu)
+    , lfsvn(gfsv)
+    , couplinglfsu(gfsu)
+    , couplinglfsv(gfsv)
   {}
+
+private:
 
   const GFSU& gfsu;
   const GFSV& gfsv;
+
+  LFSU lfsu;
+  LFSV lfsv;
+
+  LFSU lfsun;
+  LFSV lfsvn;
+
+  CouplingLFSU couplinglfsu;
+  CouplingLFSV couplinglfsv;
 
 };
 

@@ -160,7 +160,7 @@ struct do_pattern_enriched_coupling
   };
 };
 
-template<typename Operator = CouplingOperator>
+template<typename Operator = SpatialOperator>
 struct do_pattern_volume_post_skeleton
 {
   template<typename T>

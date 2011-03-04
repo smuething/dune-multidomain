@@ -38,7 +38,7 @@ public:
   bool requireIntersectionsTwoSided() const
   {
     return requireUVBoundary() ||
-      requireUVEnrichedCoupling || any_child<typename LocalAssembler::Couplings,do_pattern_coupling<> >::value ||
+      requireUVEnrichedCoupling() || any_child<typename LocalAssembler::Couplings,do_pattern_coupling<> >::value ||
       any_child<typename LocalAssembler::SubProblems,do_skeleton_two_sided<> >::value;
   }
 
@@ -176,10 +176,10 @@ public:
   template<typename EG, typename LFSU, typename LFSV>
   void assembleUVVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    typedef visitor<invoke_jacobian_volume,do_pattern_volume<> > Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
-                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),
-                                         wrap_pattern_ss(pattern_ss)));
+    typedef visitor<invoke_pattern_volume,do_pattern_volume<> > Visitor;
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
+                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),
+                                                          wrap_pattern_ss(pattern_ss)));
   }
 
   template<typename EG, typename LFSV>
@@ -198,21 +198,21 @@ public:
     pattern_sn.clear();
     pattern_ns.clear();
 
-    applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
-                                                   store_neighbor_accessed(false),
-                                                   wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
-                                                   wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
-                                                   wrap_pattern_ss(pattern_ss),
-                                                   wrap_pattern_sn(pattern_sn),
-                                                   wrap_pattern_ns(pattern_ns)));
+    localAssembler().applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
+                                                                    store_neighbor_accessed(false),
+                                                                    wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
+                                                                    wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
+                                                                    wrap_pattern_ss(pattern_ss),
+                                                                    wrap_pattern_sn(pattern_sn),
+                                                                    wrap_pattern_ns(pattern_ns)));
 
     typedef visitor<invoke_pattern_coupling,do_pattern_coupling<> > CouplingVisitor;
-    applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
-                                               store_neighbor_accessed(false),
-                                               wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
-                                               wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
-                                               wrap_pattern_sn(pattern_sn),
-                                               wrap_pattern_ns(pattern_ns)));
+    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
+                                                                store_neighbor_accessed(false),
+                                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
+                                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
+                                                                wrap_pattern_sn(pattern_sn),
+                                                                wrap_pattern_ns(pattern_ns)));
 
     addToGlobalPattern(pattern_sn,lfsu_s,lfsv_n);
     addToGlobalPattern(pattern_ns,lfsu_n,lfsv_s);
@@ -230,8 +230,8 @@ public:
   void assembleUVBoundary(const IG& ig, const LFSU& lfsu, const LFSV& lfsv)
   {
     typedef visitor<invoke_pattern_boundary,do_pattern_boundary<> > Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
-                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_pattern_ss(pattern_ss)));
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
+                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_pattern_ss(pattern_ss)));
   }
 
   template<typename IG, typename LFSV>
@@ -256,14 +256,14 @@ public:
     pattern_nc.clear();
     pattern_cn.clear();
 
-    applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
-                                               wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
-                                               wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
-                                               wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),
-                                               wrap_pattern_sc(pattern_sc),
-                                               wrap_pattern_cs(pattern_cs),
-                                               wrap_pattern_nc(pattern_nc),
-                                               wrap_pattern_cn(pattern_cn)));
+    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
+                                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
+                                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
+                                                                wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),
+                                                                wrap_pattern_sc(pattern_sc),
+                                                                wrap_pattern_cs(pattern_cs),
+                                                                wrap_pattern_nc(pattern_nc),
+                                                                wrap_pattern_cn(pattern_cn)));
     addToGlobalPattern(pattern_sc,lfsu_s,lfsv_c);
     addToGlobalPattern(pattern_cs,lfsu_c,lfsv_s);
     addToGlobalPattern(pattern_nc,lfsu_n,lfsv_c);
@@ -286,9 +286,9 @@ public:
   void assembleUVVolumePostSkeleton(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
     typedef visitor<invoke_pattern_volume_post_skeleton,do_pattern_volume_post_skeleton<> > Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
-                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),
-                                         wrap_pattern_ss(pattern_ss)));
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
+                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),
+                                                          wrap_pattern_ss(pattern_ss)));
   }
 
   template<typename EG, typename LFSV>

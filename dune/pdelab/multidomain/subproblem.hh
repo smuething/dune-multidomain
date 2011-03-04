@@ -87,9 +87,9 @@ public:
     return typename Traits::LocalTrialFunctionSpace(mdlfs,_condition);
   }
 
-  template<typename SDS>
-  bool appliesTo(const SDS& sds) const {
-    return _condition(sds);
+  template<typename EG>
+  bool appliesTo(const EG& eg) const {
+    return _condition(eg.subDomains());
   }
 
   const Condition& condition() const {

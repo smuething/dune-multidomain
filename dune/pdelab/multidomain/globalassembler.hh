@@ -139,13 +139,8 @@ public:
                 if (iit->boundary())
                   {
                     BoundaryIntersectionWrapper boundaryIntersectionWrapper(*iit,intersection_index,elementWrapper);
-                    engine.onBindLFSUVOutside(boundaryIntersectionWrapper,lfsun,lfsvn);
-                    engine.loadCoefficientsOutside(lfsun);
-                    engine.onBindLFSVOutside(boundaryIntersectionWrapper,lfsvn);
                     engine.assembleUVBoundary(boundaryIntersectionWrapper,lfsu,lfsv);
                     engine.assembleVBoundary(boundaryIntersectionWrapper,lfsv);
-                    engine.onUnbindLFSUVOutside(boundaryIntersectionWrapper,lfsun,lfsvn);
-                    engine.onUnbindLFSVOutside(boundaryIntersectionWrapper,lfsvn);
                   }
               }
           }

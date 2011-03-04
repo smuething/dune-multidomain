@@ -11,6 +11,7 @@
 #include <dune/pdelab/multidomain/datawrappers.hh>
 #include <dune/pdelab/multidomain/operatorflagtests.hh>
 #include <dune/pdelab/multidomain/residualassemblerengine.hh>
+#include <dune/pdelab/multidomain/jacobianassemblerengine.hh>
 
 
 namespace Dune {
@@ -139,8 +140,11 @@ class LocalAssembler
   , public Dune::PDELab::LocalAssemblerBase<B,CU,CV>
 {
 
-  template<typename,typename,typename>
+  template<typename>
   friend class ResidualAssemblerEngine;
+
+  template<typename>
+  friend class JacobianAssemblerEngine;
 
   typedef Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...> NodeT;
   typedef Dune::PDELab::LocalAssemblerBase<B,CU,CV> BaseT;
@@ -150,7 +154,13 @@ class LocalAssembler
 public:
 
   typedef typename BaseT::Traits Traits;
-  typedef Dune::PDELab::MultiDomain::ResidualAssemblerEngine<LocalAssembler,V,V> ResidualAssemblerEngine;
+  typedef V Domain;
+  typedef V Range;
+  typedef V Jacobian;
+
+  typedef Dune::PDELab::MultiDomain::JacobianAssemblerEngine<LocalAssembler> JacobianAssemblerEngine;
+  typedef Dune::PDELab::MultiDomain::ResidualAssemblerEngine<LocalAssembler> ResidualAssemblerEngine;
+
 
   bool requireIntersections() const
   {
@@ -265,8 +275,14 @@ public:
     return applyToParticipants(visitor<functors::suggest_time_step>::add_data(store_dt(dt))).dt();
   }
 
+  JacobianAssemblerEngine& jacobianAssemblerEngine(const Domain& x, Jacobian& a)
+  {
+    _jacobianAssemblerEngine.setSolution(x);
+    _jacobianAssemblerEngine.setJacobian(a);
+    return _jacobianAssemblerEngine;
+  }
 
-  ResidualAssemblerEngine& residualAssemblerEngine(const V& x, V& r)
+  ResidualAssemblerEngine& residualAssemblerEngine(const Domain& x, Range& r)
   {
     _residualAssemblerEngine.setSolution(x);
     _residualAssemblerEngine.setResidual(r);
@@ -320,6 +336,7 @@ public:
     , _subProblems(*this)
     , _couplings(*this)
     , _weight(1.0)
+    , _jacobianAssemblerEngine(*this)
     , _residualAssemblerEngine(*this)
   {}
 
@@ -329,6 +346,7 @@ public:
     , _subProblems(*this)
     , _couplings(*this)
     , _weight(1.0)
+    , _jacobianAssemblerEngine(*this)
     , _residualAssemblerEngine(*this)
   {}
 
@@ -339,6 +357,7 @@ private:
   Couplings _couplings;
   double _weight;
 
+  JacobianAssemblerEngine _jacobianAssemblerEngine;
   ResidualAssemblerEngine _residualAssemblerEngine;
 
 };

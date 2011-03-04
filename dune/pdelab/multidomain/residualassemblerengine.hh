@@ -17,13 +17,15 @@ namespace PDELab {
 namespace MultiDomain {
 
 
-template<typename LocalAssembler_, typename X, typename R>
+template<typename LA>
 class ResidualAssemblerEngine
 {
 
 public:
 
-  typedef LocalAssembler_ LocalAssembler;
+  typedef LA LocalAssembler;
+  typedef typename LA::Range Range;
+  typedef typename LA::Domain Domain;
 
   bool requireIntersections() const
   {
@@ -322,12 +324,12 @@ public:
     Dune::PDELab::constrain_residual(localAssembler().testConstraints(),*r);
   }
 
-  void setSolution(const X& x_)
+  void setSolution(const Domain& x_)
   {
     x = &x_;
   }
 
-  void setResidual(R& r_)
+  void setResidual(Range& r_)
   {
     r = &r_;
   }
@@ -347,15 +349,15 @@ private:
 
   const LocalAssembler& _localAssembler;
 
-  const X* x;
-  R* r;
+  const Domain* x;
+  Range* r;
 
-  LocalVector<typename X::ElementType, TrialSpaceTag> x_s;
-  LocalVector<typename R::ElementType, TestSpaceTag> r_s;
-  LocalVector<typename X::ElementType, TrialSpaceTag> x_n;
-  LocalVector<typename R::ElementType, TestSpaceTag> r_n;
-  LocalVector<typename X::ElementType, TrialSpaceTag> x_c;
-  LocalVector<typename R::ElementType, TestSpaceTag> r_c;
+  LocalVector<typename Domain::ElementType, TrialSpaceTag> x_s;
+  LocalVector<typename Range::ElementType, TestSpaceTag> r_s;
+  LocalVector<typename Domain::ElementType, TrialSpaceTag> x_n;
+  LocalVector<typename Range::ElementType, TestSpaceTag> r_n;
+  LocalVector<typename Domain::ElementType, TrialSpaceTag> x_c;
+  LocalVector<typename Range::ElementType, TestSpaceTag> r_c;
 
 };
 

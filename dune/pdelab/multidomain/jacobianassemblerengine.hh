@@ -2,22 +2,14 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_JACOBIANASSEMBLERENGINE_HH
 #define DUNE_PDELAB_MULTIDOMAIN_JACOBIANASSEMBLERENGINE_HH
 
-#include<map>
-#include<tuple>
+#include <algorithm>
 
-#include<dune/common/exceptions.hh>
-#include<dune/common/geometrytype.hh>
-
-#include <dune/pdelab/common/geometrywrapper.hh>
-//#include"../gridfunctionspace/gridfunctionspace.hh"
-#include <dune/pdelab/gridfunctionspace/constraints.hh>
+#include <dune/pdelab/gridfunctionspace/localvector.hh>
 #include <dune/pdelab/gridoperatorspace/localmatrix.hh>
-#include <dune/pdelab/gridoperatorspace/gridoperatorspaceutilities.hh>
 
-#include <dune/pdelab/multidomain/multidomaingridoperatorspaceutilities.hh>
-#include <dune/pdelab/multidomain/operatorapplier.hh>
+#include <dune/pdelab/multidomain/datawrappers.hh>
+#include <dune/pdelab/multidomain/jacobianassemblerfunctors.hh>
 
-#include <dune/pdelab/multidomain/multidomaingridoperatorspaceinvocationhelpers.hh>
 
 namespace Dune {
 
@@ -26,10 +18,80 @@ namespace PDELab {
 namespace MultiDomain {
 
 
-template<typename X, typename R>
+template<typename LA>
 class JacobianAssemblerEngine
-  : public AssemblerEngineBase<X>
 {
+
+public:
+
+  typedef LA LocalAssembler;
+  typedef typename LA::Domain Domain;
+  typedef typename LA::Jacobian Jacobian;
+
+
+  bool requireIntersections() const
+  {
+    return requireUVSkeleton() || requireUVEnrichedCoupling() || requireUVBoundary();
+  }
+
+  bool requireIntersectionsTwoSided() const
+  {
+    return requireUVBoundary() ||
+      any_child<typename LocalAssembler::SubProblems,do_skeleton_two_sided<> >::value;
+  }
+
+  bool requireUVVolume() const
+  {
+    return any_child<typename LocalAssembler::SubProblems,do_alpha_volume<> >::value;
+  }
+
+  bool requireVVolume() const
+  {
+    return false;
+  }
+
+  bool requireUVSkeleton() const
+  {
+    return any_child<typename LocalAssembler::SubProblems,do_alpha_skeleton<> >::value ||
+      any_child<typename LocalAssembler::SubProblems,do_alpha_boundary<> >::value ||
+      any_child<typename LocalAssembler::Couplings,do_alpha_coupling<> >::value ||
+      any_child<typename LocalAssembler::Couplings,do_alpha_enriched_coupling<> >::value;
+  }
+
+  bool requireVSkeleton() const
+  {
+    return false;
+  }
+
+  bool requireUVBoundary() const
+  {
+    return any_child<typename LocalAssembler::SubProblems,do_alpha_boundary<> >::value;
+  }
+
+  bool requireVBoundary() const
+  {
+    return false;
+  }
+
+  bool requireUVEnrichedCoupling() const
+  {
+    return any_child<typename LocalAssembler::Couplings,do_alpha_enriched_coupling<> >::value;
+  }
+
+  bool requireVEnrichedCoupling() const
+  {
+    return false;
+  }
+
+  bool requireUVVolumePostSkeleton() const
+  {
+    return any_child<typename LocalAssembler::SubProblems,do_alpha_volume_post_skeleton<> >::value;
+  }
+
+  bool requireVVolumePostSkeleton() const
+  {
+    return false;
+  }
 
   template<typename EG, typename LFSU, typename LFSV>
   void onBindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
@@ -69,8 +131,8 @@ class JacobianAssemblerEngine
     a_cc.assign(lfsv_c.size(),lfsu_c.size(),0.0);
   }
 
-  template<typename IG, typename LFSU_C>
-  void onUnbindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c)
+  template<typename IG, typename LFSU_C, typename LFSV_C>
+  void onUnbindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
     // write back local jacobian contributions
     etadd(lfsv_c,lfsu_c,a_cc,*a);
@@ -130,8 +192,8 @@ class JacobianAssemblerEngine
   template<typename EG, typename LFSU, typename LFSV>
   void assembleUVVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    typedef visitor<invoke_jacobian_volume,do_alpha_volume> Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
+    typedef visitor<invoke_jacobian_volume,do_alpha_volume<> > Visitor;
+    applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
   }
 
@@ -148,16 +210,16 @@ class JacobianAssemblerEngine
   {
     a_sn.assign(lfsv_s.size(),lfsu_n.size(),0.0);
     a_ns.assign(lfsv_n.size(),lfsu_s.size(),0.0);
-    typedef visitor<invoke_jacobian_skeleton_or_boundary,do_alpha_skeleton_or_boundary> SubProblemVisitor;
-    applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
+    typedef visitor<invoke_jacobian_skeleton_or_boundary,do_alpha_skeleton_or_boundary<> > SubProblemVisitor;
+    applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
                                                    store_neighbor_accessed(false),
                                                    wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
                                                    wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
                                                    wrap_a_ss(a_ss),wrap_a_sn(a_sn),
                                                    wrap_a_ns(a_ns),wrap_a_nn(a_nn)));
 
-    typedef visitor<invoke_jacobian_coupling,do_alpha_coupling> CouplingVisitor;
-    applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
+    typedef visitor<invoke_jacobian_coupling,do_alpha_coupling<> > CouplingVisitor;
+    applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
                                                store_neighbor_accessed(false),
                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
@@ -178,8 +240,8 @@ class JacobianAssemblerEngine
   template<typename IG, typename LFSU, typename LFSV>
   void assembleUVBoundary(const IG& ig, const LFSU& lfsu, const LFSV& lfsv)
   {
-    typedef visitor<invoke_jacobian_boundary,do_alpha_boundary> Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_ig(ig),
+    typedef visitor<invoke_jacobian_boundary,do_alpha_boundary<> > Visitor;
+    applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
   }
 
@@ -202,8 +264,8 @@ class JacobianAssemblerEngine
     a_cs.assign(lfsv_c.size(),lfsu_s.size(),0.0);
     a_nc.assign(lfsv_n.size(),lfsu_c.size(),0.0);
     a_cn.assign(lfsv_c.size(),lfsu_n.size(),0.0);
-    typedef visitor<invoke_jacobian_enriched_coupling,do_alpha_enriched_coupling> CouplingVisitor;
-    applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(coupling_operator()),wrap_ig(ig),
+    typedef visitor<invoke_jacobian_enriched_coupling,do_alpha_enriched_coupling<> > CouplingVisitor;
+    applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
                                                wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),wrap_x_c(x_c),
@@ -231,8 +293,8 @@ class JacobianAssemblerEngine
   template<typename EG, typename LFSU, typename LFSV>
   void assembleUVVolumePostSkeleton(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    typedef visitor<invoke_lambda_volume_post_skeleton,do_alpha_volume_post_skeleton> Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(spatial_operator()),wrap_eg(eg),
+    typedef visitor<invoke_jacobian_volume_post_skeleton,do_alpha_volume_post_skeleton<> > Visitor;
+    applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
   }
 
@@ -247,40 +309,51 @@ class JacobianAssemblerEngine
 
   void postAssembly()
   {
-    typedef typename CV::const_iterator global_row_iterator;
-    for (global_row_iterator cit=pconstraintsv->begin(); cit!=pconstraintsv->end(); ++cit)
-      set_trivial_row(cit->first,cit->second,*a);
+    localAssembler().handle_dirichlet_constraints(*a);
   }
 
-  void setSolution(const X& x_)
+  void setSolution(const Domain& x_)
   {
     x = &x_;
   }
 
-  void setJacobian(A& a_)
+  void setJacobian(Jacobian& a_)
   {
     a = &a_;
   }
 
-  const X* x;
+  const LocalAssembler& localAssembler() const
+  {
+    return _localAssembler;
+  }
 
-  LocalVector<typename X::ElementType, TrialSpaceTag> x_s;
-  LocalVector<typename X::ElementType, TrialSpaceTag> x_n;
-  LocalVector<typename X::ElementType, TrialSpaceTag> x_c;
+  JacobianAssemblerEngine(const LocalAssembler& localAssembler)
+    : _localAssembler(localAssembler)
+  {}
 
-  A* a;
+private:
 
-  LocalMatrix<typename R::ElementType> a_ss;
-  LocalMatrix<typename R::ElementType> a_sn;
-  LocalMatrix<typename R::ElementType> a_sc;
+  const LocalAssembler& _localAssembler;
 
-  LocalMatrix<typename R::ElementType> a_nn;
-  LocalMatrix<typename R::ElementType> a_ns;
-  LocalMatrix<typename R::ElementType> a_nc;
+  const Domain* x;
 
-  LocalMatrix<typename R::ElementType> a_cc;
-  LocalMatrix<typename R::ElementType> a_cs;
-  LocalMatrix<typename R::ElementType> a_cn;
+  LocalVector<typename Domain::ElementType, TrialSpaceTag> x_s;
+  LocalVector<typename Domain::ElementType, TrialSpaceTag> x_n;
+  LocalVector<typename Domain::ElementType, TrialSpaceTag> x_c;
+
+  Jacobian* a;
+
+  LocalMatrix<typename Jacobian::ElementType> a_ss;
+  LocalMatrix<typename Jacobian::ElementType> a_sn;
+  LocalMatrix<typename Jacobian::ElementType> a_sc;
+
+  LocalMatrix<typename Jacobian::ElementType> a_nn;
+  LocalMatrix<typename Jacobian::ElementType> a_ns;
+  LocalMatrix<typename Jacobian::ElementType> a_nc;
+
+  LocalMatrix<typename Jacobian::ElementType> a_cc;
+  LocalMatrix<typename Jacobian::ElementType> a_cs;
+  LocalMatrix<typename Jacobian::ElementType> a_cn;
 
 };
 

@@ -170,6 +170,16 @@ public:
     , couplinglfsv(gfsv)
   {}
 
+  const GFSU& trialGridFunctionSpace() const
+  {
+    return gfsu;
+  }
+
+  const GFSV& testGridFunctionSpace() const
+  {
+    return gfsv;
+  }
+
 private:
 
   const GFSU& gfsu;

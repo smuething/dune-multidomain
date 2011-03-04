@@ -81,22 +81,22 @@ public:
 
   const GFSU& trialGridFunctionSpace() const
   {
-    return assembler().gfsu();
+    return assembler().trialGridFunctionSpace();
   }
 
   const GFSV& testGridFunctionSpace() const
   {
-    return assembler().gfsv();
+    return assembler().testGridFunctionSpace();
   }
 
   typename GFSU::Traits::SizeType globalSizeU () const
   {
-    return assembler().gfsu().size();
+    return assembler().trialGridFunctionSpace().size();
   }
 
   typename GFSV::Traits::SizeType globalSizeV () const
   {
-    return assembler().gfsu().size();
+    return assembler().testGridFunctionSpace().size();
   }
 
   template<typename F>

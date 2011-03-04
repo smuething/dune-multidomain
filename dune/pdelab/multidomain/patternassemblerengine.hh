@@ -27,7 +27,7 @@ public:
   typedef LA LocalAssembler;
   typedef typename LA::Domain Domain;
   typedef typename LA::Jacobian Jacobian;
-  typedef typename LA::GlobalPattern GlobalPattern;
+  typedef typename LA::Pattern GlobalPattern;
 
 
   bool requireIntersections() const
@@ -97,7 +97,6 @@ public:
   template<typename EG, typename LFSU, typename LFSV>
   void onBindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    x_s.resize(lfsu.size());
     pattern_ss.clear();
   }
 
@@ -110,7 +109,6 @@ public:
   template<typename IG, typename LFSU_N, typename LFSV_N>
   void onBindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
-    x_n.resize(lfsu_n.size());
     pattern_sn.clear();
     pattern_ns.clear();
   }
@@ -123,7 +121,6 @@ public:
   template<typename IG, typename LFSU_C, typename LFSV_C>
   void onBindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
-    x_c.resize(lfsu_c.size());
   }
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
@@ -181,7 +178,8 @@ public:
   {
     typedef visitor<invoke_jacobian_volume,do_pattern_volume<> > Visitor;
     applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
-                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
+                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),
+                                         wrap_pattern_ss(pattern_ss)));
   }
 
   template<typename EG, typename LFSV>
@@ -196,6 +194,10 @@ public:
                           const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
     typedef visitor<invoke_pattern_skeleton_or_boundary,do_pattern_skeleton_or_boundary<> > SubProblemVisitor;
+
+    pattern_sn.clear();
+    pattern_ns.clear();
+
     applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
                                                    store_neighbor_accessed(false),
                                                    wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
@@ -248,6 +250,12 @@ public:
                                   const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
     typedef visitor<invoke_pattern_enriched_coupling,do_pattern_enriched_coupling<> > CouplingVisitor;
+
+    pattern_sc.clear();
+    pattern_cs.clear();
+    pattern_nc.clear();
+    pattern_cn.clear();
+
     applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
@@ -257,7 +265,7 @@ public:
                                                wrap_pattern_nc(pattern_nc),
                                                wrap_pattern_cn(pattern_cn)));
     addToGlobalPattern(pattern_sc,lfsu_s,lfsv_c);
-    addToGlobalPattern(pattern_cx,lfsu_c,lfsv_s);
+    addToGlobalPattern(pattern_cs,lfsu_c,lfsv_s);
     addToGlobalPattern(pattern_nc,lfsu_n,lfsv_c);
     addToGlobalPattern(pattern_cn,lfsu_c,lfsv_n);
   }
@@ -279,7 +287,8 @@ public:
   {
     typedef visitor<invoke_pattern_volume_post_skeleton,do_pattern_volume_post_skeleton<> > Visitor;
     applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
-                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
+                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),
+                                         wrap_pattern_ss(pattern_ss)));
   }
 
   template<typename EG, typename LFSV>
@@ -292,18 +301,11 @@ public:
   {}
 
   void postAssembly()
-  {
-    localAssembler().handle_dirichlet_constraints(*a);
-  }
+  {}
 
-  void setSolution(const Domain& x_)
+  void setPattern(GlobalPattern& globalPattern)
   {
-    x = &x_;
-  }
-
-  void setJacobian(Jacobian& a_)
-  {
-    a = &a_;
+    _globalPattern = &globalPattern;
   }
 
   const LocalAssembler& localAssembler() const
@@ -317,7 +319,8 @@ public:
 
 private:
 
-  void addToGlobalPattern(const LocalSparsityPattern pattern, const LFSU& lfsu, const LFSV& lfsv&)
+  template<typename LFSU, typename LFSV>
+  void addToGlobalPattern(const LocalSparsityPattern pattern, const LFSU& lfsu, const LFSV& lfsv)
   {
     for(auto it = pattern.begin(); it != pattern.end(); ++it)
       localAssembler().add_entry(*_globalPattern,it->i(),it->j());

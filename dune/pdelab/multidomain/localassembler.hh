@@ -12,7 +12,7 @@
 #include <dune/pdelab/multidomain/operatorflagtests.hh>
 #include <dune/pdelab/multidomain/residualassemblerengine.hh>
 #include <dune/pdelab/multidomain/jacobianassemblerengine.hh>
-#include <dune/pdelab/multidomain/residualassemblerengine.hh>
+#include <dune/pdelab/multidomain/patternassemblerengine.hh>
 
 namespace Dune {
 
@@ -148,6 +148,10 @@ class LocalAssembler
   template<typename>
   friend class JacobianAssemblerEngine;
 
+  template<typename>
+  friend class PatternAssemblerEngine;
+
+
   typedef Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...> NodeT;
   typedef Dune::PDELab::LocalAssemblerBase<
     typename GridOperator::Traits::MatrixBackend,
@@ -163,10 +167,11 @@ public:
   typedef typename GridOperator::Traits::Domain Domain;
   typedef typename GridOperator::Traits::Range Range;
   typedef typename GridOperator::Traits::Jacobian Jacobian;
+  typedef typename GridOperator::Traits::MatrixBackend::Pattern Pattern;
 
   typedef Dune::PDELab::MultiDomain::JacobianAssemblerEngine<LocalAssembler> JacobianAssemblerEngine;
   typedef Dune::PDELab::MultiDomain::ResidualAssemblerEngine<LocalAssembler> ResidualAssemblerEngine;
-
+  typedef Dune::PDELab::MultiDomain::PatternAssemblerEngine<LocalAssembler> PatternAssemblerEngine;
 
   template<typename TReal>
   void setTime(TReal time)
@@ -225,6 +230,12 @@ public:
     return _residualAssemblerEngine;
   }
 
+  PatternAssemblerEngine& patternAssemblerEngine(Pattern& pattern)
+  {
+    _patternAssemblerEngine.setPattern(pattern);
+    return _patternAssemblerEngine;
+  }
+
   template<typename Visitor>
   const Visitor& applyToSubProblems(Visitor&& v)
   {
@@ -274,6 +285,7 @@ public:
     , _weight(1.0)
     , _jacobianAssemblerEngine(*this)
     , _residualAssemblerEngine(*this)
+    , _patternAssemblerEngine(*this)
   {}
 
   LocalAssembler(const typename GridOperator::Traits::TrialGridFunctionSpaceConstraints& cu,
@@ -286,6 +298,7 @@ public:
     , _weight(1.0)
     , _jacobianAssemblerEngine(*this)
     , _residualAssemblerEngine(*this)
+    , _patternAssemblerEngine(*this)
   {}
 
 
@@ -297,6 +310,7 @@ private:
 
   JacobianAssemblerEngine _jacobianAssemblerEngine;
   ResidualAssemblerEngine _residualAssemblerEngine;
+  PatternAssemblerEngine _patternAssemblerEngine;
 
 };
 

@@ -14,7 +14,7 @@ namespace PDELab {
 namespace MultiDomain {
 
 
-  template<typename GFSU, typename GFSV, bool nonoverlapping_mode = false>
+template<typename GFSU, typename GFSV, bool nonoverlapping_mode = false>
 class GlobalAssembler
 {
 
@@ -75,7 +75,7 @@ public:
         engine.assembleVVolume(elementWrapper,lfsv);
 
         // skip if no intersection iterator is needed
-        if (engine.requireSkeleton())
+        if (engine.requireIntersections())
           {
             // traverse intersections
             unsigned int intersection_index = 0;
@@ -87,7 +87,7 @@ public:
                 if (iit->neighbor())
                   {
                     const typename GV::IndexSet::IndexType idn = cell_mapper.map(*(iit->outside()));
-                    if (ids < idn && !engine.requireSkeletonTwoSided())
+                    if (ids < idn && !engine.requireIntersectionsTwoSided())
                       continue;
 
                     lfsun.bind(*(iit->outside()));

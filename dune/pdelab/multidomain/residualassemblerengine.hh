@@ -104,7 +104,7 @@ public:
   void onBindLFSV(const EG& eg, const LFSV& lfsv)
   {
     // clear local residual
-    r_s.resize(lfsv.size);
+    r_s.resize(lfsv.size());
     std::fill(r_s.begin(),r_s.end(),0.0);
   }
 
@@ -235,6 +235,7 @@ public:
   {
     typedef visitor<functors::lambda_skeleton_or_boundary,do_lambda_skeleton_or_boundary<> > Visitor;
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
+                                                          store_neighbor_accessed(false),
                                                           wrap_lfsv_s(lfsv_s),wrap_r_s(r_s),
                                                           wrap_lfsv_n(lfsv_n),wrap_r_n(r_n)));
 

@@ -139,6 +139,9 @@ class LocalAssembler
   , public Dune::PDELab::LocalAssemblerBase<B,CU,CV>
 {
 
+  template<typename,typename,typename>
+  friend class ResidualAssemblerEngine;
+
   typedef Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...> NodeT;
   typedef Dune::PDELab::LocalAssemblerBase<B,CU,CV> BaseT;
   typedef Dune::PDELab::TypeTree::FilteredCompositeNode<LocalAssembler,SubProblemFilter> SubProblems;
@@ -278,7 +281,7 @@ public:
   }
 
   template<typename Visitor>
-  const Visitor& applyToSubCouplings(Visitor&& v)
+  const Visitor& applyToCouplings(Visitor&& v)
   {
     Dune::PDELab::TypeTree::applyToTree(_couplings,v);
     return v;
@@ -299,7 +302,7 @@ public:
   }
 
   template<typename Visitor>
-  const Visitor& applyToSubCouplings(Visitor&& v) const
+  const Visitor& applyToCouplings(Visitor&& v) const
   {
     Dune::PDELab::TypeTree::applyToTree(_couplings,v);
     return v;

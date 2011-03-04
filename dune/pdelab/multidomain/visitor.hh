@@ -51,14 +51,14 @@ struct visitor
     {}
 
     template<typename Node, typename TreePath>
-    typename enable_if<condition::template test<Node>::value == true>::type
+    typename enable_if<condition::template test<typename remove_reference<Node>::type>::value == true>::type
     leaf(Node&& node, TreePath treePath)
     {
       (*this)(std::forward<Node>(node));
     }
 
     template<typename Node, typename TreePath>
-    typename enable_if<condition::template test<Node>::value == false>::type
+    typename enable_if<condition::template test<typename remove_reference<Node>::type>::value == false>::type
     leaf(const Node& node, TreePath treePath)
     {}
 

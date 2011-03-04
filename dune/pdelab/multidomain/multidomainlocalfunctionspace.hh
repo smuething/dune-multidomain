@@ -60,10 +60,6 @@ struct ComputeSizeVisitorBase
     return static_cast<Impl&>(*this);
   }
 
-  template<typename Child, typename Tag>
-  void compute_size(Child& child, Tag tag)
-  {}
-
   ComputeSizeVisitorBase(const Entity& entity, std::size_t offset_)
     : e(entity)
     , offset(offset_)
@@ -89,6 +85,10 @@ struct ComputeSizeVisitor<Entity,StandardLFSTag>
 
   ComputeSizeVisitor(const Entity& entity, std::size_t offset_ = 0)
     : BaseT(entity,offset_)
+  {}
+
+  template<typename Child, typename Tag>
+  void compute_size(Child& child, Tag tag)
   {}
 
   template<typename Child>
@@ -127,6 +127,10 @@ struct ComputeSizeVisitor<Intersection,CouplingLFSTag>
 
   ComputeSizeVisitor(const Intersection& intersection, std::size_t offset_ = 0)
     : BaseT(intersection,offset_)
+  {}
+
+  template<typename Child, typename Tag>
+  void compute_size(Child& child, Tag tag)
   {}
 
   template<typename Child>

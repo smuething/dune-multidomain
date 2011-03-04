@@ -122,6 +122,26 @@ struct do_pattern_skeleton
   };
 };
 
+template<typename Operator = SpatialOperator>
+struct do_pattern_boundary
+{
+  template<typename T>
+  struct test {
+    static const bool value = Operator::template ExtractType<T>::Type::doPatternBoundary;
+  };
+};
+
+template<typename Operator = SpatialOperator>
+struct do_pattern_skeleton_or_boundary
+{
+  template<typename T>
+  struct test {
+    static const bool value =
+      Operator::template ExtractType<T>::Type::doPatternSkeleton ||
+      Operator::template ExtractType<T>::Type::doPatternBoundary;
+  };
+};
+
 template<typename Operator = CouplingOperator>
 struct do_pattern_coupling
 {
@@ -140,6 +160,14 @@ struct do_pattern_enriched_coupling
   };
 };
 
+template<typename Operator = CouplingOperator>
+struct do_pattern_volume_post_skeleton
+{
+  template<typename T>
+  struct test {
+    static const bool value = Operator::template ExtractType<T>::Type::doPatternVolumePostSkeleton;
+  };
+};
 
 template<typename Operator = SpatialOperator>
 struct do_alpha_volume

@@ -12,7 +12,7 @@
 #include <dune/pdelab/multidomain/operatorflagtests.hh>
 #include <dune/pdelab/multidomain/residualassemblerengine.hh>
 #include <dune/pdelab/multidomain/jacobianassemblerengine.hh>
-
+#include <dune/pdelab/multidomain/residualassemblerengine.hh>
 
 namespace Dune {
 
@@ -134,10 +134,12 @@ namespace functors {
 }
 
 
-template<typename V, typename B, typename CU, typename CV, typename... AssemblyParticipants>
+template<typename GridOperator, typename... AssemblyParticipants>
 class LocalAssembler
   : public Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...>
-  , public Dune::PDELab::LocalAssemblerBase<B,CU,CV>
+  , public Dune::PDELab::LocalAssemblerBase<typename GridOperator::Traits::MatrixBackend,
+                                            typename GridOperator::Traits::TrialGridFunctionSpaceConstraints,
+                                            typename GridOperator::Traits::TestGridFunctionSpaceConstraints>
 {
 
   template<typename>
@@ -147,16 +149,20 @@ class LocalAssembler
   friend class JacobianAssemblerEngine;
 
   typedef Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...> NodeT;
-  typedef Dune::PDELab::LocalAssemblerBase<B,CU,CV> BaseT;
+  typedef Dune::PDELab::LocalAssemblerBase<
+    typename GridOperator::Traits::MatrixBackend,
+    typename GridOperator::Traits::TrialGridFunctionSpaceConstraints,
+    typename GridOperator::Traits::TestGridFunctionSpaceConstraints
+    > BaseT;
+
   typedef Dune::PDELab::TypeTree::FilteredCompositeNode<LocalAssembler,SubProblemFilter> SubProblems;
   typedef Dune::PDELab::TypeTree::FilteredCompositeNode<LocalAssembler,CouplingFilter> Couplings;
 
 public:
 
-  typedef typename BaseT::Traits Traits;
-  typedef V Domain;
-  typedef V Range;
-  typedef V Jacobian;
+  typedef typename GridOperator::Traits::Domain Domain;
+  typedef typename GridOperator::Traits::Range Range;
+  typedef typename GridOperator::Traits::Jacobian Jacobian;
 
   typedef Dune::PDELab::MultiDomain::JacobianAssemblerEngine<LocalAssembler> JacobianAssemblerEngine;
   typedef Dune::PDELab::MultiDomain::ResidualAssemblerEngine<LocalAssembler> ResidualAssemblerEngine;
@@ -340,7 +346,9 @@ public:
     , _residualAssemblerEngine(*this)
   {}
 
-  LocalAssembler(const CU& cu, const CV& cv, AssemblyParticipants&... participants)
+  LocalAssembler(const typename GridOperator::Traits::TrialGridFunctionSpaceConstraints& cu,
+                 const typename GridOperator::Traits::TestGridFunctionSpaceConstraints& cv,
+                 AssemblyParticipants&... participants)
     : NodeT(stackobject_to_shared_ptr(participants)...)
     , BaseT(cu,cv)
     , _subProblems(*this)

@@ -323,7 +323,7 @@ private:
   void addToGlobalPattern(const LocalSparsityPattern pattern, const LFSU& lfsu, const LFSV& lfsv)
   {
     for(auto it = pattern.begin(); it != pattern.end(); ++it)
-      localAssembler().add_entry(*_globalPattern,it->i(),it->j());
+      localAssembler().add_entry(*_globalPattern,lfsv.globalIndex(it->i()),lfsu.globalIndex(it->j()));
   }
 
   GlobalPattern* _globalPattern;

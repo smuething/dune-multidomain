@@ -105,7 +105,7 @@ public:
   void onUnbindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
     // write back local jacobian contributions
-    etadd(lfsv,lfsu,a_ss,*a);
+    localAssembler().etadd(lfsv,lfsu,a_ss,*a);
   }
 
   template<typename IG, typename LFSU_N, typename LFSV_N>
@@ -120,7 +120,7 @@ public:
   void onUnbindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
     // write back local jacobian contributions
-    etadd(lfsv_n,lfsu_n,a_nn,*a);
+    localAssembler().etadd(lfsv_n,lfsu_n,a_nn,*a);
   }
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
@@ -135,7 +135,7 @@ public:
   void onUnbindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
     // write back local jacobian contributions
-    etadd(lfsv_c,lfsu_c,a_cc,*a);
+    localAssembler().etadd(lfsv_c,lfsu_c,a_cc,*a);
   }
 
   template<typename EG, typename LFSV>
@@ -193,8 +193,8 @@ public:
   void assembleUVVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
     typedef visitor<invoke_jacobian_volume,do_alpha_volume<> > Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
-                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
+                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
   }
 
   template<typename EG, typename LFSV>
@@ -211,22 +211,22 @@ public:
     a_sn.assign(lfsv_s.size(),lfsu_n.size(),0.0);
     a_ns.assign(lfsv_n.size(),lfsu_s.size(),0.0);
     typedef visitor<invoke_jacobian_skeleton_or_boundary,do_alpha_skeleton_or_boundary<> > SubProblemVisitor;
-    applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
-                                                   store_neighbor_accessed(false),
-                                                   wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
-                                                   wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
-                                                   wrap_a_ss(a_ss),wrap_a_sn(a_sn),
-                                                   wrap_a_ns(a_ns),wrap_a_nn(a_nn)));
+    localAssembler().applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
+                                                                    store_neighbor_accessed(false),
+                                                                    wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
+                                                                    wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
+                                                                    wrap_a_ss(a_ss),wrap_a_sn(a_sn),
+                                                                    wrap_a_ns(a_ns),wrap_a_nn(a_nn)));
 
     typedef visitor<invoke_jacobian_coupling,do_alpha_coupling<> > CouplingVisitor;
-    applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
-                                               store_neighbor_accessed(false),
-                                               wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
-                                               wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
-                                               wrap_a_ss(a_ss),wrap_a_sn(a_sn),
-                                               wrap_a_ns(a_ns),wrap_a_nn(a_nn)));
-    etadd(lfsv_s,lfsu_n,a_sn,a);
-    etadd(lfsv_n,lfsu_s,a_ns,a);
+    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
+                                                                store_neighbor_accessed(false),
+                                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
+                                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
+                                                                wrap_a_ss(a_ss),wrap_a_sn(a_sn),
+                                                                wrap_a_ns(a_ns),wrap_a_nn(a_nn)));
+    localAssembler().etadd(lfsv_s,lfsu_n,a_sn,*a);
+    localAssembler().etadd(lfsv_n,lfsu_s,a_ns,*a);
   }
 
   template<typename IG, typename LFSV_S, typename LFSV_N>
@@ -241,8 +241,8 @@ public:
   void assembleUVBoundary(const IG& ig, const LFSU& lfsu, const LFSV& lfsv)
   {
     typedef visitor<invoke_jacobian_boundary,do_alpha_boundary<> > Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
-                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
+                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
   }
 
   template<typename IG, typename LFSV>
@@ -265,17 +265,17 @@ public:
     a_nc.assign(lfsv_n.size(),lfsu_c.size(),0.0);
     a_cn.assign(lfsv_c.size(),lfsu_n.size(),0.0);
     typedef visitor<invoke_jacobian_enriched_coupling,do_alpha_enriched_coupling<> > CouplingVisitor;
-    applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
-                                               wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
-                                               wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
-                                               wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),wrap_x_c(x_c),
-                                               wrap_a_ss(a_ss),wrap_a_sc(a_sc),
-                                               wrap_a_nn(a_nn),wrap_a_nc(a_nc),
-                                               wrap_a_cc(a_cc),wrap_a_cs(a_cs),wrap_a_sc(a_sc)));
-    etadd(lfsv_s,lfsu_c,a_sc,a);
-    etadd(lfsv_c,lfsu_s,a_cs,a);
-    etadd(lfsv_n,lfsu_c,a_nc,a);
-    etadd(lfsv_c,lfsu_n,a_cn,a);
+    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
+                                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
+                                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
+                                                                wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),wrap_x_c(x_c),
+                                                                wrap_a_ss(a_ss),wrap_a_sc(a_sc),
+                                                                wrap_a_nn(a_nn),wrap_a_nc(a_nc),
+                                                                wrap_a_cc(a_cc),wrap_a_cs(a_cs),wrap_a_cn(a_cn)));
+    localAssembler().etadd(lfsv_s,lfsu_c,a_sc,*a);
+    localAssembler().etadd(lfsv_c,lfsu_s,a_cs,*a);
+    localAssembler().etadd(lfsv_n,lfsu_c,a_nc,*a);
+    localAssembler().etadd(lfsv_c,lfsu_n,a_cn,*a);
   }
 
   template<typename IG,
@@ -294,8 +294,8 @@ public:
   void assembleUVVolumePostSkeleton(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
     typedef visitor<invoke_jacobian_volume_post_skeleton,do_alpha_volume_post_skeleton<> > Visitor;
-    applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
-                                         wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
+                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
   }
 
   template<typename EG, typename LFSV>

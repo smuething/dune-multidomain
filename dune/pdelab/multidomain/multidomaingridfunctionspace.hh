@@ -191,6 +191,8 @@ public:
                                              sizeof...(Children)>
   Traits;
 
+  typedef CompositeLexicographicOrdering<typename Traits::SizeType,typename Children::Ordering...> Ordering;
+
   template<typename T>
   struct IndexForChild
   {
@@ -225,24 +227,14 @@ public:
   //typedef MultiDomainCouplingLocalFunctionSpace<MultiDomainGridFunctionSpace,Children...> CouplingLocalFunctionSpace;
 
 
-  MultiDomainGridFunctionSpace (G& g, Children&... children) : BaseT(children...), _g(g)
+  MultiDomainGridFunctionSpace (G& g, Children&... children)
+    : BaseT(children...)
+    , _g(g)
+    , _ordering(make_shared<Ordering>(*this,children.orderingPtr()...))
   {
     dune_static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
                        "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
     TypeTree::applyToTree(*this,VerifyChildren());
-    this->setup();
-  }
-
-  //! map index from our index set [0,size()-1] to root index set
-  typename Traits::SizeType upMap (typename Traits::SizeType i) const
-  {
-    return i;
-  }
-
-  //! map index from child i's index set into our index set
-  typename Traits::SizeType subMap (typename Traits::SizeType i, typename Traits::SizeType j) const
-  {
-    return offset[i]+j;
   }
 
   template<class EntityType>
@@ -274,33 +266,21 @@ public:
     return _g;
   }
 
+  Ordering& ordering()
+  {
+    return *_ordering;
+  }
+
+  const Ordering& ordering() const
+  {
+    return *_ordering;
+  }
+
+
 private:
 
   const G& _g;
-
-  using ImplementationBase::childLocalSize;
-  using ImplementationBase::childGlobalSize;
-  using ImplementationBase::maxlocalsize;
-  using ImplementationBase::offset;
-
-  void calculateSizes ()
-  {
-    Dune::dinfo << "multi domain grid function space:"
-                << std::endl;
-
-    Dune::dinfo << "( ";
-    offset[0] = 0;
-    maxlocalsize = 0;
-    for (std::size_t i=0; i<BaseT::CHILDREN; i++)
-      {
-        Dune::dinfo << childGlobalSize[i] << " ";
-        offset[i+1] = offset[i]+childGlobalSize[i];
-        maxlocalsize += childLocalSize[i];
-      }
-    Dune::dinfo << ") total size = " << offset[BaseT::CHILDREN]
-                << " max local size = " << maxlocalsize
-                << std::endl;
-  }
+  shared_ptr<Ordering> _ordering;
 
 };
 

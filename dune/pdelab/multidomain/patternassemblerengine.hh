@@ -318,7 +318,7 @@ public:
 private:
 
   template<typename LFSU, typename LFSV>
-  void addToGlobalPattern(const LocalSparsityPattern pattern, const LFSU& lfsu, const LFSV& lfsv)
+  void addToGlobalPattern(const LocalSparsityPattern& pattern, const LFSU& lfsu, const LFSV& lfsv)
   {
     for(auto it = pattern.begin(); it != pattern.end(); ++it)
       localAssembler().add_entry(*_globalPattern,lfsv.globalIndex(it->i()),lfsu.globalIndex(it->j()));

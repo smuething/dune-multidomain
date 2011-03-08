@@ -274,7 +274,7 @@ struct do_lambda_skeleton_or_boundary
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = CouplingOperator>
 struct do_lambda_coupling
 {
   template<typename T>
@@ -283,7 +283,7 @@ struct do_lambda_coupling
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = CouplingOperator>
 struct do_lambda_enriched_coupling
 {
   template<typename T>

@@ -103,7 +103,7 @@ public:
   template<typename EG, typename LFSU, typename LFSV>
   void onUnbindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    addToGlobalPattern(pattern_ss,lfsu,lfsv);
+    addToGlobalPattern(pattern_ss,lfsv,lfsu);
   }
 
   template<typename IG, typename LFSU_N, typename LFSV_N>
@@ -111,21 +111,29 @@ public:
   {
     pattern_sn.clear();
     pattern_ns.clear();
+    pattern_nn.clear();
   }
 
   template<typename IG, typename LFSU_N, typename LFSV_N>
   void onUnbindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
+    addToGlobalPattern(pattern_nn,lfsv_n,lfsu_n);
   }
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
   void onBindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
+    pattern_cc.clear();
+    pattern_sc.clear();
+    pattern_nc.clear();
+    pattern_cs.clear();
+    pattern_cn.clear();
   }
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
   void onUnbindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
+    addToGlobalPattern(pattern_cc,lfsv_c,lfsu_c);
   }
 
   template<typename EG, typename LFSV>
@@ -195,25 +203,25 @@ public:
   {
     typedef visitor<invoke_pattern_skeleton_or_boundary,do_pattern_skeleton_or_boundary<> > SubProblemVisitor;
 
-    pattern_sn.clear();
-    pattern_ns.clear();
-
     localAssembler().applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
                                                                     wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
                                                                     wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
                                                                     wrap_pattern_ss(pattern_ss),
                                                                     wrap_pattern_sn(pattern_sn),
+                                                                    wrap_pattern_nn(pattern_nn),
                                                                     wrap_pattern_ns(pattern_ns)));
 
     typedef visitor<invoke_pattern_coupling,do_pattern_coupling<> > CouplingVisitor;
     localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
                                                                 wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
                                                                 wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
+                                                                wrap_pattern_ss(pattern_ss),
                                                                 wrap_pattern_sn(pattern_sn),
+                                                                wrap_pattern_nn(pattern_nn),
                                                                 wrap_pattern_ns(pattern_ns)));
 
-    addToGlobalPattern(pattern_sn,lfsu_s,lfsv_n);
-    addToGlobalPattern(pattern_ns,lfsu_n,lfsv_s);
+    addToGlobalPattern(pattern_sn,lfsv_s,lfsu_n);
+    addToGlobalPattern(pattern_ns,lfsv_n,lfsu_s);
   }
 
   template<typename IG, typename LFSV_S, typename LFSV_N>
@@ -249,23 +257,21 @@ public:
   {
     typedef visitor<invoke_pattern_enriched_coupling,do_pattern_enriched_coupling<> > CouplingVisitor;
 
-    pattern_sc.clear();
-    pattern_cs.clear();
-    pattern_nc.clear();
-    pattern_cn.clear();
-
     localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
                                                                 wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
                                                                 wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
                                                                 wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),
+                                                                wrap_pattern_ss(pattern_ss),
                                                                 wrap_pattern_sc(pattern_sc),
-                                                                wrap_pattern_cs(pattern_cs),
+                                                                wrap_pattern_nn(pattern_nn),
                                                                 wrap_pattern_nc(pattern_nc),
+                                                                wrap_pattern_cc(pattern_cc),
+                                                                wrap_pattern_cs(pattern_cs),
                                                                 wrap_pattern_cn(pattern_cn)));
-    addToGlobalPattern(pattern_sc,lfsu_s,lfsv_c);
-    addToGlobalPattern(pattern_cs,lfsu_c,lfsv_s);
-    addToGlobalPattern(pattern_nc,lfsu_n,lfsv_c);
-    addToGlobalPattern(pattern_cn,lfsu_c,lfsv_n);
+    addToGlobalPattern(pattern_sc,lfsv_s,lfsu_c);
+    addToGlobalPattern(pattern_cs,lfsv_c,lfsu_s);
+    addToGlobalPattern(pattern_nc,lfsv_n,lfsu_c);
+    addToGlobalPattern(pattern_cn,lfsv_c,lfsu_n);
   }
 
   template<typename IG,
@@ -281,7 +287,7 @@ public:
 
 
   template<typename EG, typename LFSU, typename LFSV>
-  void assembleUVVolumePostSkeleton(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
+  void assembleUVVolumePostSkeleton(const EG& eg, const LFSV& lfsv, const LFSU& lfsu)
   {
     typedef visitor<invoke_pattern_volume_post_skeleton,do_pattern_volume_post_skeleton<> > Visitor;
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
@@ -318,7 +324,7 @@ public:
 private:
 
   template<typename LFSU, typename LFSV>
-  void addToGlobalPattern(const LocalSparsityPattern& pattern, const LFSU& lfsu, const LFSV& lfsv)
+  void addToGlobalPattern(const LocalSparsityPattern& pattern, const LFSV& lfsv, const LFSU& lfsu)
   {
     for(auto it = pattern.begin(); it != pattern.end(); ++it)
       localAssembler().add_entry(*_globalPattern,lfsv.globalIndex(it->i()),lfsu.globalIndex(it->j()));
@@ -329,14 +335,15 @@ private:
   const LocalAssembler& _localAssembler;
 
   LocalSparsityPattern pattern_ss;
-
   LocalSparsityPattern pattern_sn;
-  LocalSparsityPattern pattern_ns;
-
   LocalSparsityPattern pattern_sc;
-  LocalSparsityPattern pattern_cs;
 
+  LocalSparsityPattern pattern_nn;
+  LocalSparsityPattern pattern_ns;
   LocalSparsityPattern pattern_nc;
+
+  LocalSparsityPattern pattern_cc;
+  LocalSparsityPattern pattern_cs;
   LocalSparsityPattern pattern_cn;
 
 };

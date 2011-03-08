@@ -27,8 +27,10 @@ public:
 
   template<typename LFSU1, typename LFSV1, typename LFSU2, typename LFSV2>
   void pattern_coupling (const LFSU1& lfsu_s, const LFSV1& lfsv_s, const LFSU2& lfsu_n, const LFSV2& lfsv_n,
+                         Dune::PDELab::LocalSparsityPattern& pattern_ss,
                          Dune::PDELab::LocalSparsityPattern& pattern_sn,
-                         Dune::PDELab::LocalSparsityPattern& pattern_ns) const
+                         Dune::PDELab::LocalSparsityPattern& pattern_ns,
+                         Dune::PDELab::LocalSparsityPattern& pattern_nn) const
   {
     for (unsigned int i=0; i<lfsv_s.size(); ++i)
       for (unsigned int j=0; j<lfsu_n.size(); ++j)
@@ -228,9 +230,10 @@ public:
            >
   void pattern_enriched_coupling_first (const LFSU1& lfsu_s, const LFSV1& lfsv_s,
                                         const CouplingLFSU& coupling_lfsu, const CouplingLFSV& coupling_lfsv,
+                                        Dune::PDELab::LocalSparsityPattern& pattern_ss,
                                         Dune::PDELab::LocalSparsityPattern& pattern_sc,
-                                        Dune::PDELab::LocalSparsityPattern& pattern_cs
-                                        ) const
+                                        Dune::PDELab::LocalSparsityPattern& pattern_cs,
+                                        Dune::PDELab::LocalSparsityPattern& pattern_cc) const
   {
     for (unsigned int i=0; i<lfsv_s.size(); ++i)
       for (unsigned int j=0; j<coupling_lfsu.size(); ++j)
@@ -253,9 +256,10 @@ public:
            >
   void pattern_enriched_coupling_second (const LFSU2& lfsu_n, const LFSV2& lfsv_n,
                                          const CouplingLFSU& coupling_lfsu, const CouplingLFSV& coupling_lfsv,
+                                         Dune::PDELab::LocalSparsityPattern& pattern_nn,
                                          Dune::PDELab::LocalSparsityPattern& pattern_nc,
-                                         Dune::PDELab::LocalSparsityPattern& pattern_cn
-                                         ) const
+                                         Dune::PDELab::LocalSparsityPattern& pattern_cn,
+                                         Dune::PDELab::LocalSparsityPattern& pattern_cc) const
   {
     for (unsigned int i=0; i<lfsv_n.size(); ++i)
       for (unsigned int j=0; j<coupling_lfsu.size(); ++j)

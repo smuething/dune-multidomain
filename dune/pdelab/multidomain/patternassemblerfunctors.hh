@@ -99,7 +99,8 @@ struct invoke_pattern_coupling
                                                        LFS::lfsv_s(data(),localSubProblem),
                                                        LFS::lfsu_n(data(),remoteSubProblem),
                                                        LFS::lfsv_n(data(),remoteSubProblem),
-                                                       data().pattern_sn(),data().pattern_ns());
+                                                       data().pattern_ss(),data().pattern_sn(),
+                                                       data().pattern_ns(),data().pattern_nn());
   }
 
 };
@@ -126,11 +127,13 @@ struct invoke_pattern_enriched_coupling
     Data::Operator::extract(coupling).pattern_enriched_coupling_first(LFS::lfsu_s(data(),localSubProblem),
                                                                       LFS::lfsv_s(data(),localSubProblem),
                                                                       lfsu_c,lfsv_c,
-                                                                      data().pattern_sc(),data().pattern_cs());
+                                                                      data().pattern_ss(),data().pattern_sc(),
+                                                                      data().pattern_cs(),data().pattern_cc());
     Data::Operator::extract(coupling).pattern_enriched_coupling_second(LFS::lfsu_n(data(),remoteSubProblem),
                                                                        LFS::lfsv_n(data(),remoteSubProblem),
                                                                        lfsu_c,lfsv_c,
-                                                                       data().pattern_nc(),data().pattern_cn());
+                                                                       data().pattern_nn(),data().pattern_nc(),
+                                                                       data().pattern_cn(),data().pattern_cc());
   }
 
 };

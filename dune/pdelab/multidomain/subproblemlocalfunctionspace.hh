@@ -384,6 +384,11 @@ public:
     return _subProblem.appliesTo(eg);
   }
 
+  // This method does nothing - it only exists for compatibility with the multi-child version
+  void bind()
+  {
+  }
+
 private:
   const SubProblem& _subProblem;
   const Constraints& _constraints;

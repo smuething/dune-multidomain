@@ -98,14 +98,16 @@ public:
   {
     x_s.resize(lfsu.size());
     // initialize local jacobian matrix
-    a_ss.assign(lfsv.size(),lfsu.size(),0.0);
+    _a_ss.assign(lfsv.size(),lfsu.size(),0.0);
   }
 
   template<typename EG, typename LFSU, typename LFSV>
   void onUnbindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
     // write back local jacobian contributions
-    localAssembler().etadd(lfsv,lfsu,a_ss,*a);
+    if (a_ss.modified())
+      localAssembler().etadd(lfsv,lfsu,_a_ss,*a);
+    a_ss.resetModified();
   }
 
   template<typename IG, typename LFSU_N, typename LFSV_N>
@@ -113,14 +115,16 @@ public:
   {
     x_n.resize(lfsu_n.size());
     // initialize local jacobian matrix
-    a_nn.assign(lfsv_n.size(),lfsu_n.size(),0.0);
+    _a_nn.assign(lfsv_n.size(),lfsu_n.size(),0.0);
   }
 
   template<typename IG, typename LFSU_N, typename LFSV_N>
   void onUnbindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
     // write back local jacobian contributions
-    localAssembler().etadd(lfsv_n,lfsu_n,a_nn,*a);
+    if (a_nn.modified())
+      localAssembler().etadd(lfsv_n,lfsu_n,_a_nn,*a);
+    a_nn.resetModified();
   }
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
@@ -128,14 +132,16 @@ public:
   {
     x_c.resize(lfsu_c.size());
     // initialize local jacobian matrix
-    a_cc.assign(lfsv_c.size(),lfsu_c.size(),0.0);
+    _a_cc.assign(lfsv_c.size(),lfsu_c.size(),0.0);
   }
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
   void onUnbindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
     // write back local jacobian contributions
-    localAssembler().etadd(lfsv_c,lfsu_c,a_cc,*a);
+    if (a_cc.modified())
+      localAssembler().etadd(lfsv_c,lfsu_c,_a_cc,*a);
+    a_cc.resetModified();
   }
 
   template<typename EG, typename LFSV>
@@ -193,6 +199,7 @@ public:
   void assembleUVVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
     typedef visitor<invoke_jacobian_volume,do_alpha_volume<> > Visitor;
+    a_ss.setWeight(localAssembler().weight());
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a_ss(a_ss)));
   }
@@ -208,11 +215,14 @@ public:
                           const LFSU_S& lfsu_s, const LFSV_S& lfsv_s,
                           const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
-    a_sn.assign(lfsv_s.size(),lfsu_n.size(),0.0);
-    a_ns.assign(lfsv_n.size(),lfsu_s.size(),0.0);
+    _a_sn.assign(lfsv_s.size(),lfsu_n.size(),0.0);
+    _a_ns.assign(lfsv_n.size(),lfsu_s.size(),0.0);
+    a_ss.setWeight(localAssembler().weight());
+    a_sn.setWeight(localAssembler().weight());
+    a_ns.setWeight(localAssembler().weight());
+    a_nn.setWeight(localAssembler().weight());
     typedef visitor<invoke_jacobian_skeleton_or_boundary,do_alpha_skeleton_or_boundary<> > SubProblemVisitor;
     localAssembler().applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
-                                                                    store_neighbor_accessed(false),
                                                                     wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
                                                                     wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
                                                                     wrap_a_ss(a_ss),wrap_a_sn(a_sn),
@@ -220,13 +230,16 @@ public:
 
     typedef visitor<invoke_jacobian_coupling,do_alpha_coupling<> > CouplingVisitor;
     localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
-                                                                store_neighbor_accessed(false),
                                                                 wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
                                                                 wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
                                                                 wrap_a_ss(a_ss),wrap_a_sn(a_sn),
                                                                 wrap_a_ns(a_ns),wrap_a_nn(a_nn)));
-    localAssembler().etadd(lfsv_s,lfsu_n,a_sn,*a);
-    localAssembler().etadd(lfsv_n,lfsu_s,a_ns,*a);
+    if (a_sn.modified())
+      localAssembler().etadd(lfsv_s,lfsu_n,_a_sn,*a);
+    a_sn.resetModified();
+    if (a_ns.modified())
+      localAssembler().etadd(lfsv_n,lfsu_s,_a_ns,*a);
+    a_ns.resetModified();
   }
 
   template<typename IG, typename LFSV_S, typename LFSV_N>
@@ -241,6 +254,7 @@ public:
   void assembleUVBoundary(const IG& ig, const LFSU& lfsu, const LFSV& lfsv)
   {
     typedef visitor<invoke_jacobian_boundary,do_alpha_boundary<> > Visitor;
+    a_ss.setWeight(localAssembler().weight());
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
   }
@@ -260,10 +274,17 @@ public:
                                   const LFSU_N& lfsu_n, const LFSV_N& lfsv_n,
                                   const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
-    a_sc.assign(lfsv_s.size(),lfsu_c.size(),0.0);
-    a_cs.assign(lfsv_c.size(),lfsu_s.size(),0.0);
-    a_nc.assign(lfsv_n.size(),lfsu_c.size(),0.0);
-    a_cn.assign(lfsv_c.size(),lfsu_n.size(),0.0);
+    _a_sc.assign(lfsv_s.size(),lfsu_c.size(),0.0);
+    _a_cs.assign(lfsv_c.size(),lfsu_s.size(),0.0);
+    _a_nc.assign(lfsv_n.size(),lfsu_c.size(),0.0);
+    _a_cn.assign(lfsv_c.size(),lfsu_n.size(),0.0);
+    a_ss.setWeight(localAssembler().weight());
+    a_sc.setWeight(localAssembler().weight());
+    a_nn.setWeight(localAssembler().weight());
+    a_nc.setWeight(localAssembler().weight());
+    a_cc.setWeight(localAssembler().weight());
+    a_cs.setWeight(localAssembler().weight());
+    a_cn.setWeight(localAssembler().weight());
     typedef visitor<invoke_jacobian_enriched_coupling,do_alpha_enriched_coupling<> > CouplingVisitor;
     localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
                                                                 wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
@@ -272,10 +293,18 @@ public:
                                                                 wrap_a_ss(a_ss),wrap_a_sc(a_sc),
                                                                 wrap_a_nn(a_nn),wrap_a_nc(a_nc),
                                                                 wrap_a_cc(a_cc),wrap_a_cs(a_cs),wrap_a_cn(a_cn)));
-    localAssembler().etadd(lfsv_s,lfsu_c,a_sc,*a);
-    localAssembler().etadd(lfsv_c,lfsu_s,a_cs,*a);
-    localAssembler().etadd(lfsv_n,lfsu_c,a_nc,*a);
-    localAssembler().etadd(lfsv_c,lfsu_n,a_cn,*a);
+    if (a_sc.modified())
+      localAssembler().etadd(lfsv_s,lfsu_c,_a_sc,*a);
+    a_sc.resetModified();
+    if (a_cs.modified())
+      localAssembler().etadd(lfsv_c,lfsu_s,_a_cs,*a);
+    a_cs.resetModified();
+    if (a_nc.modified())
+      localAssembler().etadd(lfsv_n,lfsu_c,_a_nc,*a);
+    a_nc.resetModified();
+    if (a_cn.modified())
+      localAssembler().etadd(lfsv_c,lfsu_n,_a_cn,*a);
+    a_cn.resetModified();
   }
 
   template<typename IG,
@@ -294,6 +323,7 @@ public:
   void assembleUVVolumePostSkeleton(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
     typedef visitor<invoke_jacobian_volume_post_skeleton,do_alpha_volume_post_skeleton<> > Visitor;
+    a_ss.setWeight(localAssembler().weight());
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
   }
@@ -329,6 +359,15 @@ public:
 
   JacobianAssemblerEngine(const LocalAssembler& localAssembler)
     : _localAssembler(localAssembler)
+    , a_ss(_a_ss,1.0)
+    , a_sn(_a_sn,1.0)
+    , a_sc(_a_sc,1.0)
+    , a_nn(_a_nn,1.0)
+    , a_ns(_a_ns,1.0)
+    , a_nc(_a_nc,1.0)
+    , a_cc(_a_cc,1.0)
+    , a_cs(_a_cs,1.0)
+    , a_cn(_a_cn,1.0)
   {}
 
 private:
@@ -337,23 +376,38 @@ private:
 
   const Domain* x;
 
-  LocalVector<typename Domain::ElementType, TrialSpaceTag> x_s;
-  LocalVector<typename Domain::ElementType, TrialSpaceTag> x_n;
-  LocalVector<typename Domain::ElementType, TrialSpaceTag> x_c;
+  typedef LocalVector<typename Domain::ElementType, TrialSpaceTag> SolutionVector;
+  typedef LocalMatrix<typename Jacobian::ElementType> LocalJacobian;
+
+  SolutionVector x_s;
+  SolutionVector x_n;
+  SolutionVector x_c;
 
   Jacobian* a;
 
-  LocalMatrix<typename Jacobian::ElementType> a_ss;
-  LocalMatrix<typename Jacobian::ElementType> a_sn;
-  LocalMatrix<typename Jacobian::ElementType> a_sc;
+  LocalJacobian _a_ss;
+  LocalJacobian _a_sn;
+  LocalJacobian _a_sc;
 
-  LocalMatrix<typename Jacobian::ElementType> a_nn;
-  LocalMatrix<typename Jacobian::ElementType> a_ns;
-  LocalMatrix<typename Jacobian::ElementType> a_nc;
+  LocalJacobian _a_nn;
+  LocalJacobian _a_ns;
+  LocalJacobian _a_nc;
 
-  LocalMatrix<typename Jacobian::ElementType> a_cc;
-  LocalMatrix<typename Jacobian::ElementType> a_cs;
-  LocalMatrix<typename Jacobian::ElementType> a_cn;
+  LocalJacobian _a_cc;
+  LocalJacobian _a_cs;
+  LocalJacobian _a_cn;
+
+  typename LocalJacobian::WeightedAccumulationView a_ss;
+  typename LocalJacobian::WeightedAccumulationView a_sn;
+  typename LocalJacobian::WeightedAccumulationView a_sc;
+
+  typename LocalJacobian::WeightedAccumulationView a_nn;
+  typename LocalJacobian::WeightedAccumulationView a_ns;
+  typename LocalJacobian::WeightedAccumulationView a_nc;
+
+  typename LocalJacobian::WeightedAccumulationView a_cc;
+  typename LocalJacobian::WeightedAccumulationView a_cs;
+  typename LocalJacobian::WeightedAccumulationView a_cn;
 
 };
 

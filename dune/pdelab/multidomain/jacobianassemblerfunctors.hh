@@ -48,8 +48,6 @@ struct invoke_jacobian_skeleton_or_boundary
                             LFS::lfsu_s(data(),subProblem),data().x_s(),LFS::lfsv_s(data(),subProblem),
                             LFS::lfsu_n(data(),subProblem),data().x_n(),LFS::lfsv_n(data(),subProblem),
                             data().a_ss(),data().a_sn(),data().a_ns(),data().a_nn());
-        if(LOP::doAlphaSkeleton)
-          data().neighbor_accessed() = true;
       }
     else
       {
@@ -108,7 +106,6 @@ struct invoke_jacobian_coupling
                                                         data().x_n(),
                                                         LFS::lfsv_n(data(),remoteSubProblem),
                                                         data().a_ss(),data().a_sn(),data().a_ns(),data.a_n());
-    data().neighbor_accessed() = true;
   }
 
 };
@@ -145,8 +142,6 @@ struct invoke_jacobian_enriched_coupling
                                                                         LFS::lfsv_n(data(),remoteSubProblem),
                                                                         lfsu_c,data().x_c(),lfsv_c,
                                                                         data().a_nn(),data().a_nc(),data().a_cn(),data().a_cc());
-    data().neighbor_accessed() = true;
-    data().coupling_accessed() = true;
   }
 
 };

@@ -73,8 +73,6 @@ namespace functors {
                            LFS::lfsu_s(data(),subProblem),data().x_s(),LFS::lfsv_s(data(),subProblem),
                            LFS::lfsu_n(data(),subProblem),data().x_n(),LFS::lfsv_n(data(),subProblem),
                            data().r_s(),data().r_n());
-          if(LOP::doAlphaSkeleton)
-            data().neighbor_accessed() = true;
         }
       else
         {
@@ -108,8 +106,6 @@ namespace functors {
                             LFS::lfsv_s(data(),subProblem),
                             LFS::lfsv_n(data(),subProblem),
                             data().r_s(),data().r_n());
-          if(LOP::doAlphaSkeleton)
-            data().neighbor_accessed() = true;
         }
       else
         {
@@ -189,7 +185,6 @@ namespace functors {
                                                        data().x_n(),
                                                        LFS::lfsv_n(data(),remoteSubProblem),
                                                        data().r_s(),data().r_n());
-      data().neighbor_accessed() = true;
     }
 
   };
@@ -216,7 +211,6 @@ namespace functors {
                                                        LFS::lfsv_s(data(),localSubProblem),
                                                        LFS::lfsv_n(data(),remoteSubProblem),
                                                        data().r_s(),data().r_n());
-      data().neighbor_accessed() = true;
     }
 
   };
@@ -253,8 +247,6 @@ namespace functors {
                                                                        LFS::lfsv_n(data(),remoteSubProblem),
                                                                        lfsu_c,data().x_c(),lfsv_c,
                                                                        data().r_n(),data().r_c());
-      data().neighbor_accessed() = true;
-      data().coupling_accessed() = true;
     }
 
   };
@@ -286,8 +278,6 @@ namespace functors {
                                                                        LFS::lfsv_n(data(),remoteSubProblem),
                                                                        lfsv_c,
                                                                        data().r_n(),data().r_c());
-      data().neighbor_accessed() = true;
-      data().coupling_accessed() = true;
     }
 
   };

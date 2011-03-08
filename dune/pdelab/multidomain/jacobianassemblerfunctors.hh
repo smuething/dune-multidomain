@@ -105,7 +105,7 @@ struct invoke_jacobian_coupling
                                                         LFS::lfsu_n(data(),remoteSubProblem),
                                                         data().x_n(),
                                                         LFS::lfsv_n(data(),remoteSubProblem),
-                                                        data().a_ss(),data().a_sn(),data().a_ns(),data.a_n());
+                                                        data().a_ss(),data().a_sn(),data().a_ns(),data().a_nn());
   }
 
 };

@@ -47,8 +47,6 @@ struct invoke_pattern_skeleton_or_boundary
                            LFS::lfsu_s(data(),subProblem),LFS::lfsv_s(data(),subProblem),
                            LFS::lfsu_n(data(),subProblem),LFS::lfsv_n(data(),subProblem),
                            data().pattern_sn(),data().pattern_ns());
-        if(LOP::doPatternSkeleton)
-          data().neighbor_accessed() = true;
       }
     else
       {
@@ -102,7 +100,6 @@ struct invoke_pattern_coupling
                                                        LFS::lfsu_n(data(),remoteSubProblem),
                                                        LFS::lfsv_n(data(),remoteSubProblem),
                                                        data().pattern_sn(),data().pattern_ns());
-    data().neighbor_accessed() = true;
   }
 
 };
@@ -134,7 +131,6 @@ struct invoke_pattern_enriched_coupling
                                                                        LFS::lfsv_n(data(),remoteSubProblem),
                                                                        lfsu_c,lfsv_c,
                                                                        data().pattern_nc(),data().pattern_cn());
-    data().coupling_accessed() = true;
   }
 
 };

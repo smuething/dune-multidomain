@@ -199,7 +199,6 @@ public:
     pattern_ns.clear();
 
     localAssembler().applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
-                                                                    store_neighbor_accessed(false),
                                                                     wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
                                                                     wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
                                                                     wrap_pattern_ss(pattern_ss),
@@ -208,7 +207,6 @@ public:
 
     typedef visitor<invoke_pattern_coupling,do_pattern_coupling<> > CouplingVisitor;
     localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
-                                                                store_neighbor_accessed(false),
                                                                 wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
                                                                 wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
                                                                 wrap_pattern_sn(pattern_sn),

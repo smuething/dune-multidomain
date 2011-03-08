@@ -278,6 +278,11 @@ public:
     return v;
   }
 
+  double weight() const
+  {
+    return _weight;
+  }
+
   LocalAssembler(AssemblyParticipants&... participants)
     : NodeT(stackobject_to_shared_ptr(participants)...)
     , _subProblems(*this)

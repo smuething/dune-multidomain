@@ -131,33 +131,33 @@ struct is_coupling
  * (either trial or test).
  */
 
-template<typename NoSubProblem>
+template<typename MultiLFS, typename NoSubProblem>
 typename std::enable_if<!is_subproblem<NoSubProblem>::value,const NoSubProblem&>::type
-extract_trial_lfs(const NoSubProblem& noSubProblem)
+extract_trial_lfs(const MultiLFS& multiLFS, const NoSubProblem& noSubProblem)
 {
   return noSubProblem;
 }
 
-template<typename SubProblem>
+template<typename MultiLFS, typename SubProblem>
 typename std::enable_if<is_subproblem<SubProblem>::value,typename SubProblem::Traits::LocalTrialFunctionSpace>::type
-extract_trial_lfs(const SubProblem& subProblem)
+extract_trial_lfs(const MultiLFS& multiLFS, const SubProblem& subProblem)
 {
-  return typename SubProblem::Traits::LocalTrialFunctionSpace(subProblem,subProblem.trialGridFunctionSpaceConstraints());
+  return typename SubProblem::Traits::LocalTrialFunctionSpace(multiLFS,subProblem,subProblem.trialGridFunctionSpaceConstraints());
 }
 
 
-template<typename NoSubProblem>
+template<typename MultiLFS, typename NoSubProblem>
 typename std::enable_if<!is_subproblem<NoSubProblem>::value,const NoSubProblem&>::type
-extract_test_lfs(const NoSubProblem& noSubProblem)
+extract_test_lfs(const MultiLFS& multiLFS, const NoSubProblem& noSubProblem)
 {
   return noSubProblem;
 }
 
-template<typename SubProblem>
+template<typename MultiLFS, typename SubProblem>
 typename std::enable_if<is_subproblem<SubProblem>::value,typename SubProblem::Traits::LocalTestFunctionSpace>::type
-extract_test_lfs(const SubProblem& subProblem)
+extract_test_lfs(const MultiLFS& multiLFS, const SubProblem& subProblem)
 {
-  return typename SubProblem::Traits::LocalTestFunctionSpace(subProblem,subProblem.testGridFunctionSpaceConstraints());
+  return typename SubProblem::Traits::LocalTestFunctionSpace(multiLFS,subProblem,subProblem.testGridFunctionSpaceConstraints());
 }
 
 } // namespace MultiDomain

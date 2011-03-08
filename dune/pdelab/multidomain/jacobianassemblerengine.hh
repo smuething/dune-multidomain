@@ -194,7 +194,7 @@ public:
   {
     typedef visitor<invoke_jacobian_volume,do_alpha_volume<> > Visitor;
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
-                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
+                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a_ss(a_ss)));
   }
 
   template<typename EG, typename LFSV>

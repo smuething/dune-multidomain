@@ -22,7 +22,7 @@ struct invoke_jacobian_volume
                                                         LFS::lfsu(data(),subProblem),
                                                         data().x(),
                                                         LFS::lfsv(data(),subProblem),
-                                                        data().a());
+                                                        data().a_ss());
   }
 
 };

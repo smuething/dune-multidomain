@@ -15,6 +15,8 @@ public:
   static const bool doPatternEnrichedCoupling = false;
   static const bool doAlphaCoupling = false;
   static const bool doAlphaEnrichedCoupling = false;
+  static const bool doLambdaCoupling = false;
+  static const bool doLambdaEnrichedCoupling = false;
 };
 
 
@@ -61,14 +63,19 @@ public:
   //! compute local jacobian of the skeleton term
   template<typename IG, typename LFSU_S, typename LFSU_N,
            typename X, typename LFSV_S, typename LFSV_N,
-           typename R>
+           typename Jacobian>
   void jacobian_coupling
   ( const IG& ig,
     const LFSU_S& lfsu_s, const X& x_s, const LFSV_S& lfsv_s,
     const LFSU_N& lfsu_n, const X& x_n, const LFSV_N& lfsv_n,
-    LocalMatrix<R>& mat_ss, LocalMatrix<R>& mat_sn,
-    LocalMatrix<R>& mat_ns, LocalMatrix<R>& mat_nn) const
+    Jacobian& mat_ss, Jacobian& mat_sn,
+    Jacobian& mat_ns, Jacobian& mat_nn) const
   {
+    typedef typename X::value_type D;
+    typedef typename Jacobian::value_type R;
+    typedef LocalVector<R,TestSpaceTag,typename Jacobian::weight_type> ResidualVector;
+    typedef typename ResidualVector::WeightedAccumulationView ResidualView;
+
     const int m_s=lfsv_s.size();
     const int m_n=lfsv_n.size();
     const int n_s=lfsu_s.size();
@@ -76,25 +83,33 @@ public:
 
     X u_s(x_s);
     X u_n(x_n);
-    std::vector<R> down_s(m_s,0.0),up_s(m_s);
-    std::vector<R> down_n(m_n,0.0),up_n(m_n);
+
+    ResidualVector down_s(m_s),up_s(m_s);
+    ResidualView downview_s = down_s.weightedAccumulationView(1.0);
+    ResidualView upview_s = up_s.weightedAccumulationView(1.0);
+
+    ResidualVector down_n(m_n),up_n(m_n);
+    ResidualView downview_n = down_n.weightedAccumulationView(1.0);
+    ResidualView upview_n = up_n.weightedAccumulationView(1.0);
 
     // base line
-    asImp().alpha_coupling(ig,lfsu_s,u_s,lfsv_s,lfsu_n,u_n,lfsv_n,down_s,down_n);
+    asImp().alpha_coupling(ig,lfsu_s,u_s,lfsv_s,lfsu_n,u_n,lfsv_n,downview_s,downview_n);
 
     // jiggle in self
     for (int j=0; j<n_s; j++)
       {
         for (int k=0; k<m_s; k++) up_s[k]=0.0;
         for (int k=0; k<m_n; k++) up_n[k]=0.0;
-        R delta = epsilon*(1.0+std::abs(u_s[j]));
-        u_s[j] += delta;
-        asImp().alpha_coupling(ig,lfsu_s,u_s,lfsv_s,lfsu_n,u_n,lfsv_n,up_s,up_n);
+        D delta = epsilon*(1.0+std::abs(u_s[lfsu_s.localIndex(j)]));
+        u_s[lfsu_s.localIndex(j)] += delta;
+        asImp().alpha_coupling(ig,lfsu_s,u_s,lfsv_s,lfsu_n,u_n,lfsv_n,upview_s,upview_n);
         for (int i=0; i<m_s; i++)
-          mat_ss(i,j) += (up_s[i]-down_s[i])/delta;
+          mat_ss.accumulate(lfsv_s.localIndex(i),lfsu_s.localIndex(j),
+                            (up_s[lfsv_s.localIndex(i)]-down_s[lfsv_s.localIndex(i)])/delta);
         for (int i=0; i<m_n; i++)
-          mat_ns(i,j) += (up_n[i]-down_n[i])/delta;
-        u_s[j] = x_s[j];
+          mat_ns.accumulate(lfsv_n.localIndex(i),lfsu_s.localIndex(j),
+                            (up_s[lfsv_n.localIndex(i)]-down_s[lfsv_n.localIndex(i)])/delta);
+        u_s[lfsu_s.localIndex(j)] = x_s[lfsu_s.localIndex(j)];
       }
 
     // jiggle in neighbor
@@ -102,14 +117,16 @@ public:
       {
         for (int k=0; k<m_s; k++) up_s[k]=0.0;
         for (int k=0; k<m_n; k++) up_n[k]=0.0;
-        R delta = epsilon*(1.0+std::abs(u_n[j]));
-        u_n[j] += delta;
-        asImp().alpha_coupling(ig,lfsu_s,u_s,lfsv_s,lfsu_n,u_n,lfsv_n,up_s,up_n);
+        D delta = epsilon*(1.0+std::abs(u_n[lfsu_n.localIndex(j)]));
+        u_n[lfsu_n.localIndex(j)] += delta;
+        asImp().alpha_coupling(ig,lfsu_s,u_s,lfsv_s,lfsu_n,u_n,lfsv_n,upview_s,upview_n);
         for (int i=0; i<m_s; i++)
-          mat_sn(i,j) += (up_s[i]-down_s[i])/delta;
+          mat_sn.accumulate(lfsv_s.localIndex(i),lfsu_n.localIndex(j),
+                            (up_s[lfsv_s.localIndex(i)]-down_s[lfsv_s.localIndex(i)])/delta);
         for (int i=0; i<m_n; i++)
-          mat_nn(i,j) += (up_n[i]-down_n[i])/delta;
-        u_n[j] = x_n[j];
+          mat_nn.accumulate(lfsv_n.localIndex(i),lfsu_n.localIndex(j),
+                            (up_s[lfsv_n.localIndex(i)]-down_s[lfsv_n.localIndex(i)])/delta);
+        u_n[lfsu_n.localIndex(j)] = x_n[lfsu_n.localIndex(j)];
       }
   }
 

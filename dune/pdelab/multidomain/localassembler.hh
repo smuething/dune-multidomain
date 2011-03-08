@@ -7,6 +7,9 @@
 #include <dune/pdelab/gridoperator/common/assemblerutilities.hh>
 
 #include <dune/pdelab/multidomain/multidomaingridoperatorspaceutilities.hh>
+#include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
+#include <dune/pdelab/multidomain/subproblem.hh>
+#include <dune/pdelab/multidomain/coupling.hh>
 #include <dune/pdelab/multidomain/visitor.hh>
 #include <dune/pdelab/multidomain/datawrappers.hh>
 #include <dune/pdelab/multidomain/operatorflagtests.hh>

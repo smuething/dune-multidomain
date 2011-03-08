@@ -3,7 +3,8 @@
 
 #include <dune/pdelab/multidomain/datawrappers.hh>
 #include <dune/pdelab/multidomain/localfunctionspaceutility.hh>
-
+#include <dune/pdelab/gridoperatorspace/gridoperatorspaceutilities.hh>
+#include <dune/pdelab/constraints/constraints.hh>
 
 namespace Dune {
 namespace PDELab {

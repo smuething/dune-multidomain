@@ -247,8 +247,7 @@ public:
   {
     // make offset
     offset = 0;
-    AccumulateSize accumulateSize
-;
+    AccumulateSize accumulateSize;
     Dune::PDELab::TypeTree::applyToTree(*this,accumulateSize);
     n = accumulateSize.size;
     global_storage.resize(n);

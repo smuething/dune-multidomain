@@ -55,11 +55,13 @@ public:
   SkeletonIntersectionWrapper(const Intersection& intersection,
                               std::size_t intersectionIndex,
                               const EntityWrapper& insideElement,
-                              const typename EntityWrapper::SubDomainSet& outsideSubDomains)
+                              const typename EntityWrapper::SubDomainSet& outsideSubDomains,
+                              bool inverseDirection)
     : BaseT(intersection,intersectionIndex)
     , _inside(insideElement)
     , _outsideEntityPointer(intersection.outside())
     , _outside(*_outsideEntityPointer,outsideSubDomains)
+    , _inverseDirection(inverseDirection)
   {}
 
   const EntityWrapper& insideElement() const
@@ -72,11 +74,17 @@ public:
     return _outside;
   }
 
+  bool inverseDirection() const
+  {
+    return _inverseDirection;
+  }
+
 private:
 
   const EntityWrapper& _inside;
   const EntityPointer _outsideEntityPointer;
   const EntityWrapper _outside;
+  const bool _inverseDirection;
 
 };
 

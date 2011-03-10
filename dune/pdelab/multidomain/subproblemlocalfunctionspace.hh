@@ -205,11 +205,6 @@ public:
 
 public:
 
-  //! \brief empty constructor - TODO:Do we need this???
-  /*SubProblemLocalFunctionSpace ()
-  {
-  }*/
-
   //! \brief initialize with grid function space
   SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const SubProblem& subProblem, const Constraints& constraints)
     : NodeT(stackobject_to_shared_ptr(mdlfs))

@@ -56,12 +56,12 @@ public:
                               std::size_t intersectionIndex,
                               const EntityWrapper& insideElement,
                               const typename EntityWrapper::SubDomainSet& outsideSubDomains,
-                              bool inverseDirection)
+                              bool oneSidedDirection)
     : BaseT(intersection,intersectionIndex)
     , _inside(insideElement)
     , _outsideEntityPointer(intersection.outside())
     , _outside(*_outsideEntityPointer,outsideSubDomains)
-    , _inverseDirection(inverseDirection)
+    , _oneSidedDirection(oneSidedDirection)
   {}
 
   const EntityWrapper& insideElement() const
@@ -74,9 +74,9 @@ public:
     return _outside;
   }
 
-  bool inverseDirection() const
+  bool oneSidedDirection() const
   {
-    return _inverseDirection;
+    return _oneSidedDirection;
   }
 
 private:
@@ -84,7 +84,7 @@ private:
   const EntityWrapper& _inside;
   const EntityPointer _outsideEntityPointer;
   const EntityWrapper _outside;
-  const bool _inverseDirection;
+  const bool _oneSidedDirection;
 
 };
 

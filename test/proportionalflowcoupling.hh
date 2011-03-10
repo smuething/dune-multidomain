@@ -32,11 +32,11 @@ public:
     R& r_s, R& r_n) const
   {
     // domain and range field type
-    typedef typename LFSU1::Traits::LocalFiniteElementType::
+    typedef typename LFSU1::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::DomainFieldType DF;
-    typedef typename LFSU1::Traits::LocalFiniteElementType::
+    typedef typename LFSU1::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::RangeFieldType RF;
-    typedef typename LFSU1::Traits::LocalFiniteElementType::
+    typedef typename LFSU1::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::RangeType RangeType;
 
     const int intorder = 4;
@@ -59,27 +59,27 @@ public:
 
         // evaluate ansatz shape functions (assume Galerkin for now)
         std::vector<RangeType> phi1(lfsv_s.size());
-        lfsv_s.localFiniteElement().localBasis().evaluateFunction(local1,phi1);
+        lfsv_s.finiteElement().localBasis().evaluateFunction(local1,phi1);
 
         std::vector<RangeType> phi2(lfsv_n.size());
-        lfsv_n.localFiniteElement().localBasis().evaluateFunction(local2,phi2);
+        lfsv_n.finiteElement().localBasis().evaluateFunction(local2,phi2);
 
         RF u_s(0.0);
         for (size_t i=0; i<lfsu_s.size(); i++)
-          u_s += x_s[lfsu_s.localIndex(i)] * phi1[i];
+          u_s += x_s(lfsu_s,i) * phi1[i];
 
         RF u_n(0.0);
         for (size_t i=0; i<lfsu_n.size(); i++)
-          u_n += x_n[lfsu_n.localIndex(i)] * phi2[i];
+          u_n += x_n(lfsu_n,i) * phi2[i];
 
         RF u_diff = _intensity*(u_s - u_n);
 
         // integrate J
         RF factor = it->weight()*ig.geometry().integrationElement(it->position());
         for (size_type i=0; i<lfsv_s.size(); i++)
-          r_s[lfsu_s.localIndex(i)] += u_diff*phi1[i]*factor;
+          r_s.accumulate(lfsv_s,i,u_diff*phi1[i]*factor);
         for (size_type i=0; i<lfsv_n.size(); i++)
-          r_n[lfsu_n.localIndex(i)] -= u_diff*phi2[i]*factor;
+          r_n.accumulate(lfsv_n,i,-u_diff*phi2[i]*factor);
 
       }
   }

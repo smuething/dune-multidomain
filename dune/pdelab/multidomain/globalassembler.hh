@@ -149,7 +149,7 @@ public:
                         SkeletonIntersectionWrapper skeletonIntersectionWrapper(*iit,intersection_index,
                                                                                 elementWrapper,
                                                                                 is.subDomains(*(iit->outside())),
-                                                                                ids < idn);
+                                                                                ids > idn);
 
                         // bind lfsv_n
                         lfsv_n.bind(*(iit->outside()));

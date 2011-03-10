@@ -86,11 +86,11 @@ public:
     X u_s(x_s);
     X u_n(x_n);
 
-    ResidualVector down_s(m_s),up_s(m_s);
+    ResidualVector down_s(mat_ss.nrows()),up_s(mat_ss.nrows());
     ResidualView downview_s = down_s.weightedAccumulationView(1.0);
     ResidualView upview_s = up_s.weightedAccumulationView(1.0);
 
-    ResidualVector down_n(m_n),up_n(m_n);
+    ResidualVector down_n(mat_nn.nrows()),up_n(mat_nn.nrows());
     ResidualView downview_n = down_n.weightedAccumulationView(1.0);
     ResidualView upview_n = up_n.weightedAccumulationView(1.0);
 
@@ -100,35 +100,31 @@ public:
     // jiggle in self
     for (int j=0; j<n_s; j++)
       {
-        for (int k=0; k<m_s; k++) up_s[k]=0.0;
-        for (int k=0; k<m_n; k++) up_n[k]=0.0;
-        D delta = epsilon*(1.0+std::abs(u_s[lfsu_s.localIndex(j)]));
-        u_s[lfsu_s.localIndex(j)] += delta;
+        up_s = 0.0;
+        up_n = 0.0;
+        D delta = epsilon*(1.0+std::abs(u_s(lfsu_s,j)));
+        u_s(lfsu_s,j) += delta;
         asImp().alpha_coupling(ig,lfsu_s,u_s,lfsv_s,lfsu_n,u_n,lfsv_n,upview_s,upview_n);
         for (int i=0; i<m_s; i++)
-          mat_ss.accumulate(lfsv_s.localIndex(i),lfsu_s.localIndex(j),
-                            (up_s[lfsv_s.localIndex(i)]-down_s[lfsv_s.localIndex(i)])/delta);
+          mat_ss.accumulate(lfsv_s,i,lfsu_s,j,(up_s(lfsv_s,i)-down_s(lfsv_s,i))/delta);
         for (int i=0; i<m_n; i++)
-          mat_ns.accumulate(lfsv_n.localIndex(i),lfsu_s.localIndex(j),
-                            (up_s[lfsv_n.localIndex(i)]-down_s[lfsv_n.localIndex(i)])/delta);
-        u_s[lfsu_s.localIndex(j)] = x_s[lfsu_s.localIndex(j)];
+          mat_ns.accumulate(lfsv_n,i,lfsu_s,j,(up_s(lfsv_n,i)-down_s(lfsv_n,i))/delta);
+        u_s(lfsu_s,j) = x_s(lfsu_s,j);
       }
 
     // jiggle in neighbor
     for (int j=0; j<n_n; j++)
       {
-        for (int k=0; k<m_s; k++) up_s[k]=0.0;
-        for (int k=0; k<m_n; k++) up_n[k]=0.0;
-        D delta = epsilon*(1.0+std::abs(u_n[lfsu_n.localIndex(j)]));
-        u_n[lfsu_n.localIndex(j)] += delta;
+        up_s = 0.0;
+        up_n = 0.0;
+        D delta = epsilon*(1.0+std::abs(u_n(lfsu_n,j)));
+        u_n(lfsu_n,j) += delta;
         asImp().alpha_coupling(ig,lfsu_s,u_s,lfsv_s,lfsu_n,u_n,lfsv_n,upview_s,upview_n);
         for (int i=0; i<m_s; i++)
-          mat_sn.accumulate(lfsv_s.localIndex(i),lfsu_n.localIndex(j),
-                            (up_s[lfsv_s.localIndex(i)]-down_s[lfsv_s.localIndex(i)])/delta);
+          mat_sn.accumulate(lfsv_s,i,lfsu_n,j,(up_s(lfsv_s,i)-down_s(lfsv_s,i))/delta);
         for (int i=0; i<m_n; i++)
-          mat_nn.accumulate(lfsv_n.localIndex(i),lfsu_n.localIndex(j),
-                            (up_s[lfsv_n.localIndex(i)]-down_s[lfsv_n.localIndex(i)])/delta);
-        u_n[lfsu_n.localIndex(j)] = x_n[lfsu_n.localIndex(j)];
+          mat_nn.accumulate(lfsv_n,i,lfsu_n,j,(up_s(lfsv_n,i)-down_s(lfsv_n,i))/delta);
+        u_n(lfsu_n,j) = x_n(lfsu_n,j);
       }
   }
 

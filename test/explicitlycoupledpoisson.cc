@@ -8,10 +8,10 @@
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/backend/istlmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
-#include <dune/pdelab/multidomain/multidomaingridoperatorspace.hh>
+#include <dune/pdelab/multidomain/gridoperator.hh>
 #include <dune/pdelab/multidomain/subproblem.hh>
 #include <dune/pdelab/finiteelementmap/conformingconstraints.hh>
-#include <dune/pdelab/multidomain/constraints.hh>
+//#include <dune/pdelab/multidomain/constraints.hh>
 #include <dune/pdelab/multidomain/interpolate.hh>
 #include <dune/pdelab/backend/istlsolverbackend.hh>
 #include <dune/pdelab/localoperator/laplacedirichletp12d.hh>
@@ -38,31 +38,33 @@ SIMPLE_ANALYTIC_FUNCTION(F,x,y)
 END_SIMPLE_ANALYTIC_FUNCTION
 
 
-// boundary condition type
-SIMPLE_BOUNDARYTYPE_FUNCTION(B,ig,x,y)
+struct DirichletBoundary :
+  public Dune::PDELab::DirichletConstraintsParameters
 {
-  Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
-    xg = ig.geometry().global(x);
+  template<typename I>
+  bool isDirichlet(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
+  {
+    Dune::FieldVector<typename I::ctype,I::dimension>
+      xg = ig.geometry().global(x);
 
-  if (!ig.boundary())
-    {
-      y = Traits::None; // no bc on subdomain interface
-      return;
-    }
+    if (!ig.boundary())
+      {
+        return false;
+      }
 
-  if (xg[1]<1E-6 || xg[1]>1.0-1E-6)
-    {
-      y = Traits::Neumann; // Neumann
-      return;
-    }
-  if (xg[0]>1.0-1E-6 && xg[1]>0.5+1E-6)
-    {
-      y = Traits::Neumann; // Neumann
-      return;
-    }
-  y = Traits::Dirichlet; // Dirichlet
-}
-END_SIMPLE_BOUNDARYTYPE_FUNCTION
+    if (xg[1]<1E-6 || xg[1]>1.0-1E-6)
+      {
+        return false;
+      }
+
+    if (xg[0]>1.0-1E-6 && xg[1]>0.5+1E-6)
+      {
+        return false;
+      }
+
+    return true;
+  }
+};
 
 
 // dirichlet bc
@@ -147,7 +149,7 @@ int main(int argc, char** argv) {
     typedef Dune::PDELab::Q22DLocalFiniteElementMap<ctype,double> FEM0;
     typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM1;
 
-    typedef FEM0::Traits::LocalFiniteElementType::Traits::
+    typedef FEM0::Traits::FiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
 
     FEM0 fem0;
@@ -158,17 +160,17 @@ int main(int argc, char** argv) {
 
     CON con;
 
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,NOCON,
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,CON,
       Dune::PDELab::ISTLVectorBackend<1> > GFS0;
 
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,NOCON,
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,CON,
       Dune::PDELab::ISTLVectorBackend<1> > GFS1;
 
     typedef GFS0::ConstraintsContainer<R>::Type C;
     C cg;
 
-    GFS0 gfs0(sdgv0,fem0);
-    GFS1 gfs1(sdgv1,fem1);
+    GFS0 gfs0(sdgv0,fem0,con);
+    GFS1 gfs1(sdgv1,fem1,con);
 
     typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS0,GFS1> MultiGFS;
 
@@ -177,8 +179,8 @@ int main(int argc, char** argv) {
     std::cout << "function space setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
-    typedef B<MDGV> BType;
-    BType b(mdgv);
+    typedef DirichletBoundary BType;
+    BType b;
 
     typedef F<MDGV,R> FType;
     FType f(mdgv);
@@ -202,10 +204,12 @@ int main(int argc, char** argv) {
     SubProblem0 sp0(con,con,lop,c0);
     SubProblem1 sp1(con,con,lop,c1);
 
+    /*
     SubProblem0::Traits::LocalTrialFunctionSpace
       splfs0(sp0,sp0.trialGridFunctionSpaceConstraints());
     SubProblem1::Traits::LocalTrialFunctionSpace
       splfs1(sp1,sp1.trialGridFunctionSpaceConstraints());
+    */
 
     ProportionalFlowCoupling proportionalFlowCoupling(atof(argv[2]));
 
@@ -215,21 +219,21 @@ int main(int argc, char** argv) {
     std::cout << "subproblem / coupling setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
-    constraints(b,multigfs,cg,b,splfs0,b,splfs1);
+    //constraints(b,multigfs,cg,b,splfs0,b,splfs1);
 
     std::cout << "constraints evaluation: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
     // make coefficent Vector and initialize it from a function
-    typedef MultiGFS::VectorContainer<R>::Type V;
+    typedef Dune::PDELab::BackendVectorSelector<MultiGFS,R>::Type V;
     V x0(multigfs);
     x0 = 0.0;
-    Dune::PDELab::MultiDomain::interpolate(multigfs,x0,g,splfs0,g,splfs1);
+    Dune::PDELab::MultiDomain::interpolateOnTrialSpace(multigfs,x0,g,sp0,g,sp1);
 
     Dune::PDELab::set_shifted_dofs(cg,0.0,x0);
 
     std::cout << "interpolation: " << timer.elapsed() << " sec" << std::endl;
-    std::cout << x0.size() << " dof total, " << cg.size() << " dof constrained" << std::endl;
+    std::cout << x0.N() << " dof total, " << cg.size() << " dof constrained" << std::endl;
     timer.reset();
 
     typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,GFS0> SGFS0;
@@ -239,22 +243,43 @@ int main(int argc, char** argv) {
 
     typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridOperatorSpace<MultiGFS,MultiGFS,MBE,SubProblem0,SubProblem1,Coupling> MultiGOS;
+    //typedef Dune::PDELab::MultiDomain::MultiDomainGridOperatorSpace<MultiGFS,MultiGFS,MBE,SubProblem0,SubProblem1,Coupling> MultiGOS;
 
-    MultiGOS multigos(multigfs,multigfs,cg,cg,sp0,sp1,coupling);
+    typedef Dune::PDELab::MultiDomain::GridOperator<
+      MultiGFS,
+      MultiGFS,
+      MBE,
+      double,double,double,
+      C,
+      C,
+      SubProblem0,
+      SubProblem1,
+      Coupling> GridOperator;
+
+    GridOperator gridOperator(multigfs,
+                              multigfs,
+                              cg,
+                              cg,
+                              sp0,
+                              sp1,
+                              coupling);
+
+    //MultiGOS multigos(multigfs,multigfs,cg,cg,sp0,sp1,coupling);
 
     std::cout << "operator space setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
-    typedef MultiGOS::MatrixContainer<R>::Type M;
-    M m(multigos);
+    typedef GridOperator::Traits::Jacobian M;
+    M m(gridOperator);
     m = 0.0;
 
 
     std::cout << "matrix construction: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
-    multigos.jacobian(x0,m);
+    gridOperator.jacobian(x0,m);
+
+    Dune::printmatrix(std::cout,m.base(),"","");
 
     std::cout << "jacobian evaluation: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
@@ -263,7 +288,7 @@ int main(int argc, char** argv) {
 
     r = 0.0;
 
-    multigos.residual(x0,r);
+    gridOperator.residual(x0,r);
     std::cout << "residual evaluation: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 

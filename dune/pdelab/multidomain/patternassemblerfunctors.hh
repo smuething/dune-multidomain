@@ -39,9 +39,9 @@ struct invoke_pattern_skeleton_or_boundary
     typedef typename Data::Operator LOP;
     if (!subProblem.appliesTo(data().ig().insideElement()))
       return;
-    if (subProblem.appliesTo(data().ig().outsideElement()))
+    if (subProblem.appliesTo(data().ig().outsideElement()) &&
+        (LOP::doSkeletonTwoSided || data().ig().oneSidedDirection()))
       {
-        //! FIXME: re-add two-sided tracking!
         LocalAssemblerCallSwitch<LOP,LOP::doPatternSkeleton>::
           pattern_skeleton(Data::Operator::extract(subProblem),
                            LFS::lfsu_s(data(),subProblem),LFS::lfsv_s(data(),subProblem),

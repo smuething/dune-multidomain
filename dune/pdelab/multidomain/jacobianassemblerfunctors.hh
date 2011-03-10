@@ -41,7 +41,8 @@ struct invoke_jacobian_skeleton_or_boundary
     typedef typename Data::Operator LOP;
     if (!subProblem.appliesTo(data().ig().insideElement()))
       return;
-    if (subProblem.appliesTo(data().ig().outsideElement()))
+    if (subProblem.appliesTo(data().ig().outsideElement()) &&
+        (LOP::doSkeletonTwoSided || data().ig().oneSidedDirection()))
       {
         LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
           jacobian_skeleton(Data::Operator::extract(subProblem),data().ig(),

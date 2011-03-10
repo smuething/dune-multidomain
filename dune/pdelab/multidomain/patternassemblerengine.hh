@@ -6,6 +6,7 @@
 
 #include <dune/pdelab/gridfunctionspace/localvector.hh>
 #include <dune/pdelab/gridoperatorspace/localmatrix.hh>
+#include <dune/pdelab/gridoperator/common/localassemblerenginebase.hh>
 
 #include <dune/pdelab/multidomain/datawrappers.hh>
 #include <dune/pdelab/multidomain/patternassemblerfunctors.hh>
@@ -20,6 +21,7 @@ namespace MultiDomain {
 
 template<typename LA>
 class PatternAssemblerEngine
+  : public LocalAssemblerEngineBase
 {
 
 public:
@@ -32,14 +34,19 @@ public:
 
   bool requireIntersections() const
   {
-    return requireUVSkeleton() || requireUVEnrichedCoupling() || requireUVBoundary();
+    return
+      requireUVSkeleton() ||
+      requireUVEnrichedCoupling() ||
+      requireUVBoundary();
   }
 
   bool requireIntersectionsTwoSided() const
   {
-    return requireUVBoundary() ||
-      requireUVEnrichedCoupling() || any_child<typename LocalAssembler::Couplings,do_pattern_coupling<> >::value ||
-      any_child<typename LocalAssembler::SubProblems,do_skeleton_two_sided<> >::value;
+    return
+      requireUVBoundary() ||
+      requireUVEnrichedCoupling() ||
+      any_child<typename LocalAssembler::Couplings,do_pattern_coupling<> >::value ||
+      any_child<LocalAssembler,do_skeleton_two_sided<> >::value;
   }
 
   bool requireUVVolume() const
@@ -47,21 +54,12 @@ public:
     return any_child<typename LocalAssembler::SubProblems,do_pattern_volume<> >::value;
   }
 
-  bool requireVVolume() const
-  {
-    return false;
-  }
-
   bool requireUVSkeleton() const
   {
-    return any_child<typename LocalAssembler::SubProblems,do_pattern_skeleton<> >::value ||
+    return
+      any_child<typename LocalAssembler::SubProblems,do_pattern_skeleton<> >::value ||
       any_child<typename LocalAssembler::SubProblems,do_pattern_boundary<> >::value ||
       any_child<typename LocalAssembler::Couplings,do_pattern_coupling<> >::value;
-  }
-
-  bool requireVSkeleton() const
-  {
-    return false;
   }
 
   bool requireUVBoundary() const
@@ -69,19 +67,9 @@ public:
     return any_child<typename LocalAssembler::SubProblems,do_pattern_boundary<> >::value;
   }
 
-  bool requireVBoundary() const
-  {
-    return false;
-  }
-
   bool requireUVEnrichedCoupling() const
   {
     return any_child<typename LocalAssembler::Couplings,do_pattern_enriched_coupling<> >::value;
-  }
-
-  bool requireVEnrichedCoupling() const
-  {
-    return false;
   }
 
   bool requireUVVolumePostSkeleton() const
@@ -89,10 +77,6 @@ public:
     return any_child<typename LocalAssembler::SubProblems,do_pattern_volume_post_skeleton<> >::value;
   }
 
-  bool requireVVolumePostSkeleton() const
-  {
-    return false;
-  }
 
   template<typename EG, typename LFSU, typename LFSV>
   void onBindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
@@ -105,6 +89,7 @@ public:
   {
     addToGlobalPattern(pattern_ss,lfsv,lfsu);
   }
+
 
   template<typename IG, typename LFSU_N, typename LFSV_N>
   void onBindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
@@ -119,6 +104,7 @@ public:
   {
     addToGlobalPattern(pattern_nn,lfsv_n,lfsu_n);
   }
+
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
   void onBindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
@@ -136,50 +122,6 @@ public:
     addToGlobalPattern(pattern_cc,lfsv_c,lfsu_c);
   }
 
-  template<typename EG, typename LFSV>
-  void onBindLFSV(const EG& eg, const LFSV& lfsv)
-  {
-  }
-
-  template<typename EG, typename LFSV>
-  void onUnbindLFSV(const EG& eg, const LFSV& lfsv)
-  {
-  }
-
-  template<typename IG, typename LFSV_N>
-  void onBindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
-  {
-  }
-
-  template<typename IG, typename LFSV_N>
-  void onUnbindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
-  {
-  }
-
-  template<typename IG, typename LFSV_C>
-  void onBindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
-  {
-  }
-
-  template<typename IG, typename LFSV_C>
-  void onUnbindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
-  {
-  }
-
-  template<typename LFSU>
-  void loadCoefficientsLFSUInside(const LFSU& lfsu_s)
-  {
-  }
-
-  template<typename LFSU_N>
-  void loadCoefficientsLFSUOutside(const LFSU_N& lfsu_n)
-  {
-  }
-
-  template<typename LFSU_C>
-  void loadCoefficientsLFSUCoupling(const LFSU_C& lfsu_c)
-  {
-  }
 
   template<typename EG, typename LFSU, typename LFSV>
   void assembleUVVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
@@ -189,12 +131,6 @@ public:
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),
                                                           wrap_pattern_ss(pattern_ss)));
   }
-
-  template<typename EG, typename LFSV>
-  void assembleVVolume(const EG& eg, const LFSV& lfsv)
-  {
-  }
-
 
   template<typename IG, typename LFSU_S, typename LFSV_S, typename LFSU_N, typename LFSV_N>
   void assembleUVSkeleton(const IG& ig,
@@ -224,14 +160,6 @@ public:
     addToGlobalPattern(pattern_ns,lfsv_n,lfsu_s);
   }
 
-  template<typename IG, typename LFSV_S, typename LFSV_N>
-  void assembleVSkeleton(const IG& ig,
-                         const LFSV_S& lfsv_s,
-                         const LFSV_N& lfsv_n)
-  {
-  }
-
-
   template<typename IG, typename LFSU, typename LFSV>
   void assembleUVBoundary(const IG& ig, const LFSU& lfsu, const LFSV& lfsv)
   {
@@ -239,12 +167,6 @@ public:
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_pattern_ss(pattern_ss)));
   }
-
-  template<typename IG, typename LFSV>
-  void assembleVBoundary(const IG& ig, const LFSV& lfsv)
-  {
-  }
-
 
   template<typename IG,
            typename LFSU_S, typename LFSV_S,
@@ -274,18 +196,6 @@ public:
     addToGlobalPattern(pattern_cn,lfsv_c,lfsu_n);
   }
 
-  template<typename IG,
-           typename LFSV_S,
-           typename LFSV_N,
-           typename LFSV_C>
-  void assembleVEnrichedCoupling(const IG& ig,
-                                 const LFSV_S& lfsv_s,
-                                 const LFSV_N& lfsv_n,
-                                 const LFSV_C& lfsv_c)
-  {
-  }
-
-
   template<typename EG, typename LFSU, typename LFSV>
   void assembleUVVolumePostSkeleton(const EG& eg, const LFSV& lfsv, const LFSU& lfsu)
   {
@@ -295,17 +205,6 @@ public:
                                                           wrap_pattern_ss(pattern_ss)));
   }
 
-  template<typename EG, typename LFSV>
-  void assembleVVolumePostSkeleton(const EG& eg, const LFSV& lfsv)
-  {
-  }
-
-
-  void preAssembly()
-  {}
-
-  void postAssembly()
-  {}
 
   void setPattern(GlobalPattern& globalPattern)
   {

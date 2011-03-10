@@ -6,6 +6,7 @@
 
 #include <dune/pdelab/gridfunctionspace/localvector.hh>
 #include <dune/pdelab/gridoperatorspace/localmatrix.hh>
+#include <dune/pdelab/gridoperator/common/localassemblerenginebase.hh>
 
 #include <dune/pdelab/multidomain/datawrappers.hh>
 #include <dune/pdelab/multidomain/residualassemblerfunctors.hh>
@@ -19,6 +20,7 @@ namespace MultiDomain {
 
 template<typename LA>
 class ResidualAssemblerEngine
+  : public LocalAssemblerEngineBase
 {
 
 public:
@@ -29,14 +31,17 @@ public:
 
   bool requireIntersections() const
   {
-    return requireUVSkeleton() || requireVSkeleton() ||
+    return
+      requireUVSkeleton() || requireVSkeleton() ||
       requireUVEnrichedCoupling() || requireVEnrichedCoupling() ||
       requireUVBoundary() || requireVBoundary();
   }
 
   bool requireIntersectionsTwoSided() const
   {
-    return requireUVBoundary() || requireVBoundary() ||
+    return
+      requireUVBoundary() || requireVBoundary() ||
+      requireUVEnrichedCoupling() || requireVEnrichedCoupling() ||
       any_child<typename LocalAssembler::SubProblems,do_skeleton_two_sided<> >::value;
   }
 
@@ -54,16 +59,14 @@ public:
   {
     return any_child<typename LocalAssembler::SubProblems,do_alpha_skeleton<> >::value ||
       any_child<typename LocalAssembler::SubProblems,do_alpha_boundary<> >::value ||
-      any_child<typename LocalAssembler::Couplings,do_alpha_coupling<> >::value ||
-      any_child<typename LocalAssembler::Couplings,do_alpha_enriched_coupling<> >::value;
+      any_child<typename LocalAssembler::Couplings,do_alpha_coupling<> >::value;
   }
 
   bool requireVSkeleton() const
   {
     return any_child<typename LocalAssembler::SubProblems,do_lambda_skeleton<> >::value ||
       any_child<typename LocalAssembler::SubProblems,do_lambda_boundary<> >::value ||
-      any_child<typename LocalAssembler::Couplings,do_lambda_coupling<> >::value ||
-      any_child<typename LocalAssembler::Couplings,do_lambda_enriched_coupling<> >::value;
+      any_child<typename LocalAssembler::Couplings,do_lambda_coupling<> >::value;
   }
 
   bool requireUVBoundary() const
@@ -107,12 +110,8 @@ public:
   {
     // clear local residual
     _r_s.resize(lfsv.size());
-    std::fill(_r_s.begin(),_r_s.end(),0.0);
+    std::fill(_r_s.base().begin(),_r_s.base().end(),0.0);
   }
-
-  template<typename EG, typename LFSU, typename LFSV>
-  void onUnbindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
-  {}
 
   template<typename EG, typename LFSV_S>
   void onUnbindLFSV(const EG& eg, const LFSV_S& lfsv_s)
@@ -135,12 +134,8 @@ public:
   {
     // clear local residual
     _r_n.resize(lfsv_n.size());
-    std::fill(_r_n.begin(),_r_n.end(),0.0);
+    std::fill(_r_n.base().begin(),_r_n.base().end(),0.0);
   }
-
-  template<typename IG, typename LFSU_N, typename LFSV_N>
-  void onUnbindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
-  {}
 
   template<typename IG, typename LFSV_N>
   void onUnbindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
@@ -163,12 +158,8 @@ public:
   {
     // clear local residual
     _r_c.resize(lfsv_c.size());
-    std::fill(_r_c.begin(),_r_c.end(),0.0);
+    std::fill(_r_c.base().begin(),_r_c.base().end(),0.0);
   }
-
-  template<typename IG, typename LFSU_C, typename LFSV_C>
-  void onUnbindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
-  {}
 
   template<typename IG, typename LFSV_C>
   void onUnbindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
@@ -178,6 +169,7 @@ public:
       lfsv_c.vadd(_r_c,*r);
     r_c.resetModified();
   }
+
 
   template<typename LFSU>
   void loadCoefficientsLFSUInside(const LFSU& lfsu_s)
@@ -333,9 +325,6 @@ public:
                                                           wrap_lfsv(lfsv),wrap_r(r_s)));
   }
 
-
-  void preAssembly()
-  {}
 
   void postAssembly()
   {

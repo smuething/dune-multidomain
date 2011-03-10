@@ -6,6 +6,7 @@
 
 #include <dune/pdelab/gridfunctionspace/localvector.hh>
 #include <dune/pdelab/gridoperatorspace/localmatrix.hh>
+#include <dune/pdelab/gridoperator/common/localassemblerenginebase.hh>
 
 #include <dune/pdelab/multidomain/datawrappers.hh>
 #include <dune/pdelab/multidomain/jacobianassemblerfunctors.hh>
@@ -20,6 +21,7 @@ namespace MultiDomain {
 
 template<typename LA>
 class JacobianAssemblerEngine
+  : public LocalAssemblerEngineBase
 {
 
 public:
@@ -31,12 +33,17 @@ public:
 
   bool requireIntersections() const
   {
-    return requireUVSkeleton() || requireUVEnrichedCoupling() || requireUVBoundary();
+    return
+      requireUVSkeleton() ||
+      requireUVEnrichedCoupling() ||
+      requireUVBoundary();
   }
 
   bool requireIntersectionsTwoSided() const
   {
-    return requireUVBoundary() ||
+    return
+      requireUVBoundary() ||
+      requireUVEnrichedCoupling() ||
       any_child<typename LocalAssembler::SubProblems,do_skeleton_two_sided<> >::value;
   }
 
@@ -45,22 +52,11 @@ public:
     return any_child<typename LocalAssembler::SubProblems,do_alpha_volume<> >::value;
   }
 
-  bool requireVVolume() const
-  {
-    return false;
-  }
-
   bool requireUVSkeleton() const
   {
     return any_child<typename LocalAssembler::SubProblems,do_alpha_skeleton<> >::value ||
       any_child<typename LocalAssembler::SubProblems,do_alpha_boundary<> >::value ||
-      any_child<typename LocalAssembler::Couplings,do_alpha_coupling<> >::value ||
-      any_child<typename LocalAssembler::Couplings,do_alpha_enriched_coupling<> >::value;
-  }
-
-  bool requireVSkeleton() const
-  {
-    return false;
+      any_child<typename LocalAssembler::Couplings,do_alpha_coupling<> >::value;
   }
 
   bool requireUVBoundary() const
@@ -68,29 +64,14 @@ public:
     return any_child<typename LocalAssembler::SubProblems,do_alpha_boundary<> >::value;
   }
 
-  bool requireVBoundary() const
-  {
-    return false;
-  }
-
   bool requireUVEnrichedCoupling() const
   {
     return any_child<typename LocalAssembler::Couplings,do_alpha_enriched_coupling<> >::value;
   }
 
-  bool requireVEnrichedCoupling() const
-  {
-    return false;
-  }
-
   bool requireUVVolumePostSkeleton() const
   {
     return any_child<typename LocalAssembler::SubProblems,do_alpha_volume_post_skeleton<> >::value;
-  }
-
-  bool requireVVolumePostSkeleton() const
-  {
-    return false;
   }
 
   template<typename EG, typename LFSU, typename LFSV>
@@ -144,35 +125,6 @@ public:
     a_cc.resetModified();
   }
 
-  template<typename EG, typename LFSV>
-  void onBindLFSV(const EG& eg, const LFSV& lfsv)
-  {
-  }
-
-  template<typename EG, typename LFSV>
-  void onUnbindLFSV(const EG& eg, const LFSV& lfsv)
-  {
-  }
-
-  template<typename IG, typename LFSV_N>
-  void onBindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
-  {
-  }
-
-  template<typename IG, typename LFSV_N>
-  void onUnbindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
-  {
-  }
-
-  template<typename IG, typename LFSV_C>
-  void onBindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
-  {
-  }
-
-  template<typename IG, typename LFSV_C>
-  void onUnbindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
-  {
-  }
 
   template<typename LFSU>
   void loadCoefficientsLFSUInside(const LFSU& lfsu_s)
@@ -195,6 +147,7 @@ public:
     lfsu_c.vread(*x,x_c);
   }
 
+
   template<typename EG, typename LFSU, typename LFSV>
   void assembleUVVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
@@ -203,12 +156,6 @@ public:
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a_ss(a_ss)));
   }
-
-  template<typename EG, typename LFSV>
-  void assembleVVolume(const EG& eg, const LFSV& lfsv)
-  {
-  }
-
 
   template<typename IG, typename LFSU_S, typename LFSV_S, typename LFSU_N, typename LFSV_N>
   void assembleUVSkeleton(const IG& ig,
@@ -242,14 +189,6 @@ public:
     a_ns.resetModified();
   }
 
-  template<typename IG, typename LFSV_S, typename LFSV_N>
-  void assembleVSkeleton(const IG& ig,
-                         const LFSV_S& lfsv_s,
-                         const LFSV_N& lfsv_n)
-  {
-  }
-
-
   template<typename IG, typename LFSU, typename LFSV>
   void assembleUVBoundary(const IG& ig, const LFSU& lfsu, const LFSV& lfsv)
   {
@@ -258,12 +197,6 @@ public:
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
   }
-
-  template<typename IG, typename LFSV>
-  void assembleVBoundary(const IG& ig, const LFSV& lfsv)
-  {
-  }
-
 
   template<typename IG,
            typename LFSU_S, typename LFSV_S,
@@ -307,18 +240,6 @@ public:
     a_cn.resetModified();
   }
 
-  template<typename IG,
-           typename LFSV_S,
-           typename LFSV_N,
-           typename LFSV_C>
-  void assembleVEnrichedCoupling(const IG& ig,
-                                 const LFSV_S& lfsv_s,
-                                 const LFSV_N& lfsv_n,
-                                 const LFSV_C& lfsv_c)
-  {
-  }
-
-
   template<typename EG, typename LFSU, typename LFSV>
   void assembleUVVolumePostSkeleton(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
@@ -328,14 +249,6 @@ public:
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
   }
 
-  template<typename EG, typename LFSV>
-  void assembleVVolumePostSkeleton(const EG& eg, const LFSV& lfsv)
-  {
-  }
-
-
-  void preAssembly()
-  {}
 
   void postAssembly()
   {

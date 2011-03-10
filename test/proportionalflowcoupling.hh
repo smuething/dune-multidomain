@@ -32,11 +32,11 @@ public:
     R& r_s, R& r_n) const
   {
     // domain and range field type
-    typedef typename LFSU1::Traits::LocalFiniteElementType::
+    typedef typename LFSU1::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::DomainFieldType DF;
-    typedef typename LFSU1::Traits::LocalFiniteElementType::
+    typedef typename LFSU1::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::RangeFieldType RF;
-    typedef typename LFSU1::Traits::LocalFiniteElementType::
+    typedef typename LFSU1::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::RangeType RangeType;
 
     const int intorder = 4;
@@ -59,10 +59,10 @@ public:
 
         // evaluate ansatz shape functions (assume Galerkin for now)
         std::vector<RangeType> phi1(lfsv_s.size());
-        lfsv_s.localFiniteElement().localBasis().evaluateFunction(local1,phi1);
+        lfsv_s.finiteElement().localBasis().evaluateFunction(local1,phi1);
 
         std::vector<RangeType> phi2(lfsv_n.size());
-        lfsv_n.localFiniteElement().localBasis().evaluateFunction(local2,phi2);
+        lfsv_n.finiteElement().localBasis().evaluateFunction(local2,phi2);
 
         RF u_s(0.0);
         for (size_t i=0; i<lfsu_s.size(); i++)

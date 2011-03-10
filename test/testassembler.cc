@@ -20,12 +20,11 @@
 
 #include "functionmacros.hh"
 
-#include <dune/pdelab/multidomain/globalassembler.hh>
-#include <dune/pdelab/multidomain/localassembler.hh>
+#include <dune/pdelab/multidomain/gridoperator.hh>
 
 
 // source term
-SIMPLE_ANALYTIC_FUNCTION(F,x,y)
+INSTATIONARY_ANALYTIC_FUNCTION(F,x,y)
 {
   if (x[0]>0.4 && x[0]<0.5 && x[1]>0.4 && x[1]<0.55)
     y = 350.0;
@@ -34,14 +33,17 @@ SIMPLE_ANALYTIC_FUNCTION(F,x,y)
   else
     y = 0.0;
 }
-END_SIMPLE_ANALYTIC_FUNCTION
+END_INSTATIONARY_ANALYTIC_FUNCTION
 
 
 struct DirichletBoundary :
   public Dune::PDELab::DirichletConstraintsParameters
 {
+
+  void setTime(double) {}
+
   template<typename I>
-  bool isDirichlet(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x)
+  bool isDirichlet(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
   {
     Dune::FieldVector<typename I::ctype,I::dimension>
       xg = ig.geometry().global(x);
@@ -67,18 +69,18 @@ struct DirichletBoundary :
 
 
 // dirichlet bc
-SIMPLE_ANALYTIC_FUNCTION(G,x,y)
+INSTATIONARY_ANALYTIC_FUNCTION(G,x,y)
 {
   typename Traits::DomainType center;
   for (int i=0; i<GV::dimension; i++) center[i] = 0.5;
   center -= x;
   y = exp(-center.two_norm2());
 }
-END_SIMPLE_ANALYTIC_FUNCTION
+END_INSTATIONARY_ANALYTIC_FUNCTION
 
 
 // neumann bc
-SIMPLE_ANALYTIC_FUNCTION(J,x,y)
+INSTATIONARY_ANALYTIC_FUNCTION(J,x,y)
 {
   if (x[1]<1E-6 || x[1]>1.0-1E-6)
     {
@@ -91,7 +93,7 @@ SIMPLE_ANALYTIC_FUNCTION(J,x,y)
       return;
     }
 }
-END_SIMPLE_ANALYTIC_FUNCTION
+END_INSTATIONARY_ANALYTIC_FUNCTION
 
 template<typename MDLFS, typename SDS, typename... SubProblems>
 void instantiateLocalFunctionSpaces(const MDLFS& mdlfs, const SDS& sds, SubProblems&... subProblems)
@@ -104,9 +106,6 @@ void instantiateLocalFunctionSpaces(const MDLFS& mdlfs, const SDS& sds, SubProbl
   if (subProblem.appliesTo(sds))
     {
       typename SubProblem::Traits::LocalTrialFunctionSpace lfs(mdlfs,subProblem,subProblem.trialGridFunctionSpaceConstraints());
-      /*int status;
-      std::unique_ptr<char> name(abi::__cxa_demangle(typeid(lfs).name(),0,0,&status));
-      std::cout << name.get() << std::endl;*/
     }
   instantiateLocalFunctionSpaces(mdlfs,sds,subProblems...);
 }
@@ -182,9 +181,9 @@ int main(int argc, char** argv) {
     PowerGFS powergfs(gfs0);
     CompositeGFS compositegfs(gfs0,powergfs);
 
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS0,GFS1,GFS2,PowerGFS,CompositeGFS> MultiGFS;
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS0,GFS1/*,GFS2,PowerGFS,CompositeGFS*/> MultiGFS;
 
-    MultiGFS multigfs(grid,gfs0,gfs1,gfs2,powergfs,compositegfs);
+    MultiGFS multigfs(grid,gfs0,gfs1/*,gfs2,powergfs,compositegfs*/);
 
     Dune::PDELab::LocalFunctionSpace<MultiGFS> multilfs(multigfs);
 
@@ -194,16 +193,16 @@ int main(int argc, char** argv) {
     typedef DirichletBoundary BType;
     BType b;
 
-    typedef F<MDGV,R> FType;
+    typedef F<MDGV,R,R> FType;
     FType f(mdgv);
 
-    typedef G<MDGV,R> GType;
+    typedef G<MDGV,R,R> GType;
     GType g(mdgv);
 
-    typedef J<MDGV,R> JType;
+    typedef J<MDGV,R,R> JType;
     JType j(mdgv);
 
-    typedef Dune::PDELab::Poisson<FType,BType,JType,2> LOP;
+    typedef Dune::PDELab::InstationaryPoisson<double,FType,BType,JType,2> LOP;
     LOP lop(f,b,j);
 
     typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> Condition;
@@ -213,36 +212,59 @@ int main(int argc, char** argv) {
 
     typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,GFS0> SubProblem0;
     typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,GFS1> SubProblem1;
+    /*
     typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,GFS0,PowerGFS> SubProblem2;
     typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,PowerGFS> SubProblem3;
     typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,CompositeGFS> SubProblem4;
-
+    */
     NOCON nocon;
     SubProblem0 sp0(nocon,nocon,lop,c0);
     SubProblem1 sp1(nocon,nocon,lop,c1);
-    SubProblem2 sp2(nocon,nocon,lop,c0);
+    /*SubProblem2 sp2(nocon,nocon,lop,c0);
     SubProblem3 sp3(nocon,nocon,lop,c0);
-    SubProblem4 sp4(nocon,nocon,lop,c0);
+    SubProblem4 sp4(nocon,nocon,lop,c0);*/
 
-    typedef Dune::PDELab::MultiDomain::GlobalAssembler<MultiGFS,MultiGFS> GlobalAssembler;
-    GlobalAssembler globalAssembler(multigfs,multigfs);
+    typedef Dune::PDELab::BackendVectorSelector<MultiGFS,double>::Type V;
 
-    typedef Dune::PDELab::MultiDomain::LocalAssembler<
+    V x(multigfs,0.0);
+    V r(multigfs,0.0);
+
+    typedef Dune::PDELab::MultiDomain::GridOperator<
+      MultiGFS,
+      MultiGFS,
       Dune::PDELab::ISTLBCRSMatrixBackend<1,1>,
+      double,double,double,
       Dune::PDELab::EmptyTransformation,
       Dune::PDELab::EmptyTransformation,
       SubProblem0,
-      SubProblem1,
-      SubProblem2> LocalAssembler;
+      SubProblem1
+      > GridOperator;
 
-    LocalAssembler localAssembler(sp0,sp1,sp2/*,sp3,sp4*/);
-    localAssembler.setTime(1.3);
-    std::cout << localAssembler.suggestTimestep(3.1) << std::endl;
-    localAssembler.preStep(0.0,1.0,2);
-    localAssembler.preStage(0.0,1);
-    localAssembler.postStage();
-    localAssembler.postStep();
-    localAssembler.requireIntersections();
+    Dune::PDELab::EmptyTransformation constraints;
+
+    GridOperator gridOperator(multigfs,
+                              multigfs,
+                              constraints,
+                              constraints,
+                              sp0,
+                              sp1);
+
+    gridOperator.localAssembler().setTime(1.3);
+    std::cout << gridOperator.localAssembler().suggestTimestep(3.1) << std::endl;
+
+    gridOperator.localAssembler().preStep(0.0,1.0,2);
+    gridOperator.localAssembler().preStage(0.0,1);
+    gridOperator.localAssembler().postStage();
+    gridOperator.localAssembler().postStep();
+
+    gridOperator.residual(x,r);
+
+    GridOperator::Traits::Jacobian a(gridOperator);
+
+    gridOperator.jacobian(x,a);
+
+    std::cout << std::accumulate(r.begin(),r.end(),0.0) << std::endl;
+
   }
   catch (Dune::Exception &e){
     std::cerr << "Dune reported error: " << e << std::endl;

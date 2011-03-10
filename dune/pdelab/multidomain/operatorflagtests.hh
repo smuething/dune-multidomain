@@ -310,6 +310,44 @@ struct do_skeleton_two_sided
   };
 };
 
+// ********************************************************************************
+// tests for constraints operators
+// ********************************************************************************
+
+struct do_constraints_volume
+{
+  template<typename T>
+  struct test {
+    static const bool value = T::doVolume;
+  };
+};
+
+struct do_constraints_skeleton
+{
+  template<typename T>
+  struct test {
+    static const bool value = T::doSkeleton;
+  };
+};
+
+struct do_constraints_boundary
+{
+  template<typename T>
+  struct test {
+    static const bool value = T::doBoundary;
+  };
+};
+
+struct do_constraints_processor
+{
+  template<typename T>
+  struct test {
+    static const bool value = T::doProcessor;
+  };
+};
+
+
+
 } // namespace MultiDomain
 } // namespace PDELab
 } // namespace Dune

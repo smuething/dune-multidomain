@@ -126,7 +126,7 @@ public:
   template<typename EG, typename LFSU, typename LFSV>
   void assembleUVVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    typedef visitor<invoke_pattern_volume,do_pattern_volume<> > Visitor;
+    typedef visitor<functors::invoke_pattern_volume,do_pattern_volume<> > Visitor;
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),
                                                           wrap_pattern_ss(pattern_ss)));
@@ -137,7 +137,7 @@ public:
                           const LFSU_S& lfsu_s, const LFSV_S& lfsv_s,
                           const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
-    typedef visitor<invoke_pattern_skeleton_or_boundary,do_pattern_skeleton_or_boundary<> > SubProblemVisitor;
+    typedef visitor<functors::invoke_pattern_skeleton_or_boundary,do_pattern_skeleton_or_boundary<> > SubProblemVisitor;
 
     localAssembler().applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
                                                                     wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
@@ -147,7 +147,7 @@ public:
                                                                     wrap_pattern_nn(pattern_nn),
                                                                     wrap_pattern_ns(pattern_ns)));
 
-    typedef visitor<invoke_pattern_coupling,do_pattern_coupling<> > CouplingVisitor;
+    typedef visitor<functors::invoke_pattern_coupling,do_pattern_coupling<> > CouplingVisitor;
     localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
                                                                 wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
                                                                 wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
@@ -163,7 +163,7 @@ public:
   template<typename IG, typename LFSU, typename LFSV>
   void assembleUVBoundary(const IG& ig, const LFSU& lfsu, const LFSV& lfsv)
   {
-    typedef visitor<invoke_pattern_boundary,do_pattern_boundary<> > Visitor;
+    typedef visitor<functors::invoke_pattern_boundary,do_pattern_boundary<> > Visitor;
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_pattern_ss(pattern_ss)));
   }
@@ -177,7 +177,7 @@ public:
                                   const LFSU_N& lfsu_n, const LFSV_N& lfsv_n,
                                   const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
-    typedef visitor<invoke_pattern_enriched_coupling,do_pattern_enriched_coupling<> > CouplingVisitor;
+    typedef visitor<functors::invoke_pattern_enriched_coupling,do_pattern_enriched_coupling<> > CouplingVisitor;
 
     localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
                                                                 wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
@@ -199,7 +199,7 @@ public:
   template<typename EG, typename LFSU, typename LFSV>
   void assembleUVVolumePostSkeleton(const EG& eg, const LFSV& lfsv, const LFSU& lfsu)
   {
-    typedef visitor<invoke_pattern_volume_post_skeleton,do_pattern_volume_post_skeleton<> > Visitor;
+    typedef visitor<functors::invoke_pattern_volume_post_skeleton,do_pattern_volume_post_skeleton<> > Visitor;
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),
                                                           wrap_pattern_ss(pattern_ss)));

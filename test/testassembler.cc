@@ -210,16 +210,16 @@ int main(int argc, char** argv) {
     Condition c0(0);
     Condition c1(1);
 
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,GFS0> SubProblem0;
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,GFS1> SubProblem1;
+    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,GFS0> SubProblem0;
+    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,GFS1> SubProblem1;
     /*
     typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,GFS0,PowerGFS> SubProblem2;
     typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,PowerGFS> SubProblem3;
     typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,CompositeGFS> SubProblem4;
     */
     NOCON nocon;
-    SubProblem0 sp0(nocon,nocon,lop,c0);
-    SubProblem1 sp1(nocon,nocon,lop,c1);
+    SubProblem0 sp0(lop,c0);
+    SubProblem1 sp1(lop,c1);
     /*SubProblem2 sp2(nocon,nocon,lop,c0);
     SubProblem3 sp3(nocon,nocon,lop,c0);
     SubProblem4 sp4(nocon,nocon,lop,c0);*/

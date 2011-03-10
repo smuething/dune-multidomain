@@ -67,7 +67,7 @@ namespace {
 
 } // anonymous namespace
 
-template<typename GFS, typename N, typename BaseLFS, typename SubProblem_, typename Constraints_>
+template<typename GFS, typename N, typename BaseLFS, typename SubProblem_>
 struct SubProblemLocalFunctionSpaceTraits
 {
   //! \brief the grid view where grid function is defined upon
@@ -92,16 +92,12 @@ struct SubProblemLocalFunctionSpaceTraits
 
   typedef typename SubProblem::Traits::Condition Condition;
 
-  typedef Constraints_ Constraints;
-
-  typedef Constraints ConstraintsType;
-
   typedef BaseLFS BaseLocalFunctionSpace;
 
 };
 
 
-template<typename GFS, typename N, typename BaseLFS, typename SubProblem_, typename Constraints_>
+template<typename GFS, typename N, typename BaseLFS, typename SubProblem_>
 struct SubProblemLeafLocalFunctionSpaceTraits
 {
   //! \brief the grid view where grid function is defined upon
@@ -128,10 +124,6 @@ struct SubProblemLeafLocalFunctionSpaceTraits
   typedef SubProblem_ SubProblem;
 
   typedef typename SubProblem::Traits::Condition Condition;
-
-  typedef Constraints_ Constraints;
-
-  typedef Constraints ConstraintsType;
 
   typedef BaseLFS BaseLocalFunctionSpace;
 
@@ -172,7 +164,7 @@ namespace {
 // ********************************************************************************
 // LocalFunctionSpace for subproblems - multi-component version
 
-template<typename MDLFS, typename SubProblem, typename Constraints, std::size_t... ChildIndices>
+template<typename MDLFS, typename SubProblem, std::size_t... ChildIndices>
 class SubProblemLocalFunctionSpace
   : public Dune::PDELab::TypeTree::FilteredCompositeNode<const MDLFS,Dune::PDELab::TypeTree::IndexFilter<ChildIndices...> >
   , public Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType>
@@ -200,8 +192,7 @@ public:
   typedef SubProblemLocalFunctionSpaceTraits<GFS,
                                              SubProblemLocalFunctionSpace,
                                              void, // we are not directly based on a node in the original tree
-                                             SubProblem,
-                                             Constraints> Traits;
+                                             SubProblem> Traits;
 
 public:
 
@@ -211,20 +202,18 @@ public:
   }*/
 
   //! \brief initialize with grid function space
-  SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const SubProblem& subProblem, const Constraints& constraints)
+  SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const SubProblem& subProblem)
     : NodeT(stackobject_to_shared_ptr(mdlfs))
     , BaseT(mdlfs.gridFunctionSpaceStorage())
     , _subProblem(subProblem)
-    , _constraints(constraints)
   {
     bind();
   }
 
-  SubProblemLocalFunctionSpace (shared_ptr<const MDLFS> mdlfs, const SubProblem& subProblem, const Constraints& constraints)
+  SubProblemLocalFunctionSpace (shared_ptr<const MDLFS> mdlfs, const SubProblem& subProblem)
     : NodeT(mdlfs)
     , BaseT(mdlfs.gridFunctionSpaceStorage())
     , _subProblem(subProblem)
-    , _constraints(constraints)
   {
     bind();
   }
@@ -258,10 +247,6 @@ public:
     return _subProblem;
   }
 
-  const Constraints& constraints() const {
-    return _constraints;
-  }
-
   template<typename EG>
   bool appliesTo(const EG& eg) const {
     return _subProblem.appliesTo(eg);
@@ -282,7 +267,6 @@ private:
   }
 
   const SubProblem& _subProblem;
-  const Constraints& _constraints;
 
 };
 
@@ -306,12 +290,10 @@ public:
 
   typedef Traits_ Traits;
   typedef typename Traits::SubProblem SubProblem;
-  typedef typename Traits::Constraints Constraints;
 
   //! \brief initialize with grid function space
-  SubProblemLocalFunctionSpaceProxy (const SubProblem& subProblem, const Constraints& constraints)
+  SubProblemLocalFunctionSpaceProxy (const SubProblem& subProblem)
     : _subProblem(subProblem)
-    , _constraints(constraints)
   {
   }
 
@@ -375,10 +357,6 @@ public:
     return _subProblem;
   }
 
-  const Constraints& constraints() const {
-    return _constraints;
-  }
-
   template<typename EG>
   bool appliesTo(const EG& eg) const {
     return _subProblem.appliesTo(eg);
@@ -391,7 +369,6 @@ public:
 
 private:
   const SubProblem& _subProblem;
-  const Constraints& _constraints;
 
 };
 
@@ -399,14 +376,13 @@ private:
 // single-component version base - this needs to be specialized for each supported base LFS
 
 
-  template<typename MDLFS, typename LFS, typename BaseLFS, typename SubProblem, typename Constraints, typename LFSTag>
+template<typename MDLFS, typename LFS, typename BaseLFS, typename SubProblem, typename LFSTag>
 class SubProblemLocalFunctionSpaceBase
   : public SubProblemLocalFunctionSpaceProxy<SubProblemLocalFunctionSpaceTraits<
                                                typename MDLFS::Traits::GridFunctionSpaceType,
                                                LFS,
                                                BaseLFS,
-                                               SubProblem,
-                                               Constraints
+                                               SubProblem
                                                >
                                              >
 {
@@ -415,15 +391,14 @@ class SubProblemLocalFunctionSpaceBase
                                               typename MDLFS::Traits::GridFunctionSpaceType,
                                               LFS,
                                               BaseLFS,
-                                              SubProblem,
-                                              Constraints
+                                              SubProblem
                                               >
                                             > BaseT;
 
 protected:
 
-  SubProblemLocalFunctionSpaceBase(const SubProblem& subProblem, const Constraints& constraints)
-    : BaseT(subProblem,constraints)
+  SubProblemLocalFunctionSpaceBase(const SubProblem& subProblem)
+    : BaseT(subProblem)
   {}
 
 };
@@ -431,14 +406,13 @@ protected:
 
 // single-component version base - specialization for leaf function space
 
-  template<typename MDLFS, typename LFS, typename BaseLFS, typename SubProblem, typename Constraints>
-  class SubProblemLocalFunctionSpaceBase<MDLFS,LFS,BaseLFS,SubProblem,Constraints,LeafLocalFunctionSpaceTag>
+template<typename MDLFS, typename LFS, typename BaseLFS, typename SubProblem>
+class SubProblemLocalFunctionSpaceBase<MDLFS,LFS,BaseLFS,SubProblem,LeafLocalFunctionSpaceTag>
   : public SubProblemLocalFunctionSpaceProxy<SubProblemLeafLocalFunctionSpaceTraits<
                                                typename MDLFS::Traits::GridFunctionSpaceType,
                                                LFS,
                                                BaseLFS,
-                                               SubProblem,
-                                               Constraints
+                                               SubProblem
                                                >
                                              >
 {
@@ -449,8 +423,7 @@ public:
                                               typename MDLFS::Traits::GridFunctionSpaceType,
                                               LFS,
                                               BaseLFS,
-                                               SubProblem,
-                                              Constraints
+                                              SubProblem
                                               >
                                             > BaseT;
 
@@ -462,8 +435,8 @@ public:
 
 protected:
 
-  SubProblemLocalFunctionSpaceBase(const SubProblem& subProblem, const Constraints& constraints)
-    : BaseT(subProblem,constraints)
+  SubProblemLocalFunctionSpaceBase(const SubProblem& subProblem)
+    : BaseT(subProblem)
   {}
 
 };
@@ -471,14 +444,13 @@ protected:
 
 
 
-template<typename MDLFS, typename SubProblem, typename Constraints, std::size_t ChildIndex>
-class SubProblemLocalFunctionSpace<MDLFS,SubProblem,Constraints,ChildIndex>
+template<typename MDLFS, typename SubProblem, std::size_t ChildIndex>
+class SubProblemLocalFunctionSpace<MDLFS,SubProblem,ChildIndex>
   : public Dune::PDELab::TypeTree::ProxyNode<const typename MDLFS::template Child<ChildIndex>::Type>
   , public SubProblemLocalFunctionSpaceBase<MDLFS,
-                                            SubProblemLocalFunctionSpace<MDLFS,SubProblem,Constraints,ChildIndex>,
+                                            SubProblemLocalFunctionSpace<MDLFS,SubProblem,ChildIndex>,
                                             typename MDLFS::template Child<ChildIndex>::Type,
                                             SubProblem,
-                                            Constraints,
                                             typename MDLFS::template Child<ChildIndex>::Type::ImplementationTag
                                             >
 {
@@ -486,18 +458,17 @@ class SubProblemLocalFunctionSpace<MDLFS,SubProblem,Constraints,ChildIndex>
   typedef Dune::PDELab::TypeTree::ProxyNode<const typename MDLFS::template Child<ChildIndex>::Type> NodeT;
 
   typedef SubProblemLocalFunctionSpaceBase<MDLFS,
-                                           SubProblemLocalFunctionSpace<MDLFS,SubProblem,Constraints,ChildIndex>,
+                                           SubProblemLocalFunctionSpace<MDLFS,SubProblem,ChildIndex>,
                                            typename MDLFS::template Child<ChildIndex>::Type,
                                            SubProblem,
-                                           Constraints,
                                            typename MDLFS::template Child<ChildIndex>::Type::ImplementationTag
                                            > BaseT;
 
 public:
 
-  SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const SubProblem& subProblem, const Constraints& constraints)
+  SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const SubProblem& subProblem)
     : NodeT(mdlfs.template childStorage<ChildIndex>())
-    , BaseT(subProblem,constraints)
+    , BaseT(subProblem)
   {
   }
 

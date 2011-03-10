@@ -18,7 +18,7 @@ namespace LFS {
   lfsu(const Data& data, const SubProblem& subProblem)
   {
     typedef typename LFSU<Data,SubProblem>::type LFS;
-    return LFS(data.lfsu(),subProblem,subProblem.trialGridFunctionSpaceConstraints());
+    return LFS(data.lfsu(),subProblem);
   }
 
   template<typename Data, typename SubProblem>
@@ -32,7 +32,7 @@ namespace LFS {
   lfsv(const Data& data, const SubProblem& subProblem)
   {
     typedef typename LFSV<Data,SubProblem>::type LFS;
-    return LFS(data.lfsv(),subProblem,subProblem.testGridFunctionSpaceConstraints());
+    return LFS(data.lfsv(),subProblem);
   }
 
   template<typename Data, typename SubProblem>
@@ -46,7 +46,7 @@ namespace LFS {
   lfsu_s(const Data& data, const SubProblem& subProblem)
   {
     typedef typename LFSU_S<Data,SubProblem>::type LFS;
-    return LFS(data.lfsu_s(),subProblem,subProblem.trialGridFunctionSpaceConstraints());
+    return LFS(data.lfsu_s(),subProblem);
   }
 
   template<typename Data, typename SubProblem>
@@ -60,7 +60,7 @@ namespace LFS {
   lfsv_s(const Data& data, const SubProblem& subProblem)
   {
     typedef typename LFSV_S<Data,SubProblem>::type LFS;
-    return LFS(data.lfsv_s(),subProblem,subProblem.testGridFunctionSpaceConstraints());
+    return LFS(data.lfsv_s(),subProblem);
   }
 
   template<typename Data, typename SubProblem>
@@ -74,7 +74,7 @@ namespace LFS {
   lfsu_n(const Data& data, const SubProblem& subProblem)
   {
     typedef typename LFSU_N<Data,SubProblem>::type LFS;
-    return LFS(data.lfsu_n(),subProblem,subProblem.trialGridFunctionSpaceConstraints());
+    return LFS(data.lfsu_n(),subProblem);
   }
 
   template<typename Data, typename SubProblem>
@@ -88,7 +88,7 @@ namespace LFS {
   lfsv_n(const Data& data, const SubProblem& subProblem)
   {
     typedef typename LFSV_N<Data,SubProblem>::type LFS;
-    return LFS(data.lfsv_n(),subProblem,subProblem.testGridFunctionSpaceConstraints());
+    return LFS(data.lfsv_n(),subProblem);
   }
 
   template<typename Data, typename Coupling>

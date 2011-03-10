@@ -199,10 +199,10 @@ int main(int argc, char** argv) {
     Condition c0(0);
     Condition c1(1);
 
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,CON,MultiGFS,CON,LOP,Condition,GFS0> SubProblem0;
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,CON,MultiGFS,CON,LOP,Condition,GFS1> SubProblem1;
-    SubProblem0 sp0(con,con,lop,c0);
-    SubProblem1 sp1(con,con,lop,c1);
+    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,GFS0> SubProblem0;
+    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,GFS1> SubProblem1;
+    SubProblem0 sp0(lop,c0);
+    SubProblem1 sp1(lop,c1);
 
     /*
     SubProblem0::Traits::LocalTrialFunctionSpace

@@ -1,5 +1,5 @@
-#ifndef DUNE_MULTIDOMAIN_CONSTRAINTS_HH
-#define DUNE_MULTIDOMAIN_CONSTRAINTS_HH
+#ifndef DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTS_HH
+#define DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTS_HH
 
 #include <map>
 #include <dune/pdelab/gridfunctionspace/constraints.hh>
@@ -569,4 +569,4 @@ void testSpaceConstraints(const F& f, const GFS& gfs, CG& cg, const SubProblemBo
 } // namespace PDELab
 } // namespace Dune
 
-#endif // DUNE_MULTIDOMAIN_CONSTRAINTS_HH
+#endif // DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTS_HH

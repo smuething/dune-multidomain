@@ -50,6 +50,7 @@ public:
     const bool require_uv_boundary = engine.requireUVBoundary();
     const bool require_v_boundary = engine.requireVBoundary();
     const bool require_uv_processor = engine.requireUVProcessor();
+    const bool require_v_processor = engine.requireVProcessor();
     const bool require_uv_enriched_coupling = engine.requireUVEnrichedCoupling();
     const bool require_v_enriched_coupling = engine.requireVEnrichedCoupling();
     const bool require_uv_volume_post_skeleton = engine.requireUVVolumePostSkeleton();
@@ -195,7 +196,7 @@ public:
 
                   case IntersectionType::boundary:
 
-                    if (require_uv_boundary)
+                    if (require_uv_boundary || require_v_boundary)
                       {
                         BoundaryIntersectionWrapper boundaryIntersectionWrapper(*iit,intersection_index,elementWrapper);
                         engine.assembleUVBoundary(boundaryIntersectionWrapper,_lfsu_s,_lfsv_s);
@@ -206,7 +207,7 @@ public:
 
                   case IntersectionType::processor:
 
-                    if (require_uv_processor)
+                    if (require_uv_processor || require_v_processor)
                       {
                         BoundaryIntersectionWrapper boundaryIntersectionWrapper(*iit,intersection_index,elementWrapper);
                         engine.assembleUVProcessor(boundaryIntersectionWrapper,_lfsu_s,_lfsv_s);

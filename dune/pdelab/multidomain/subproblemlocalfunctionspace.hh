@@ -127,6 +127,8 @@ struct SubProblemLeafLocalFunctionSpaceTraits
 
   typedef BaseLFS BaseLocalFunctionSpace;
 
+  typedef typename BaseLFS::Traits::ConstraintsType ConstraintsType;
+
 };
 
 
@@ -426,6 +428,10 @@ public:
 
   const typename Traits::FiniteElementType& finiteElement() const {
     return this->baseLFS().finiteElement();
+  }
+
+  const typename Traits::ConstraintsType& constraints() const {
+    return this->baseLFS().constraints();
   }
 
 protected:

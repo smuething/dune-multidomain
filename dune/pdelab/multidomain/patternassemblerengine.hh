@@ -32,7 +32,7 @@ public:
   typedef typename LA::Pattern GlobalPattern;
 
 
-  bool requireIntersections() const
+  bool requireSkeleton() const
   {
     return
       requireUVSkeleton() ||
@@ -40,7 +40,7 @@ public:
       requireUVBoundary();
   }
 
-  bool requireIntersectionsTwoSided() const
+  bool requireSkeletonTwoSided() const
   {
     return
       requireUVBoundary() ||

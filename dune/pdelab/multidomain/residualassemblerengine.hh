@@ -29,7 +29,7 @@ public:
   typedef typename LA::Range Range;
   typedef typename LA::Domain Domain;
 
-  bool requireIntersections() const
+  bool requireSkeleton() const
   {
     return
       requireUVSkeleton() || requireVSkeleton() ||
@@ -37,7 +37,7 @@ public:
       requireUVBoundary() || requireVBoundary();
   }
 
-  bool requireIntersectionsTwoSided() const
+  bool requireSkeletonTwoSided() const
   {
     return
       requireUVBoundary() || requireVBoundary() ||

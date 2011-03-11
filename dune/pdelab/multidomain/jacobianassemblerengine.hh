@@ -31,7 +31,7 @@ public:
   typedef typename LA::Jacobian Jacobian;
 
 
-  bool requireIntersections() const
+  bool requireSkeleton() const
   {
     return
       requireUVSkeleton() ||
@@ -39,7 +39,7 @@ public:
       requireUVBoundary();
   }
 
-  bool requireIntersectionsTwoSided() const
+  bool requireSkeletonTwoSided() const
   {
     return
       requireUVBoundary() ||

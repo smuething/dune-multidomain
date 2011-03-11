@@ -14,12 +14,12 @@ namespace PDELab {
 namespace MultiDomain {
 
 
-template<typename GridOperator, bool nonoverlapping_mode = false>
+template<typename GFSU_, typename GFSV_, bool nonoverlapping_mode = false>
 class GlobalAssembler
 {
 
-  typedef typename GridOperator::Traits::TrialGridFunctionSpace GFSU;
-  typedef typename GridOperator::Traits::TestGridFunctionSpace GFSV;
+  typedef GFSU_ GFSU;
+  typedef GFSV_ GFSV;
 
   typedef typename GFSU::Traits::GridViewType GV;
   typedef typename GV::IndexSet IndexSet;

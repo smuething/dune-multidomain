@@ -142,7 +142,7 @@ template<typename MultiLFS, typename SubProblem>
 typename std::enable_if<is_subproblem<SubProblem>::value,typename SubProblem::Traits::LocalTrialFunctionSpace>::type
 extract_trial_lfs(const MultiLFS& multiLFS, const SubProblem& subProblem)
 {
-  return typename SubProblem::Traits::LocalTrialFunctionSpace(multiLFS,subProblem,subProblem.trialGridFunctionSpaceConstraints());
+  return typename SubProblem::Traits::LocalTrialFunctionSpace(multiLFS,subProblem);
 }
 
 
@@ -157,7 +157,7 @@ template<typename MultiLFS, typename SubProblem>
 typename std::enable_if<is_subproblem<SubProblem>::value,typename SubProblem::Traits::LocalTestFunctionSpace>::type
 extract_test_lfs(const MultiLFS& multiLFS, const SubProblem& subProblem)
 {
-  return typename SubProblem::Traits::LocalTestFunctionSpace(multiLFS,subProblem,subProblem.testGridFunctionSpaceConstraints());
+  return typename SubProblem::Traits::LocalTestFunctionSpace(multiLFS,subProblem);
 }
 
 } // namespace MultiDomain

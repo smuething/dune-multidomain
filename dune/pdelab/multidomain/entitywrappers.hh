@@ -51,6 +51,7 @@ public:
 
   typedef typename GV::Intersection Intersection;
   typedef ElementWrapper<GV> EntityWrapper;
+  typedef EntityWrapper Element;
 
   SkeletonIntersectionWrapper(const Intersection& intersection,
                               std::size_t intersectionIndex,

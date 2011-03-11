@@ -14,28 +14,28 @@ namespace PDELab {
 namespace MultiDomain {
 
 
-template<typename GridOperator, bool nonoverlapping_mode = false>
+template<typename GFSU_, typename GFSV_, bool nonoverlapping_mode = false>
 class GlobalAssembler
 {
 
-  typedef typename GridOperator::Traits::TrialGridFunctionSpace GFSU;
-  typedef typename GridOperator::Traits::TestGridFunctionSpace GFSV;
+  typedef GFSU_ GFSU;
+  typedef GFSV_ GFSV;
 
   typedef typename GFSU::Traits::GridViewType GV;
   typedef typename GV::IndexSet IndexSet;
   typedef typename GV::template Codim<0>::Iterator ElementIterator;
   typedef typename GV::IntersectionIterator IntersectionIterator;
 
-  typedef LocalFunctionSpace<GFSU> LFSU;
-  typedef LocalFunctionSpace<GFSV> LFSV;
-  typedef CouplingLocalFunctionSpace<GFSU> CouplingLFSU;
-  typedef CouplingLocalFunctionSpace<GFSV> CouplingLFSV;
-
   typedef Dune::PDELab::MultiDomain::ElementWrapper<GV> ElementWrapper;
   typedef Dune::PDELab::MultiDomain::BoundaryIntersectionWrapper<GV> BoundaryIntersectionWrapper;
   typedef Dune::PDELab::MultiDomain::SkeletonIntersectionWrapper<GV> SkeletonIntersectionWrapper;
 
 public:
+
+  typedef LocalFunctionSpace<GFSU> LFSU;
+  typedef LocalFunctionSpace<GFSV> LFSV;
+  typedef CouplingLocalFunctionSpace<GFSU> CouplingLFSU;
+  typedef CouplingLocalFunctionSpace<GFSV> CouplingLFSV;
 
   template<typename LocalAssemblerEngine>
   void assemble(LocalAssemblerEngine& engine)
@@ -50,6 +50,7 @@ public:
     const bool require_uv_boundary = engine.requireUVBoundary();
     const bool require_v_boundary = engine.requireVBoundary();
     const bool require_uv_processor = engine.requireUVProcessor();
+    const bool require_v_processor = engine.requireVProcessor();
     const bool require_uv_enriched_coupling = engine.requireUVEnrichedCoupling();
     const bool require_v_enriched_coupling = engine.requireVEnrichedCoupling();
     const bool require_uv_volume_post_skeleton = engine.requireUVVolumePostSkeleton();
@@ -109,20 +110,20 @@ public:
           continue;
 
         // bind lfsv_s
-        lfsv_s.bind(*it);
-        engine.onBindLFSV(elementWrapper,lfsv_s);
+        _lfsv_s.bind(*it);
+        engine.onBindLFSV(elementWrapper,_lfsv_s);
 
         if (require_lfsu_s)
           {
             // bind lfsu_s
-            lfsu_s.bind(*it);
-            engine.onBindLFSUV(elementWrapper,lfsu_s,lfsv_s);
-            engine.loadCoefficientsLFSUInside(lfsu_s);
+            _lfsu_s.bind(*it);
+            engine.onBindLFSUV(elementWrapper,_lfsu_s,_lfsv_s);
+            engine.loadCoefficientsLFSUInside(_lfsu_s);
           }
 
         // volume assembly
-        engine.assembleUVVolume(elementWrapper,lfsu_s,lfsv_s);
-        engine.assembleVVolume(elementWrapper,lfsv_s);
+        engine.assembleUVVolume(elementWrapper,_lfsu_s,_lfsv_s);
+        engine.assembleVVolume(elementWrapper,_lfsv_s);
 
         // skip if intersections are not needed
         if (require_intersections)
@@ -152,65 +153,65 @@ public:
                                                                                 ids > idn);
 
                         // bind lfsv_n
-                        lfsv_n.bind(*(iit->outside()));
-                        engine.onBindLFSVOutside(skeletonIntersectionWrapper,lfsv_n);
+                        _lfsv_n.bind(*(iit->outside()));
+                        engine.onBindLFSVOutside(skeletonIntersectionWrapper,_lfsv_n);
 
                         if (require_lfsu_n)
                           {
                             // bind lfsu_n
-                            lfsu_n.bind(*(iit->outside()));
-                            engine.onBindLFSUVOutside(skeletonIntersectionWrapper,lfsu_n,lfsv_n);
-                            engine.loadCoefficientsLFSUOutside(lfsu_n);
+                            _lfsu_n.bind(*(iit->outside()));
+                            engine.onBindLFSUVOutside(skeletonIntersectionWrapper,_lfsu_n,_lfsv_n);
+                            engine.loadCoefficientsLFSUOutside(_lfsu_n);
                           }
 
-                        engine.assembleUVSkeleton(skeletonIntersectionWrapper,lfsu_s,lfsv_s,lfsu_n,lfsv_n);
-                        engine.assembleVSkeleton(skeletonIntersectionWrapper,lfsv_s,lfsv_n);
+                        engine.assembleUVSkeleton(skeletonIntersectionWrapper,_lfsu_s,_lfsv_s,_lfsu_n,_lfsv_n);
+                        engine.assembleVSkeleton(skeletonIntersectionWrapper,_lfsv_s,_lfsv_n);
 
                         if (require_lfsv_coupling)
                           {
                             // bind lfsv_c
-                            lfsv_c.bind(*iit);
-                            engine.onBindLFSVCoupling(skeletonIntersectionWrapper,lfsv_c);
+                            _lfsv_c.bind(*iit);
+                            engine.onBindLFSVCoupling(skeletonIntersectionWrapper,_lfsv_c);
 
                             if (require_uv_enriched_coupling)
                               {
                                 // bind_lfsu_c
-                                lfsu_c.bind(*iit);
-                                engine.onBindLFSUVCoupling(skeletonIntersectionWrapper,lfsu_c,lfsv_c);
-                                engine.loadCoefficientsLFSUCoupling(lfsu_c);
+                                _lfsu_c.bind(*iit);
+                                engine.onBindLFSUVCoupling(skeletonIntersectionWrapper,_lfsu_c,_lfsv_c);
+                                engine.loadCoefficientsLFSUCoupling(_lfsu_c);
                               }
 
-                            engine.assembleUVEnrichedCoupling(skeletonIntersectionWrapper,lfsu_s,lfsv_s,lfsu_n,lfsv_n,lfsu_c,lfsv_c);
-                            engine.assembleVEnrichedCoupling(skeletonIntersectionWrapper,lfsv_c,lfsv_n,lfsv_c);
+                            engine.assembleUVEnrichedCoupling(skeletonIntersectionWrapper,_lfsu_s,_lfsv_s,_lfsu_n,_lfsv_n,_lfsu_c,_lfsv_c);
+                            engine.assembleVEnrichedCoupling(skeletonIntersectionWrapper,_lfsv_c,_lfsv_n,_lfsv_c);
 
-                            engine.onUnbindLFSUVCoupling(skeletonIntersectionWrapper,lfsu_c,lfsv_c);
-                            engine.onUnbindLFSVCoupling(skeletonIntersectionWrapper,lfsv_c);
+                            engine.onUnbindLFSUVCoupling(skeletonIntersectionWrapper,_lfsu_c,_lfsv_c);
+                            engine.onUnbindLFSVCoupling(skeletonIntersectionWrapper,_lfsv_c);
                           }
 
-                        engine.onUnbindLFSUVOutside(skeletonIntersectionWrapper,lfsu_n,lfsv_n);
-                        engine.onUnbindLFSVOutside(skeletonIntersectionWrapper,lfsv_n);
+                        engine.onUnbindLFSUVOutside(skeletonIntersectionWrapper,_lfsu_n,_lfsv_n);
+                        engine.onUnbindLFSVOutside(skeletonIntersectionWrapper,_lfsv_n);
                       }
                     break;
 
 
                   case IntersectionType::boundary:
 
-                    if (require_uv_boundary)
+                    if (require_uv_boundary || require_v_boundary)
                       {
                         BoundaryIntersectionWrapper boundaryIntersectionWrapper(*iit,intersection_index,elementWrapper);
-                        engine.assembleUVBoundary(boundaryIntersectionWrapper,lfsu_s,lfsv_s);
-                        engine.assembleVBoundary(boundaryIntersectionWrapper,lfsv_s);
+                        engine.assembleUVBoundary(boundaryIntersectionWrapper,_lfsu_s,_lfsv_s);
+                        engine.assembleVBoundary(boundaryIntersectionWrapper,_lfsv_s);
                       }
                     break;
 
 
                   case IntersectionType::processor:
 
-                    if (require_uv_processor)
+                    if (require_uv_processor || require_v_processor)
                       {
                         BoundaryIntersectionWrapper boundaryIntersectionWrapper(*iit,intersection_index,elementWrapper);
-                        engine.assembleUVProcessor(boundaryIntersectionWrapper,lfsu_s,lfsv_s);
-                        engine.assembleVProcessor(boundaryIntersectionWrapper,lfsv_s);
+                        engine.assembleUVProcessor(boundaryIntersectionWrapper,_lfsu_s,_lfsv_s);
+                        engine.assembleVProcessor(boundaryIntersectionWrapper,_lfsv_s);
                       }
                     break;
 
@@ -218,11 +219,11 @@ public:
               } // loop
           }  // if
 
-        engine.assembleUVVolumePostSkeleton(elementWrapper,lfsu_s,lfsv_s);
-        engine.assembleVVolumePostSkeleton(elementWrapper,lfsv_s);
+        engine.assembleUVVolumePostSkeleton(elementWrapper,_lfsu_s,_lfsv_s);
+        engine.assembleVVolumePostSkeleton(elementWrapper,_lfsv_s);
 
-        engine.onUnbindLFSUV(elementWrapper,lfsu_s,lfsv_s);
-        engine.onUnbindLFSV(elementWrapper,lfsv_s);
+        engine.onUnbindLFSUV(elementWrapper,_lfsu_s,_lfsv_s);
+        engine.onUnbindLFSV(elementWrapper,_lfsv_s);
 
       }
 
@@ -232,12 +233,12 @@ public:
   GlobalAssembler(const GFSU& gfsu_, const GFSV& gfsv_)
     : gfsu(gfsu_)
     , gfsv(gfsv_)
-    , lfsu_s(gfsu)
-    , lfsv_s(gfsv)
-    , lfsu_n(gfsu)
-    , lfsv_n(gfsv)
-    , lfsu_c(gfsu)
-    , lfsv_c(gfsv)
+    , _lfsu_s(gfsu)
+    , _lfsv_s(gfsv)
+    , _lfsu_n(gfsu)
+    , _lfsv_n(gfsv)
+    , _lfsu_c(gfsu)
+    , _lfsv_c(gfsv)
   {}
 
   const GFSU& trialGridFunctionSpace() const
@@ -250,19 +251,54 @@ public:
     return gfsv;
   }
 
+  // ************************************************************************************
+  // Access to internal local function spaces for creating SubProblemLocalFunctionSpaces
+  // ************************************************************************************
+
+  const LFSU& lfsu_s() const
+  {
+    return _lfsu_s;
+  }
+
+  const LFSV& lfsv_s() const
+  {
+    return _lfsv_s;
+  }
+
+  const LFSU& lfsu_n() const
+  {
+    return _lfsu_n;
+  }
+
+  const LFSV& lfsv_n() const
+  {
+    return _lfsv_n;
+  }
+
+  const LFSU& lfsu_c() const
+  {
+    return _lfsu_c;
+  }
+
+  const LFSV& lfsv_c() const
+  {
+    return _lfsv_c;
+  }
+
+
 private:
 
   const GFSU& gfsu;
   const GFSV& gfsv;
 
-  LFSU lfsu_s;
-  LFSV lfsv_s;
+  LFSU _lfsu_s;
+  LFSV _lfsv_s;
 
-  LFSU lfsu_n;
-  LFSV lfsv_n;
+  LFSU _lfsu_n;
+  LFSV _lfsv_n;
 
-  CouplingLFSU lfsu_c;
-  CouplingLFSV lfsv_c;
+  CouplingLFSU _lfsu_c;
+  CouplingLFSV _lfsv_c;
 
 };
 

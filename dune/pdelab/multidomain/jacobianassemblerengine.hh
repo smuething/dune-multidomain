@@ -31,7 +31,7 @@ public:
   typedef typename LA::Jacobian Jacobian;
 
 
-  bool requireIntersections() const
+  bool requireSkeleton() const
   {
     return
       requireUVSkeleton() ||
@@ -39,12 +39,13 @@ public:
       requireUVBoundary();
   }
 
-  bool requireIntersectionsTwoSided() const
+  bool requireSkeletonTwoSided() const
   {
     return
       requireUVBoundary() ||
       requireUVEnrichedCoupling() ||
-      any_child<typename LocalAssembler::SubProblems,do_skeleton_two_sided<> >::value;
+      any_child<typename LocalAssembler::SubProblems,do_skeleton_two_sided<> >::value ||
+      any_child<typename LocalAssembler::Couplings,do_alpha_coupling<> >::value;
   }
 
   bool requireUVVolume() const
@@ -54,7 +55,8 @@ public:
 
   bool requireUVSkeleton() const
   {
-    return any_child<typename LocalAssembler::SubProblems,do_alpha_skeleton<> >::value ||
+    return
+      any_child<typename LocalAssembler::SubProblems,do_alpha_skeleton<> >::value ||
       any_child<typename LocalAssembler::SubProblems,do_alpha_boundary<> >::value ||
       any_child<typename LocalAssembler::Couplings,do_alpha_coupling<> >::value;
   }
@@ -153,7 +155,7 @@ public:
   {
     typedef visitor<functors::invoke_jacobian_volume,do_alpha_volume<> > Visitor;
     a_ss.setWeight(localAssembler().weight());
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_eg(eg),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a_ss(a_ss)));
   }
 
@@ -169,14 +171,14 @@ public:
     a_ns.setWeight(localAssembler().weight());
     a_nn.setWeight(localAssembler().weight());
     typedef visitor<functors::invoke_jacobian_skeleton_or_boundary,do_alpha_skeleton_or_boundary<> > SubProblemVisitor;
-    localAssembler().applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
+    localAssembler().applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                                     wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
                                                                     wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
                                                                     wrap_a_ss(a_ss),wrap_a_sn(a_sn),
                                                                     wrap_a_ns(a_ns),wrap_a_nn(a_nn)));
 
     typedef visitor<functors::invoke_jacobian_coupling,do_alpha_coupling<> > CouplingVisitor;
-    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
+    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                                 wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
                                                                 wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
                                                                 wrap_a_ss(a_ss),wrap_a_sn(a_sn),
@@ -194,7 +196,7 @@ public:
   {
     typedef visitor<functors::invoke_jacobian_boundary,do_alpha_boundary<> > Visitor;
     a_ss.setWeight(localAssembler().weight());
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
   }
 
@@ -219,7 +221,7 @@ public:
     a_cs.setWeight(localAssembler().weight());
     a_cn.setWeight(localAssembler().weight());
     typedef visitor<functors::invoke_jacobian_enriched_coupling,do_alpha_enriched_coupling<> > CouplingVisitor;
-    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
+    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                                 wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),
                                                                 wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),
                                                                 wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),wrap_x_c(x_c),
@@ -245,7 +247,7 @@ public:
   {
     typedef visitor<functors::invoke_jacobian_volume_post_skeleton,do_alpha_volume_post_skeleton<> > Visitor;
     a_ss.setWeight(localAssembler().weight());
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_eg(eg),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_a(a_ss)));
   }
 

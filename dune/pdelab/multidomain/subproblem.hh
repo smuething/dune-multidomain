@@ -15,9 +15,7 @@ namespace MultiDomain {
 template<
   typename SubProblem,
   typename GFSU,
-  typename CONU,
   typename GFSV,
-  typename CONV,
   typename LOP,
   typename Condition_,
   std::size_t... Indices
@@ -26,15 +24,13 @@ struct SubProblemTraits
 {
 
   typedef GFSU MultiDomainTrialGridFunctionSpace;
-  typedef typename GFSU::LocalFunctionSpace MultiDomainLocalTrialFunctionSpace;
-  typedef SubProblemLocalFunctionSpace<typename GFSU::LocalFunctionSpace,SubProblem,CONU,Indices...> LocalTrialFunctionSpace;
+  typedef Dune::PDELab::LocalFunctionSpace<GFSU> MultiDomainTrialLocalFunctionSpace;
+  typedef SubProblemLocalFunctionSpace<MultiDomainTrialLocalFunctionSpace,SubProblem,Indices...> LocalTrialFunctionSpace;
   typedef LocalTrialFunctionSpace TrialLocalFunctionSpace;
-  typedef CONU TrialGridFunctionSpaceConstraints;
   typedef GFSV MultiDomainTestGridFunctionSpace;
-  typedef typename GFSV::LocalFunctionSpace MultiDomainLocalTestFunctionSpace;
-  typedef SubProblemLocalFunctionSpace<typename GFSV::LocalFunctionSpace,SubProblem,CONV,Indices...> LocalTestFunctionSpace;
+  typedef Dune::PDELab::LocalFunctionSpace<GFSV> MultiDomainTestLocalFunctionSpace;
+  typedef SubProblemLocalFunctionSpace<MultiDomainTestLocalFunctionSpace,SubProblem,Indices...> LocalTestFunctionSpace;
   typedef LocalTestFunctionSpace TestLocalFunctionSpace;
-  typedef CONV TestGridFunctionSpaceConstraints;
   typedef Condition_ Condition;
   typedef LOP LocalOperator;
 
@@ -45,9 +41,7 @@ struct SubProblemTag;
 
 template<
   typename GFSU,
-  typename CONU,
   typename GFSV,
-  typename CONV,
   typename LocalOperator,
   typename Condition,
   std::size_t... Indices
@@ -62,11 +56,9 @@ public:
 
   typedef SubProblemTag MultiDomainComponentTag;
 
-  typedef SubProblemTraits<SubProblem,GFSU,CONU,GFSV,CONV,LocalOperator,Condition,Indices...> Traits;
+  typedef SubProblemTraits<SubProblem,GFSU,GFSV,LocalOperator,Condition,Indices...> Traits;
 
-  SubProblem(const CONU& conu, const CONV& conv, LocalOperator& lop, const Condition& condition) :
-    _conu(conu),
-    _conv(conv),
+  SubProblem(LocalOperator& lop, const Condition& condition) :
     _lop(lop),
     _condition(condition)
   {}
@@ -79,11 +71,11 @@ public:
     return _lop;
   }
 
-  typename Traits::LocalTrialFunctionSpace&& localTrialFunctionSpace(typename Traits::MultiDomainLocalTrialFunctionSpace& mdlfs) {
+  typename Traits::TrialLocalFunctionSpace&& localTrialFunctionSpace(typename Traits::MultiDomainTrialLocalFunctionSpace& mdlfs) {
     return typename Traits::LocalTrialFunctionSpace(mdlfs,_condition);
   }
 
-  typename Traits::LocalTestFunctionSpace&& localTestFunctionSpace(typename Traits::MultiDomainLocalTestFunctionSpace& mdlfs) {
+  typename Traits::TestLocalFunctionSpace&& localTestFunctionSpace(typename Traits::MultiDomainTestLocalFunctionSpace& mdlfs) {
     return typename Traits::LocalTrialFunctionSpace(mdlfs,_condition);
   }
 
@@ -96,26 +88,7 @@ public:
     return _condition;
   }
 
-  typename Traits::TrialGridFunctionSpaceConstraints& trialGridFunctionSpaceConstraints() {
-    return _conu;
-  }
-
-  typename Traits::TestGridFunctionSpaceConstraints& testGridFunctionSpaceConstraints() {
-    return _conv;
-  }
-
-  const typename Traits::TrialGridFunctionSpaceConstraints& trialGridFunctionSpaceConstraints() const {
-    return _conu;
-  }
-
-  const typename Traits::TestGridFunctionSpaceConstraints& testGridFunctionSpaceConstraints() const {
-    return _conv;
-  }
-
-
 protected:
-  CONU _conu;
-  CONV _conv;
   LocalOperator& _lop;
   const Condition _condition;
 
@@ -123,14 +96,12 @@ protected:
 
 template<
   typename GFSU,
-  typename CONU,
   typename GFSV,
-  typename CONV,
   typename LocalOperator,
   typename Condition,
   std::size_t... Indices
   >
-struct is_subproblem<SubProblem<GFSU,CONU,GFSV,CONV,LocalOperator,Condition,Indices...> >
+struct is_subproblem<SubProblem<GFSU,GFSV,LocalOperator,Condition,Indices...> >
 {
   static const bool value = true;
 };
@@ -138,27 +109,21 @@ struct is_subproblem<SubProblem<GFSU,CONU,GFSV,CONV,LocalOperator,Condition,Indi
 
 template<
   typename GFSU,
-  typename CONU,
   typename GFSV,
-  typename CONV,
   typename LocalOperator,
   typename Condition,
   typename... GridFunctionSpaces
   >
 class TypeBasedSubProblem
   : public SubProblem<GFSU,
-                      CONU,
                       GFSV,
-                      CONV,
                       LocalOperator,
                       Condition,
                       get_subproblem_index<GFSU,GridFunctionSpaces>::value...>
 {
 
   typedef SubProblem<GFSU,
-                     CONU,
                      GFSV,
-                     CONV,
                      LocalOperator,
                      Condition,
                      get_subproblem_index<GFSU,GridFunctionSpaces>::value...
@@ -168,22 +133,20 @@ public:
 
   typedef typename BaseT::Traits Traits;
 
-  TypeBasedSubProblem(const CONU& conu, const CONV& conv, LocalOperator& lop, const Condition& condition) :
-    BaseT(conu,conv,lop,condition)
+  TypeBasedSubProblem(LocalOperator& lop, const Condition& condition) :
+    BaseT(lop,condition)
   {}
 
 };
 
 template<
   typename GFSU,
-  typename CONU,
   typename GFSV,
-  typename CONV,
   typename LocalOperator,
   typename Condition,
   typename... GridFunctionSpaces
   >
-struct is_subproblem<TypeBasedSubProblem<GFSU,CONU,GFSV,CONV,LocalOperator,Condition,GridFunctionSpaces...> >
+struct is_subproblem<TypeBasedSubProblem<GFSU,GFSV,LocalOperator,Condition,GridFunctionSpaces...> >
 {
   static const bool value = true;
 };

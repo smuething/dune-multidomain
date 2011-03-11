@@ -32,7 +32,7 @@ public:
   typedef typename LA::Pattern GlobalPattern;
 
 
-  bool requireIntersections() const
+  bool requireSkeleton() const
   {
     return
       requireUVSkeleton() ||
@@ -40,7 +40,7 @@ public:
       requireUVBoundary();
   }
 
-  bool requireIntersectionsTwoSided() const
+  bool requireSkeletonTwoSided() const
   {
     return
       requireUVBoundary() ||
@@ -127,7 +127,7 @@ public:
   void assembleUVVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
     typedef visitor<functors::invoke_pattern_volume,do_pattern_volume<> > Visitor;
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_eg(eg),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),
                                                           wrap_pattern_ss(pattern_ss)));
   }
@@ -139,7 +139,7 @@ public:
   {
     typedef visitor<functors::invoke_pattern_skeleton_or_boundary,do_pattern_skeleton_or_boundary<> > SubProblemVisitor;
 
-    localAssembler().applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
+    localAssembler().applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                                     wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
                                                                     wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
                                                                     wrap_pattern_ss(pattern_ss),
@@ -148,7 +148,7 @@ public:
                                                                     wrap_pattern_ns(pattern_ns)));
 
     typedef visitor<functors::invoke_pattern_coupling,do_pattern_coupling<> > CouplingVisitor;
-    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
+    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                                 wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
                                                                 wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
                                                                 wrap_pattern_ss(pattern_ss),
@@ -164,7 +164,7 @@ public:
   void assembleUVBoundary(const IG& ig, const LFSU& lfsu, const LFSV& lfsv)
   {
     typedef visitor<functors::invoke_pattern_boundary,do_pattern_boundary<> > Visitor;
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_pattern_ss(pattern_ss)));
   }
 
@@ -179,7 +179,7 @@ public:
   {
     typedef visitor<functors::invoke_pattern_enriched_coupling,do_pattern_enriched_coupling<> > CouplingVisitor;
 
-    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
+    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                                 wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
                                                                 wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
                                                                 wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),
@@ -200,7 +200,7 @@ public:
   void assembleUVVolumePostSkeleton(const EG& eg, const LFSV& lfsv, const LFSU& lfsu)
   {
     typedef visitor<functors::invoke_pattern_volume_post_skeleton,do_pattern_volume_post_skeleton<> > Visitor;
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_eg(eg),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),
                                                           wrap_pattern_ss(pattern_ss)));
   }

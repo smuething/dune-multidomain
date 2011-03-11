@@ -11,7 +11,7 @@
 #include <dune/pdelab/multidomain/gridoperator.hh>
 #include <dune/pdelab/multidomain/subproblem.hh>
 #include <dune/pdelab/finiteelementmap/conformingconstraints.hh>
-//#include <dune/pdelab/multidomain/constraints.hh>
+#include <dune/pdelab/multidomain/constraints.hh>
 #include <dune/pdelab/multidomain/interpolate.hh>
 #include <dune/pdelab/backend/istlsolverbackend.hh>
 #include <dune/pdelab/localoperator/laplacedirichletp12d.hh>
@@ -199,10 +199,10 @@ int main(int argc, char** argv) {
     Condition c0(0);
     Condition c1(1);
 
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,CON,MultiGFS,CON,LOP,Condition,GFS0> SubProblem0;
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,CON,MultiGFS,CON,LOP,Condition,GFS1> SubProblem1;
-    SubProblem0 sp0(con,con,lop,c0);
-    SubProblem1 sp1(con,con,lop,c1);
+    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,GFS0> SubProblem0;
+    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,GFS1> SubProblem1;
+    SubProblem0 sp0(lop,c0);
+    SubProblem1 sp1(lop,c1);
 
     /*
     SubProblem0::Traits::LocalTrialFunctionSpace
@@ -211,15 +211,19 @@ int main(int argc, char** argv) {
       splfs1(sp1,sp1.trialGridFunctionSpaceConstraints());
     */
 
-    ProportionalFlowCoupling proportionalFlowCoupling(atof(argv[2]));
+    ContinuousValueContinuousFlowCoupling<R> proportionalFlowCoupling(4,atof(argv[2]));
 
-    typedef Dune::PDELab::MultiDomain::Coupling<SubProblem0,SubProblem1,ProportionalFlowCoupling> Coupling;
+    typedef Dune::PDELab::MultiDomain::Coupling<SubProblem0,SubProblem1,ContinuousValueContinuousFlowCoupling<R> > Coupling;
     Coupling coupling(sp0,sp1,proportionalFlowCoupling);
 
     std::cout << "subproblem / coupling setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
-    //constraints(b,multigfs,cg,b,splfs0,b,splfs1);
+    auto constraints = Dune::PDELab::MultiDomain::constraints<R>(multigfs,
+                                                                 Dune::PDELab::MultiDomain::constrainSubProblem(sp0,b),
+                                                                 Dune::PDELab::MultiDomain::constrainSubProblem(sp1,b));
+
+    constraints.assemble(cg);
 
     std::cout << "constraints evaluation: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();

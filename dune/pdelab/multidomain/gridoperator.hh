@@ -38,7 +38,7 @@ public:
     JF,
     CU,
     CV,
-    GlobalAssembler<GridOperator>,
+    GlobalAssembler<GFSU,GFSV>,
     LocalAssembler<GridOperator,AssemblyParticipants...>
     > Traits;
 

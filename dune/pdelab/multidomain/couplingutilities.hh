@@ -11,6 +11,7 @@ namespace MultiDomain {
 class CouplingOperatorDefaultFlags
 {
 public:
+  static const bool doSkeletonTwoSided = false;
   static const bool doPatternCoupling = false;
   static const bool doPatternEnrichedCoupling = false;
   static const bool doAlphaCoupling = false;

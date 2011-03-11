@@ -43,65 +43,26 @@ struct any_child
 
 
 
-struct SpatialOperator
+struct DefaultOperator
 {
 
-  template<typename SubProblem>
+  template<typename Participant>
   struct ExtractType
   {
-    typedef typename SubProblem::Traits::LocalOperator Type;
+    typedef typename Participant::Traits::LocalOperator Type;
   };
 
-  template<typename SubProblem>
-  static typename SubProblem::Traits::LocalOperator& extract(SubProblem& subProblem) {
-    return subProblem.localOperator();
+  template<typename Participant>
+  static typename Participant::Traits::LocalOperator& extract(Participant& participant) {
+    return participant.localOperator();
   }
 
-  template<typename SubProblem>
-  static const typename SubProblem::Traits::LocalOperator& extract(const SubProblem& subProblem) {
-    return subProblem.localOperator();
+  template<typename Participant>
+  static const typename Participant::Traits::LocalOperator& extract(const Participant& participant) {
+    return participant.localOperator();
   }
 };
 
-struct TemporalOperator
-{
-
-  template<typename SubProblem>
-  struct ExtractType
-  {
-    typedef typename SubProblem::Traits::TemporalOperator Type;
-  };
-
-  template<typename SubProblem>
-  static typename SubProblem::Traits::TemporalOperator& extract(SubProblem& subProblem) {
-    return subProblem.temporalOperator();
-  }
-
-  template<typename SubProblem>
-  static const typename SubProblem::Traits::TemporalOperator& extract(const SubProblem& subProblem) {
-    return subProblem.temporalOperator();
-  }
-};
-
-struct CouplingOperator
-{
-
-  template<typename Coupling>
-  struct ExtractType
-  {
-    typedef typename Coupling::Traits::CouplingOperator Type;
-  };
-
-  template<typename Coupling>
-  static typename Coupling::Traits::CouplingOperator& extract(Coupling& coupling) {
-    return coupling.couplingOperator();
-  }
-
-  template<typename Coupling>
-  static const typename Coupling::Traits::CouplingOperator& extract(const Coupling& coupling) {
-    return coupling.couplingOperator();
-  }
-};
 
 struct IdentityExtractor
 {
@@ -144,7 +105,7 @@ struct LFSConstraintsExtractor
 };
 
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_pattern_volume
 {
   template<typename T>
@@ -153,7 +114,7 @@ struct do_pattern_volume
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_pattern_skeleton
 {
   template<typename T>
@@ -162,7 +123,7 @@ struct do_pattern_skeleton
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_pattern_boundary
 {
   template<typename T>
@@ -171,7 +132,7 @@ struct do_pattern_boundary
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_pattern_skeleton_or_boundary
 {
   template<typename T>
@@ -182,7 +143,7 @@ struct do_pattern_skeleton_or_boundary
   };
 };
 
-template<typename Operator = CouplingOperator>
+template<typename Operator = DefaultOperator>
 struct do_pattern_coupling
 {
   template<typename T>
@@ -191,7 +152,7 @@ struct do_pattern_coupling
   };
 };
 
-template<typename Operator = CouplingOperator>
+template<typename Operator = DefaultOperator>
 struct do_pattern_enriched_coupling
 {
   template<typename T>
@@ -200,7 +161,7 @@ struct do_pattern_enriched_coupling
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_pattern_volume_post_skeleton
 {
   template<typename T>
@@ -209,7 +170,7 @@ struct do_pattern_volume_post_skeleton
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_alpha_volume
 {
   template<typename T>
@@ -218,7 +179,7 @@ struct do_alpha_volume
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_alpha_skeleton
 {
   template<typename T>
@@ -227,7 +188,7 @@ struct do_alpha_skeleton
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_alpha_boundary
 {
   template<typename T>
@@ -236,7 +197,7 @@ struct do_alpha_boundary
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_alpha_skeleton_or_boundary
 {
   template<typename T>
@@ -247,7 +208,7 @@ struct do_alpha_skeleton_or_boundary
   };
 };
 
-template<typename Operator = CouplingOperator>
+template<typename Operator = DefaultOperator>
 struct do_alpha_coupling
 {
   template<typename T>
@@ -256,7 +217,7 @@ struct do_alpha_coupling
   };
 };
 
-template<typename Operator = CouplingOperator>
+template<typename Operator = DefaultOperator>
 struct do_alpha_enriched_coupling
 {
   template<typename T>
@@ -265,7 +226,7 @@ struct do_alpha_enriched_coupling
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_alpha_volume_post_skeleton
 {
   template<typename T>
@@ -276,7 +237,7 @@ struct do_alpha_volume_post_skeleton
 
 
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_lambda_volume
 {
   template<typename T>
@@ -285,7 +246,7 @@ struct do_lambda_volume
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_lambda_skeleton
 {
   template<typename T>
@@ -294,7 +255,7 @@ struct do_lambda_skeleton
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_lambda_boundary
 {
   template<typename T>
@@ -303,7 +264,7 @@ struct do_lambda_boundary
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_lambda_skeleton_or_boundary
 {
   template<typename T>
@@ -314,7 +275,7 @@ struct do_lambda_skeleton_or_boundary
   };
 };
 
-template<typename Operator = CouplingOperator>
+template<typename Operator = DefaultOperator>
 struct do_lambda_coupling
 {
   template<typename T>
@@ -323,7 +284,7 @@ struct do_lambda_coupling
   };
 };
 
-template<typename Operator = CouplingOperator>
+template<typename Operator = DefaultOperator>
 struct do_lambda_enriched_coupling
 {
   template<typename T>
@@ -332,7 +293,7 @@ struct do_lambda_enriched_coupling
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_lambda_volume_post_skeleton
 {
   template<typename T>
@@ -341,7 +302,7 @@ struct do_lambda_volume_post_skeleton
   };
 };
 
-template<typename Operator = SpatialOperator>
+template<typename Operator = DefaultOperator>
 struct do_skeleton_two_sided
 {
   template<typename T>

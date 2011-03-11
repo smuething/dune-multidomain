@@ -198,7 +198,7 @@ public:
   {
     typedef visitor<functors::alpha_volume,do_alpha_volume<> > Visitor;
     r_s.setWeight(localAssembler().weight());
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_eg(eg),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
   }
 
@@ -207,7 +207,7 @@ public:
   {
     typedef visitor<functors::lambda_volume,do_lambda_volume<> > Visitor;
     r_s.setWeight(localAssembler().weight());
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_eg(eg),
                                                           wrap_lfsv(lfsv),wrap_r(r_s)));
   }
 
@@ -220,12 +220,12 @@ public:
     typedef visitor<functors::alpha_skeleton_or_boundary,do_alpha_skeleton_or_boundary<> > SubProblemVisitor;
     r_s.setWeight(localAssembler().weight());
     r_n.setWeight(localAssembler().weight());
-    localAssembler().applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
+    localAssembler().applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                                     wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
                                                                     wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),wrap_r_n(r_n)));
 
     typedef visitor<functors::alpha_coupling,do_alpha_coupling<> > CouplingVisitor;
-    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
+    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                                 wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
                                                                 wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),wrap_r_n(r_n)));
   }
@@ -238,12 +238,12 @@ public:
     typedef visitor<functors::lambda_skeleton_or_boundary,do_lambda_skeleton_or_boundary<> > Visitor;
     r_s.setWeight(localAssembler().weight());
     r_n.setWeight(localAssembler().weight());
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                           wrap_lfsv_s(lfsv_s),wrap_r_s(r_s),
                                                           wrap_lfsv_n(lfsv_n),wrap_r_n(r_n)));
 
     typedef visitor<functors::lambda_coupling,do_lambda_coupling<> > CouplingVisitor;
-    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
+    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                                 wrap_lfsv_s(lfsv_s),wrap_r_s(r_s),
                                                                 wrap_lfsv_n(lfsv_n),wrap_r_n(r_n)));
   }
@@ -254,7 +254,7 @@ public:
   {
     typedef visitor<functors::alpha_boundary,do_alpha_boundary<> > Visitor;
     r_s.setWeight(localAssembler().weight());
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
   }
 
@@ -263,7 +263,7 @@ public:
   {
     typedef visitor<functors::lambda_boundary,do_lambda_boundary<> > Visitor;
     r_s.setWeight(localAssembler().weight());
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_ig(ig),
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                           wrap_lfsv(lfsv),wrap_r(r_s)));
   }
 
@@ -281,7 +281,7 @@ public:
     r_s.setWeight(localAssembler().weight());
     r_n.setWeight(localAssembler().weight());
     r_c.setWeight(localAssembler().weight());
-    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
+    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                                 wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
                                                                 wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),wrap_r_n(r_n),
                                                                 wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),wrap_x_c(x_c),wrap_r_c(r_c)));
@@ -300,7 +300,7 @@ public:
     r_s.setWeight(localAssembler().weight());
     r_n.setWeight(localAssembler().weight());
     r_c.setWeight(localAssembler().weight());
-    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(CouplingOperator()),wrap_ig(ig),
+    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
                                                                 wrap_lfsv_s(lfsv_s),wrap_r_s(r_s),
                                                                 wrap_lfsv_n(lfsv_n),wrap_r_n(r_n),
                                                                 wrap_lfsv_c(lfsv_c),wrap_r_c(r_c)));
@@ -312,7 +312,7 @@ public:
   {
     typedef visitor<functors::alpha_volume_post_skeleton,do_alpha_volume_post_skeleton<> > Visitor;
     r_s.setWeight(localAssembler().weight());
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_eg(eg),
                                                           wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
   }
 
@@ -321,7 +321,7 @@ public:
   {
     typedef visitor<functors::lambda_volume_post_skeleton,do_lambda_volume_post_skeleton<> > Visitor;
     r_s.setWeight(localAssembler().weight());
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(SpatialOperator()),wrap_eg(eg),
+    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_eg(eg),
                                                           wrap_lfsv(lfsv),wrap_r(r_s)));
   }
 

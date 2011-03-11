@@ -158,7 +158,7 @@ public:
                         if (require_lfsu_n)
                           {
                             // bind lfsu_n
-                            lfsu_n.bind(*it);
+                            lfsu_n.bind(*(iit->outside()));
                             engine.onBindLFSUVOutside(skeletonIntersectionWrapper,lfsu_n,lfsv_n);
                             engine.loadCoefficientsLFSUOutside(lfsu_n);
                           }

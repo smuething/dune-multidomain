@@ -1,71 +1,375 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTS_HH
 #define DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTS_HH
 
-#include <dune/pdelab/constraints/constraints.hh>
-#include <dune/pdelab/common/typetree.hh>
 #include <dune/pdelab/gridoperator/common/localassemblerenginebase.hh>
 #include <dune/pdelab/multidomain/operatorflagtests.hh>
+#include <dune/pdelab/multidomain/constraintsfunctors.hh>
 
 namespace Dune {
 namespace PDELab {
 namespace MultiDomain {
 
 
+#ifndef DOXYGEN
 
-template<typename CG, typename... ConstraintsSpecifications>
-class ConstraintsAssemblerEngine
-  : public Dune::PDELab::TypeTree::VariadicCompositeNode<ConstraintsSpecifications...>
-  , public Dune::PDELab::LocalAssemblerEngineBase
+template<typename MDLFS, typename Constraints>
+struct BuildConstraintsDescriptor;
+
+struct NoConstraintsParameters:
+    public Dune::PDELab::NoConstraintsParameters
 {
 
-  typedef Dune::PDELab::TypeTree::VariadicCompositeNode<ConstraintsSpecifications...> NodeT;
+  template<typename IG, typename X>
+  bool isDirichlet(const IG& ig, const X& x) const
+  {
+    return false;
+  }
+
+  template<typename IG, typename X>
+  bool isNeumann(const IG& ig, const X& x) const
+  {
+    return false;
+  }
+
+};
+
+template<typename Parameters>
+class ParameterHolder
+{
 
 public:
 
-  bool requireIntersections() const
+  static const bool noParameters = is_same<Parameters,NoConstraintsParameters>::value;
+
+  const Parameters& parameters() const
   {
-    return requireVSkeleton() || requireVBoundary();
+    return _parameters;
   }
 
-  bool requireIntersectionsTwoSided() const
+protected:
+
+  ParameterHolder()
+  {}
+
+  ParameterHolder(const Parameters& parameters)
+    : _parameters(parameters)
+  {}
+
+private:
+  //! Save object if type is NoConstraintsParameters, const reference otherwise
+  typename std::conditional<noParameters,Parameters,const Parameters&>::type _parameters;
+
+};
+
+#endif // DOXYGEN
+
+template<typename Parameters>
+class ConstrainMultiDomainGridFunctionSpace
+  : public ParameterHolder<Parameters>
+{
+
+public:
+
+  ConstrainMultiDomainGridFunctionSpace()
+  {}
+
+  ConstrainMultiDomainGridFunctionSpace(const Parameters& parameters)
+    : ParameterHolder<Parameters>(parameters)
+  {}
+
+};
+
+template<typename SubProblem, typename Parameters>
+class ConstrainSubProblem
+  : public ParameterHolder<Parameters>
+{
+
+public:
+
+  ConstrainSubProblem(const SubProblem& subProblem)
+    : _subProblem(subProblem)
+  {}
+
+  ConstrainSubProblem(const SubProblem& subProblem, const Parameters& parameters)
+    : ParameterHolder<Parameters>(parameters)
+    , _subProblem(subProblem)
+  {}
+
+  const SubProblem& subProblem() const
+  {
+    return _subProblem;
+  }
+
+private:
+
+  const SubProblem& _subProblem;
+
+};
+
+
+ConstrainMultiDomainGridFunctionSpace<NoConstraintsParameters>
+constrainMultiDomainGridFunctionSpace()
+{
+  return ConstrainMultiDomainGridFunctionSpace<NoConstraintsParameters>();
+}
+
+template<typename Parameters>
+ConstrainMultiDomainGridFunctionSpace<Parameters>
+constrainMultiDomainGridFunctionSpace(const Parameters& parameters)
+{
+  return ConstrainMultiDomainGridFunctionSpace<Parameters>(parameters);
+}
+
+template<typename SubProblem>
+ConstrainSubProblem<SubProblem,NoConstraintsParameters>
+constrainSubProblem(const SubProblem& subProblem)
+{
+  return ConstrainSubProblem<SubProblem,NoConstraintsParameters>(subProblem);
+}
+
+template<typename SubProblem, typename Parameters>
+ConstrainSubProblem<SubProblem,Parameters>
+constrainSubProblem(const SubProblem& subProblem, const Parameters& parameters)
+{
+  return ConstrainSubProblem<SubProblem,Parameters>(subProblem,parameters);
+}
+
+
+
+template<typename MDLFS, typename Parameters>
+struct MultiDomainGridFunctionSpaceConstraints
+  : public Dune::PDELab::TypeTree::LeafNode
+  , public ParameterHolder<Parameters>
+{
+
+  typedef ParameterHolder<Parameters> BaseT;
+
+  static const bool doVolume = any_child<MDLFS,do_constraints_volume<LFSConstraintsExtractor> >::value;
+
+  static const bool doSkeleton = any_child<MDLFS,do_constraints_skeleton<LFSConstraintsExtractor> >::value;
+
+  static const bool doBoundary = any_child<MDLFS,do_constraints_boundary<LFSConstraintsExtractor> >::value;
+
+  static const bool doProcessor = any_child<MDLFS,do_constraints_processor<LFSConstraintsExtractor> >::value;
+
+  template<typename EG>
+  bool appliesTo(const EG& eg) const
+  {
+    return true;
+  }
+
+  void rebind_lfs_s() const
+  {}
+
+  void rebind_lfs_n() const
+  {}
+
+  const MDLFS& lfs_s() const
+  {
+    return _mdlfs_s;
+  }
+
+  const MDLFS& lfs_n() const
+  {
+    return _mdlfs_n;
+  }
+
+  MultiDomainGridFunctionSpaceConstraints(const MDLFS& mdlfs_s,
+                                          const MDLFS& mdlfs_n)
+    : _mdlfs_s(mdlfs_s)
+    , _mdlfs_n(mdlfs_n)
+  {}
+
+  MultiDomainGridFunctionSpaceConstraints(const MDLFS& mdlfs_s,
+                                          const MDLFS& mdlfs_n,
+                                          const Parameters& parameters)
+    : BaseT(parameters)
+    , _mdlfs_s(mdlfs_s)
+    , _mdlfs_n(mdlfs_n)
+  {}
+
+private:
+
+  const MDLFS& _mdlfs_s;
+  const MDLFS& _mdlfs_n;
+
+};
+
+template<typename MDLFS, typename Parameters>
+struct BuildConstraintsDescriptor<MDLFS,ConstrainMultiDomainGridFunctionSpace<Parameters> >
+{
+  typedef MultiDomainGridFunctionSpaceConstraints<MDLFS,Parameters> type;
+};
+
+template<typename MDLFS, typename Parameters>
+shared_ptr<MultiDomainGridFunctionSpaceConstraints<MDLFS,Parameters> >
+buildConstraintsDescriptor(const MDLFS& mdlfs_s, const MDLFS& mdlfs_n,
+                           const ConstrainMultiDomainGridFunctionSpace<Parameters>& d)
+{
+  return make_shared<MultiDomainGridFunctionSpaceConstraints<MDLFS,Parameters> >(mdlfs_s,mdlfs_n,d.parameters());
+}
+
+
+template<typename MDLFS, typename SubProblem, typename Parameters>
+struct SubProblemConstraints
+  : public Dune::PDELab::TypeTree::LeafNode
+  , public ParameterHolder<Parameters>
+{
+
+  typedef ParameterHolder<Parameters> BaseT;
+
+  typedef typename SubProblem::Traits::MultiDomainTrialGridFunctionSpace TrialGFS;
+
+  typedef typename std::conditional<is_same<typename MDLFS::Traits::GridFunctionSpaceType,
+                                            TrialGFS
+                                            >::value,
+                                    typename SubProblem::Traits::TrialLocalFunctionSpace,
+                                    typename SubProblem::Traits::TestLocalFunctionSpace
+                                    >::type SubProblemLocalFunctionSpace;
+
+  static const bool doVolume = any_child<SubProblemLocalFunctionSpace,do_constraints_volume<LFSConstraintsExtractor> >::value;
+
+  static const bool doSkeleton = any_child<SubProblemLocalFunctionSpace,do_constraints_skeleton<LFSConstraintsExtractor> >::value;
+
+  static const bool doBoundary = any_child<SubProblemLocalFunctionSpace,do_constraints_boundary<LFSConstraintsExtractor> >::value;
+
+  static const bool doProcessor = any_child<SubProblemLocalFunctionSpace,do_constraints_processor<LFSConstraintsExtractor> >::value;
+
+  template<typename EG>
+  bool appliesTo(const EG& eg) const
+  {
+    return _subProblem.appliesTo(eg);
+  }
+
+  void rebind_lfs_s()
+  {
+    _splfs_s.bind();
+  }
+
+  void rebind_lfs_n()
+  {
+    _splfs_n.bind();
+  }
+
+  const SubProblemLocalFunctionSpace& lfs_s() const
+  {
+    return _splfs_s;
+  }
+
+  const SubProblemLocalFunctionSpace& lfs_n() const
+  {
+    return _splfs_n;
+  }
+
+  SubProblemConstraints(const MDLFS& mdlfs_s,
+                        const MDLFS& mdlfs_n,
+                        const SubProblem& subProblem)
+    : _subProblem(subProblem)
+    , _splfs_s(mdlfs_s,subProblem)
+    , _splfs_n(mdlfs_n,subProblem)
+  {}
+
+  SubProblemConstraints(const MDLFS& mdlfs_s,
+                        const MDLFS& mdlfs_n,
+                        const SubProblem& subProblem,
+                        const Parameters& parameters)
+    : BaseT(parameters)
+    , _subProblem(subProblem)
+    , _splfs_s(mdlfs_s,subProblem)
+    , _splfs_n(mdlfs_n,subProblem)
+  {}
+
+private:
+
+  const SubProblem& _subProblem;
+  SubProblemLocalFunctionSpace _splfs_s;
+  SubProblemLocalFunctionSpace _splfs_n;
+
+};
+
+template<typename MDLFS, typename SubProblem, typename Parameters>
+struct BuildConstraintsDescriptor<MDLFS,ConstrainSubProblem<SubProblem,Parameters> >
+{
+  typedef SubProblemConstraints<MDLFS,SubProblem,Parameters> type;
+};
+
+template<typename MDLFS, typename SubProblem, typename Parameters>
+shared_ptr<SubProblemConstraints<MDLFS,SubProblem,Parameters> >
+buildConstraintsDescriptor(const MDLFS& mdlfs_s, const MDLFS& mdlfs_n,
+                           const ConstrainSubProblem<SubProblem,Parameters>& d)
+{
+  return make_shared<SubProblemConstraints<MDLFS,SubProblem,Parameters> >(mdlfs_s,
+                                                                          mdlfs_n,
+                                                                          d.subProblem(),
+                                                                          d.parameters());
+}
+
+
+template<typename CA, typename... ConstraintsDescriptors>
+class ConstraintsAssemblerEngine
+  : public Dune::PDELab::TypeTree::VariadicCompositeNode<ConstraintsDescriptors...>
+  , public Dune::PDELab::LocalAssemblerEngineBase
+{
+
+  typedef Dune::PDELab::TypeTree::VariadicCompositeNode<ConstraintsDescriptors...> NodeT;
+  typedef typename CA::CG CG;
+
+public:
+
+  bool requireSkeleton() const
+  {
+    return
+      requireVSkeleton() ||
+      requireVBoundary() ||
+      requireVProcessor();
+  }
+
+  bool requireSkeletonTwoSided() const
   {
     return requireVBoundary();
   }
 
   bool requireVVolume() const
   {
-    return any_child<ConstraintsAssemblerEngine,do_constraints_volume>::value;
+    return any_child<ConstraintsAssemblerEngine,do_constraints_volume<> >::value;
   }
 
   bool requireVSkeleton() const
   {
-    return any_child<ConstraintsAssemblerEngine,do_constraints_skeleton>::value ||
-      any_child<ConstraintsAssemblerEngine,do_constraints_boundary>::value ||
-      any_child<ConstraintsAssemblerEngine,do_constraints_processor>::value;
+    return
+      any_child<ConstraintsAssemblerEngine,do_constraints_skeleton<> >::value ||
+      any_child<ConstraintsAssemblerEngine,do_constraints_boundary<> >::value;
   }
 
   bool requireVBoundary() const
   {
-    return any_child<ConstraintsAssemblerEngine,do_constraints_boundary>::value;
+    return any_child<ConstraintsAssemblerEngine,do_constraints_boundary<> >::value;
   }
+
+  bool requireVProcessor() const
+  {
+    return any_child<ConstraintsAssemblerEngine,do_constraints_processor<> >::value;
+  }
+
 
   template<typename EG, typename LFSV>
   void onBindLFSV(const EG& eg, const LFSV& lfsv)
   {
-    TypeTree::applyToTree(subProblemConstraints,BindSubProblemLFS_S());
+    applyVisitor(visitor<functors::rebind_subproblem_lfs_s>::add_data());
   }
 
   template<typename IG, typename LFSV_N>
   void onBindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
   {
-    TypeTree::applyToTree(subProblemConstraints,BindSubProblemLFS_N());
+    applyVisitor(visitor<functors::rebind_subproblem_lfs_n>::add_data());
   }
+
 
   template<typename EG, typename LFSV>
   void assembleVVolume(const EG& eg, const LFSV& lfsv)
   {
-    typedef visitor<functors::volume_constraints> Visitor;
-    applyConstraints(Visitor::add_data(wrap_eg(eg),wrap_lfsv(lfsv),wrap_cg(cg)));
+    typedef visitor<functors::volume_constraints,do_constraints_volume<> > Visitor;
+    applyVisitor(Visitor::add_data(wrap_eg(eg),wrap_lfsv_s(lfsv),wrap_cg(*cg)));
   }
 
   template<typename IG, typename LFSV_S, typename LFSV_N>
@@ -73,170 +377,88 @@ public:
                          const LFSV_S& lfsv_s,
                          const LFSV_N& lfsv_n)
   {
-    typedef visitor<functors::skeleton_or_processor_or_boundary_constraints> Visitor;
-    applyConstraints(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s(lfsv_s),wrap_lfsv_n(lfsv_n),wrap_cg(cg)));
+    typedef visitor<functors::skeleton_or_boundary_constraints,do_constraints_skeleton_or_boundary<> > Visitor;
+    applyVisitor(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s(lfsv_s),wrap_lfsv_n(lfsv_n),wrap_cg(*cg)));
   }
 
   template<typename IG, typename LFSV>
   void assembleVBoundary(const IG& ig, const LFSV& lfsv)
   {
-    typedef visitor<functors::boundary_constraints> Visitor;
-    applyConstraints(Visitor::add_data(wrap_eg(ig),wrap_lfsv(lfsv),wrap_cg(cg)));
+    typedef visitor<functors::boundary_constraints,do_constraints_boundary<> > Visitor;
+    applyVisitor(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s(lfsv),wrap_cg(*cg)));
   }
 
-  ConstraintsAssemblerEngine(CG& cg_, ConstraintsSpecifications&... constraintsSpecifications)
+  template<typename IG, typename LFSV>
+  void assembleVProcessor(const IG& ig, const LFSV& lfsv)
+  {
+    typedef visitor<functors::processor_constraints,do_constraints_processor<> > Visitor;
+    applyVisitor(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s(lfsv),wrap_cg(*cg)));
+  }
+
+
+  void setConstraintsContainer(CG& cg_)
+  {
+    cg = &cg_;
+  }
+
+  ConstraintsAssemblerEngine(shared_ptr<ConstraintsDescriptors>... constraintsSpecifications)
     : NodeT(constraintsSpecifications...)
-    , cg(cg_)
   {}
 
 private:
 
-  CG& cg;
+  template<typename Visitor>
+  void applyVisitor(Visitor&& visitor)
+  {
+    Dune::PDELab::TypeTree::applyToTree(*this,visitor);
+  }
+
+  CG* cg;
+
+};
+
+template<typename GFS, typename RF, typename... ConstraintsSpecifications>
+class ConstraintsAssembler
+{
+
+public:
+
+  typedef GlobalAssembler<GFS,GFS> Assembler;
+  typedef ConstraintsAssemblerEngine<ConstraintsAssembler,
+                                     typename BuildConstraintsDescriptor<typename Assembler::LFSV,
+                                                                         ConstraintsSpecifications
+                                                                         >::type...
+                                     > Engine;
+  typedef typename GFS::template ConstraintsContainer<RF>::Type CG;
+
+
+  ConstraintsAssembler(const GFS& gfs,
+                       const ConstraintsSpecifications&... specifications)
+    : _assembler(gfs,gfs)
+    , _engine(buildConstraintsDescriptor(_assembler.lfsv_s(),
+                                         _assembler.lfsv_n(),
+                                         specifications)...)
+  {}
+
+  void assemble(CG& cg)
+  {
+    _engine.setConstraintsContainer(cg);
+    _assembler.assemble(_engine);
+  }
+
+private:
+
+  Assembler _assembler;
+  Engine _engine;
 
 };
 
 
-
-
-//! construct constraints from given boundary condition function
-/**
- * \tparam F   Type implementing a boundary condition function
- * \tparam GFS Type implementing the model GridFunctionSpace
- * \tparam CG  Type implementing the model
- *             GridFunctionSpace::ConstraintsContainer::Type
- *
- * \param f       The boundary condition function
- * \param gfs     The gridfunctionspace
- * \param cg      The constraints container
- * \param verbose Print information about the constaints at the end
- */
-template<typename F, typename GFS, typename CG, typename... SubProblemBoundaries>
-void constraints(const F& f, const GFS& gfs, CG& cg, const SubProblemBoundaries&... subProblemBoundaries)
+template<typename RF, typename GFS, typename... ConstraintsSpecifications>
+ConstraintsAssembler<GFS,RF,ConstraintsSpecifications...>
+constraints(const GFS& gfs, const ConstraintsSpecifications&... specifications)
 {
-  typedef constraints_pairs<SubProblemBoundaries...> SubProblemConstraints;
-
-  // clear global constraints
-  cg.clear();
-
-  // get some types
-  typedef typename GFS::Traits::GridType::LeafGridView GV;
-  typedef typename GV::Traits::template Codim<0>::Entity Element;
-  typedef typename GV::Traits::template Codim<0>::Iterator ElementIterator;
-  typedef typename GV::IntersectionIterator IntersectionIterator;
-  typedef typename IntersectionIterator::Intersection Intersection;
-
-  // make local function space
-  typedef typename GFS::LocalFunctionSpace LFS;
-  LFS lfs_e(gfs);
-  LFS lfs_f(gfs);
-  SubProblemConstraints::setupLFS(lfs_e,subProblemBoundaries...);
-
-  // get index set
-  const typename GV::IndexSet& is=gfs.gridview().indexSet();
-
-  // helper to compute offset dependent on geometry type
-  const int chunk=1<<28;
-  int offset = 0;
-  std::map<Dune::GeometryType,int> gtoffset;
-
-  // loop once over the grid
-  for (ElementIterator it = gfs.gridview().template begin<0>();
-       it!=gfs.gridview().template end<0>(); ++it)
-    {
-      // assign offset for geometry type;
-      if (gtoffset.find(it->type())==gtoffset.end())
-        {
-          gtoffset[it->type()] = offset;
-          offset += chunk;
-        }
-
-      const typename GV::IndexSet::IndexType id = is.index(*it)+gtoffset[it->type()];
-
-      // bind local function space to element
-      lfs_e.bind(*it);
-
-      ConstraintsVisitNodeMetaProgram2<LFS,LFS::isLeaf>
-        ::volume(lfs_e,cg,ElementGeometry<Element>(*it));
-
-      SubProblemConstraints::volume(lfs_e,cg,ElementGeometry<Element>(*it),is.subDomains(*it),subProblemBoundaries...);
-
-      // iterate over intersections and call metaprogram
-      unsigned int intersection_index = 0;
-      IntersectionIterator endit = gfs.gridview().iend(*it);
-      for (IntersectionIterator iit = gfs.gridview().ibegin(*it); iit!=endit; ++iit, ++intersection_index)
-        {
-          if (iit->boundary())
-            {
-              //ConstraintsVisitNodeMetaProgram<F,F::isLeaf,LFS,LFS::isLeaf>
-              //  ::boundary(f,lfs_e,cg,IntersectionGeometry<Intersection>(*iit,intersection_index));
-              SubProblemConstraints::boundary(lfs_e,cg,IntersectionGeometry<Intersection>(*iit,intersection_index),is.subDomains(*(iit->inside())),subProblemBoundaries...);
-            }
-
-          /* TODO: parallel
-          // ParallelStuff: BEGIN support for processor boundaries.
-          if ((!iit->boundary()) && (!iit->neighbor()))
-            ConstraintsVisitNodeMetaProgram2<LFS,LFS::isLeaf>
-              ::processor(lfs_e,cg,IntersectionGeometry<Intersection>(*iit,intersection_index));
-          // END support for processor boundaries.
-          */
-
-          if (iit->neighbor()){
-
-            Dune::GeometryType gtn = iit->outside()->type();
-            const typename GV::IndexSet::IndexType idn = is.index(*(iit->outside()))+gtoffset[gtn];
-
-            if(id>idn){
-              // bind local function space to element in neighbor
-              lfs_f.bind( *(iit->outside()) );
-
-              //ConstraintsVisitNodeMetaProgram2<LFS,LFS::isLeaf>
-              //  ::skeleton(lfs_e,lfs_f,cg,IntersectionGeometry<Intersection>(*iit,intersection_index));
-
-              SubProblemConstraints::skeletonOrBoundary(lfs_e,lfs_f,cg,IntersectionGeometry<Intersection>(*iit,intersection_index),is.subDomains(*(iit->inside())),is.subDomains(*(iit->outside())),subProblemBoundaries...);
-            }
-          }
-        }
-    }
-
-  /*
-  // print result
-  if(verbose){
-    std::cout << "constraints:" << std::endl;
-    typedef typename CG::iterator global_col_iterator;
-    typedef typename CG::value_type::second_type global_row_type;
-    typedef typename global_row_type::iterator global_row_iterator;
-
-    std::cout << cg.size() << " constrained degrees of freedom" << std::endl;
-
-    for (global_col_iterator cit=cg.begin(); cit!=cg.end(); ++cit)
-      {
-        std::cout << cit->first << ": ";
-        for (global_row_iterator rit=(cit->second).begin(); rit!=(cit->second).end(); ++rit)
-          std::cout << "(" << rit->first << "," << rit->second << ") ";
-        std::cout << std::endl;
-      }
-      } */
-
-} // constraints
-
-
-/**
- * Construct constraints on the trial grid function space.
- */
-template<typename F, typename GFS, typename CG, typename... SubProblemBoundaries>
-void trialSpaceConstraints(const F& f, const GFS& gfs, CG& cg, const SubProblemBoundaries&... subProblemBoundaries)
-{
-  constraints(f,gfs,cg,extract_trial_lfs(subProblemBoundaries)...);
-}
-
-
-/**
- * Construct constraints on the test grid function space.
- */
-template<typename F, typename GFS, typename CG, typename... SubProblemBoundaries>
-void testSpaceConstraints(const F& f, const GFS& gfs, CG& cg, const SubProblemBoundaries&... subProblemBoundaries)
-{
-  constraints(f,gfs,cg,extract_test_lfs(subProblemBoundaries)...);
+  return ConstraintsAssembler<GFS,RF,ConstraintsSpecifications...>(gfs,specifications...);
 }
 
 

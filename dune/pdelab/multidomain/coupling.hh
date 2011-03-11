@@ -19,6 +19,7 @@ struct CouplingTraits
   typedef LocalSubProblem_ LocalSubProblem;
   typedef RemoteSubProblem_ RemoteSubProblem;
   typedef CouplingOperator_ CouplingOperator;
+  typedef CouplingOperator LocalOperator;
 };
 
 
@@ -50,6 +51,19 @@ public:
   const CouplingOperator& couplingOperator() const {
     return _operator;
   }
+
+  CouplingOperator& couplingOperator() {
+    return _operator;
+  }
+
+  const CouplingOperator& localOperator() const {
+    return _operator;
+  }
+
+  CouplingOperator& localOperator() {
+    return _operator;
+  }
+
 
   const LocalSubProblem& localSubProblem() const {
     return _localSubProblem;

@@ -91,11 +91,12 @@ private:
 
 
 template<typename TReal>
-class ContinuousValueContinuousFlowCoupling :
-  public Dune::PDELab::MultiDomain::NumericalJacobianCoupling<ContinuousValueContinuousFlowCoupling<TReal> >,
-  public Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<ContinuousValueContinuousFlowCoupling<TReal> >,
-  public Dune::PDELab::MultiDomain::FullCouplingPattern,
-  public Dune::PDELab::InstationaryLocalOperatorDefaultMethods<TReal>
+class ContinuousValueContinuousFlowCoupling
+  : public Dune::PDELab::MultiDomain::CouplingOperatorDefaultFlags
+  , public Dune::PDELab::MultiDomain::NumericalJacobianCoupling<ContinuousValueContinuousFlowCoupling<TReal> >
+  , public Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<ContinuousValueContinuousFlowCoupling<TReal> >
+  , public Dune::PDELab::MultiDomain::FullCouplingPattern
+  , public Dune::PDELab::InstationaryLocalOperatorDefaultMethods<TReal>
 {
 
 public:
@@ -117,18 +118,18 @@ public:
     R& r1, R& r2) const
   {
     // domain and range field type
-    typedef typename LFSU1::Traits::LocalFiniteElementType::
+    typedef typename LFSU1::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::DomainFieldType DF;
-    typedef typename LFSU1::Traits::LocalFiniteElementType::
+    typedef typename LFSU1::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::RangeFieldType RF;
-    typedef typename LFSU1::Traits::LocalFiniteElementType::
+    typedef typename LFSU1::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename LFSU1::Traits::LocalFiniteElementType::
+    typedef typename LFSU1::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::JacobianType JacobianType;
 
     typedef typename LFSU1::Traits::SizeType size_type;
-    typedef typename IG::EntityPointer EntityPointer;
-    typedef typename EntityPointer::Entity::Geometry::Jacobian GeometryJacobian;
+    typedef typename IG::Element Element;
+    typedef typename Element::Geometry::Jacobian GeometryJacobian;
 
     const double h_F = (ig.geometry().corner(0) - ig.geometry().corner(1)).two_norm();
 
@@ -140,8 +141,8 @@ public:
     const Dune::QuadratureRule<DF,dim-1>& rule = Dune::QuadratureRules<DF,dim-1>::rule(gtface,_intorder);
 
     // save entity pointers to adjacent elements
-    EntityPointer e1 = ig.inside();
-    EntityPointer e2 = ig.outside();
+    Element e1 = ig.insideElement();
+    Element e2 = ig.outsideElement();
 
     // loop over quadrature points and integrate normal flux
     for (typename Dune::QuadratureRule<DF,dim-1>::const_iterator it=rule.begin(); it!=rule.end(); ++it)
@@ -152,20 +153,20 @@ public:
 
         // evaluate ansatz shape functions (assume Galerkin for now)
         std::vector<RangeType> phi1(lfsv1.size());
-        lfsv1.localFiniteElement().localBasis().evaluateFunction(local1,phi1);
+        lfsv1.finiteElement().localBasis().evaluateFunction(local1,phi1);
 
         std::vector<RangeType> phi2(lfsv2.size());
-        lfsv2.localFiniteElement().localBasis().evaluateFunction(local2,phi2);
+        lfsv2.finiteElement().localBasis().evaluateFunction(local2,phi2);
 
         // evaluate gradient of shape functions
         std::vector<JacobianType> js1(lfsu1.size());
-        lfsu1.localFiniteElement().localBasis().evaluateJacobian(local1,js1);
+        lfsu1.finiteElement().localBasis().evaluateJacobian(local1,js1);
         std::vector<JacobianType> js2(lfsu2.size());
-        lfsu2.localFiniteElement().localBasis().evaluateJacobian(local2,js2);
+        lfsu2.finiteElement().localBasis().evaluateJacobian(local2,js2);
 
         // transform gradient to real element
-        const GeometryJacobian& jac1 = e1->geometry().jacobianInverseTransposed(local1);
-        const GeometryJacobian& jac2 = e2->geometry().jacobianInverseTransposed(local2);
+        const GeometryJacobian& jac1 = e1.geometry().jacobianInverseTransposed(local1);
+        const GeometryJacobian& jac2 = e2.geometry().jacobianInverseTransposed(local2);
 
         std::vector<Dune::FieldVector<RF,dim> > gradphi1(lfsu1.size());
         for (size_t i=0; i<lfsu1.size(); i++)
@@ -183,20 +184,20 @@ public:
         // compute gradient of u1
         Dune::FieldVector<RF,dim> gradu1(0.0);
         for (size_t i=0; i<lfsu1.size(); i++)
-          gradu1.axpy(x1[lfsu1.localIndex(i)],gradphi1[i]);
+          gradu1.axpy(x1(lfsu1,i),gradphi1[i]);
         // compute gradient of u2
         Dune::FieldVector<RF,dim> gradu2(0.0);
         for (size_t i=0; i<lfsu2.size(); i++)
-          gradu2.axpy(x2[lfsu2.localIndex(i)],gradphi2[i]);
+          gradu2.axpy(x2(lfsu2,i),gradphi2[i]);
 
 
         RF u1(0.0);
         for (size_t i=0; i<lfsu1.size(); i++)
-          u1 += x1[lfsu1.localIndex(i)] * phi1[i];
+          u1 += x1(lfsu1,i) * phi1[i];
 
         RF u2(0.0);
         for (size_t i=0; i<lfsu2.size(); i++)
-          u2 += x2[lfsu2.localIndex(i)] * phi2[i];
+          u2 += x2(lfsu2,i) * phi2[i];
 
         Dune::FieldVector<DF,dim> normal1 = ig.unitOuterNormal(it->position());
         Dune::FieldVector<DF,dim> normal2 = ig.unitOuterNormal(it->position());
@@ -217,7 +218,7 @@ public:
             value -= /* epsilon * */ (mean_gradu * normal1) * phi1[i];
             value -= theta * /* epsilon * */ 0.5 * (gradphi1[i] * normal1) * jump_u1;
             value += alpha / h_F * jump_u1 * phi1[i];
-            r1[lfsv1.localIndex(i)] += factor * value;
+            r1.accumulate(lfsv1,i,factor * value);
           }
         for (size_type i=0; i<lfsv2.size(); i++)
           {
@@ -225,7 +226,7 @@ public:
             value -= /* epsilon * */ (mean_gradu * normal2) * phi2[i];
             value -= theta * /* epsilon * */ 0.5 * (gradphi2[i] * normal2) * jump_u2;
             value += alpha / h_F * jump_u2 * phi2[i];
-            r2[lfsv2.localIndex(i)] += factor * value;
+            r2.accumulate(lfsv2,i,factor * value);
           }
       }
   }

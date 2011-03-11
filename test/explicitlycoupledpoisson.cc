@@ -211,16 +211,15 @@ int main(int argc, char** argv) {
       splfs1(sp1,sp1.trialGridFunctionSpaceConstraints());
     */
 
-    ProportionalFlowCoupling proportionalFlowCoupling(atof(argv[2]));
+    ContinuousValueContinuousFlowCoupling<R> proportionalFlowCoupling(4,atof(argv[2]));
 
-    typedef Dune::PDELab::MultiDomain::Coupling<SubProblem0,SubProblem1,ProportionalFlowCoupling> Coupling;
+    typedef Dune::PDELab::MultiDomain::Coupling<SubProblem0,SubProblem1,ContinuousValueContinuousFlowCoupling<R> > Coupling;
     Coupling coupling(sp0,sp1,proportionalFlowCoupling);
 
     std::cout << "subproblem / coupling setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
     auto constraints = Dune::PDELab::MultiDomain::constraints<R>(multigfs,
-                                                                 Dune::PDELab::MultiDomain::constrainMultiDomainGridFunctionSpace(),
                                                                  Dune::PDELab::MultiDomain::constrainSubProblem(sp0,b),
                                                                  Dune::PDELab::MultiDomain::constrainSubProblem(sp1,b));
 

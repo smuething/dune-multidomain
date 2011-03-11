@@ -44,7 +44,8 @@ public:
     return
       requireUVBoundary() ||
       requireUVEnrichedCoupling() ||
-      any_child<typename LocalAssembler::SubProblems,do_skeleton_two_sided<> >::value;
+      any_child<typename LocalAssembler::SubProblems,do_skeleton_two_sided<> >::value ||
+      any_child<typename LocalAssembler::Couplings,do_alpha_coupling<> >::value;
   }
 
   bool requireUVVolume() const
@@ -54,7 +55,8 @@ public:
 
   bool requireUVSkeleton() const
   {
-    return any_child<typename LocalAssembler::SubProblems,do_alpha_skeleton<> >::value ||
+    return
+      any_child<typename LocalAssembler::SubProblems,do_alpha_skeleton<> >::value ||
       any_child<typename LocalAssembler::SubProblems,do_alpha_boundary<> >::value ||
       any_child<typename LocalAssembler::Couplings,do_alpha_coupling<> >::value;
   }

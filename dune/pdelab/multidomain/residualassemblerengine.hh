@@ -42,7 +42,8 @@ public:
     return
       requireUVBoundary() || requireVBoundary() ||
       requireUVEnrichedCoupling() || requireVEnrichedCoupling() ||
-      any_child<typename LocalAssembler::SubProblems,do_skeleton_two_sided<> >::value;
+      any_child<typename LocalAssembler::SubProblems,do_skeleton_two_sided<> >::value ||
+      any_child<typename LocalAssembler::Couplings,do_alpha_coupling<> >::value;;
   }
 
   bool requireUVVolume() const
@@ -57,14 +58,16 @@ public:
 
   bool requireUVSkeleton() const
   {
-    return any_child<typename LocalAssembler::SubProblems,do_alpha_skeleton<> >::value ||
+    return
+      any_child<typename LocalAssembler::SubProblems,do_alpha_skeleton<> >::value ||
       any_child<typename LocalAssembler::SubProblems,do_alpha_boundary<> >::value ||
       any_child<typename LocalAssembler::Couplings,do_alpha_coupling<> >::value;
   }
 
   bool requireVSkeleton() const
   {
-    return any_child<typename LocalAssembler::SubProblems,do_lambda_skeleton<> >::value ||
+    return
+      any_child<typename LocalAssembler::SubProblems,do_lambda_skeleton<> >::value ||
       any_child<typename LocalAssembler::SubProblems,do_lambda_boundary<> >::value ||
       any_child<typename LocalAssembler::Couplings,do_lambda_coupling<> >::value;
   }

@@ -11,7 +11,7 @@
 #include <dune/pdelab/multidomain/gridoperator.hh>
 #include <dune/pdelab/multidomain/subproblem.hh>
 #include <dune/pdelab/finiteelementmap/conformingconstraints.hh>
-//#include <dune/pdelab/multidomain/constraints.hh>
+#include <dune/pdelab/multidomain/constraints.hh>
 #include <dune/pdelab/multidomain/interpolate.hh>
 #include <dune/pdelab/backend/istlsolverbackend.hh>
 #include <dune/pdelab/localoperator/laplacedirichletp12d.hh>
@@ -219,7 +219,12 @@ int main(int argc, char** argv) {
     std::cout << "subproblem / coupling setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
-    //constraints(b,multigfs,cg,b,splfs0,b,splfs1);
+    auto constraints = Dune::PDELab::MultiDomain::constraints<R>(multigfs,
+                                                                 Dune::PDELab::MultiDomain::constrainMultiDomainGridFunctionSpace(),
+                                                                 Dune::PDELab::MultiDomain::constrainSubProblem(sp0,b),
+                                                                 Dune::PDELab::MultiDomain::constrainSubProblem(sp1,b));
+
+    constraints.assemble(cg);
 
     std::cout << "constraints evaluation: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();

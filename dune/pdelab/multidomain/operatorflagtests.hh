@@ -103,6 +103,46 @@ struct CouplingOperator
   }
 };
 
+struct IdentityExtractor
+{
+
+  template<typename Descriptor>
+  struct ExtractType
+  {
+    typedef Descriptor Type;
+  };
+
+  template<typename Descriptor>
+  static Descriptor& extract(Descriptor& descriptor) {
+    return descriptor;
+  }
+
+  template<typename Descriptor>
+  static const Descriptor& extract(const Descriptor& descriptor) {
+    return descriptor;
+  }
+};
+
+struct LFSConstraintsExtractor
+{
+
+  template<typename LFS>
+  struct ExtractType
+  {
+    typedef typename LFS::Traits::ConstraintsType Type;
+  };
+
+  template<typename LFS>
+  static typename LFS::Traits::ConstraintsType& extract(LFS& lfs) {
+    return lfs.constraints();
+  }
+
+  template<typename LFS>
+  static const typename LFS::Traits::ConstraintsType& extract(const LFS& lfs) {
+    return lfs.constraints();
+  }
+};
+
 
 template<typename Operator = SpatialOperator>
 struct do_pattern_volume
@@ -314,35 +354,51 @@ struct do_skeleton_two_sided
 // tests for constraints operators
 // ********************************************************************************
 
+template<typename Extractor = IdentityExtractor>
 struct do_constraints_volume
 {
   template<typename T>
   struct test {
-    static const bool value = T::doVolume;
+    static const bool value = Extractor::template ExtractType<T>::Type::doVolume;
   };
 };
 
+template<typename Extractor = IdentityExtractor>
 struct do_constraints_skeleton
 {
   template<typename T>
   struct test {
-    static const bool value = T::doSkeleton;
+    static const bool value = Extractor::template ExtractType<T>::Type::doSkeleton;
   };
 };
 
+template<typename Extractor = IdentityExtractor>
 struct do_constraints_boundary
 {
   template<typename T>
   struct test {
-    static const bool value = T::doBoundary;
+    static const bool value = Extractor::template ExtractType<T>::Type::doBoundary;
   };
 };
 
+template<typename Extractor = IdentityExtractor>
+struct do_constraints_skeleton_or_boundary
+{
+  template<typename T>
+  struct test {
+    static const bool value =
+      Extractor::template ExtractType<T>::Type::doSkeleton ||
+      Extractor::template ExtractType<T>::Type::doBoundary;
+  };
+};
+
+
+template<typename Extractor = IdentityExtractor>
 struct do_constraints_processor
 {
   template<typename T>
   struct test {
-    static const bool value = T::doProcessor;
+    static const bool value = Extractor::template ExtractType<T>::Type::doProcessor;
   };
 };
 

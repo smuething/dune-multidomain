@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
     typedef J<MDGV,R> JType;
     JType j(mdgv);
 
-    typedef Dune::PDELab::Poisson<FType,BType,JType,2> LOP;
+    typedef Dune::PDELab::Poisson<FType,BType,JType,4> LOP;
     LOP lop(f,b,j);
 
     typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> Condition;

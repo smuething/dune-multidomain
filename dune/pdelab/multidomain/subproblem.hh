@@ -88,6 +88,12 @@ public:
     return _condition;
   }
 
+  template<typename TReal>
+  void setTime(const TReal& time)
+  {
+    _lop.setTime(time);
+  }
+
 protected:
   LocalOperator& _lop;
   const Condition _condition;

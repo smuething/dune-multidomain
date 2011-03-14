@@ -143,72 +143,93 @@ public:
   template<typename EG, typename LFSU, typename LFSV>
   void onBindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    data().x_s.resize(lfsu.size());
+    if (localAssembler().readData())
+      data().x_s.resize(lfsu.size());
   }
 
   template<typename EG, typename LFSV>
   void onBindLFSV(const EG& eg, const LFSV& lfsv)
   {
     // clear local residual
-    data()._r_s.resize(lfsv.size());
-    std::fill(data()._r_s.base().begin(),data()._r_s.base().end(),0.0);
+    if (localAssembler().readData())
+      {
+        data()._r_s.resize(lfsv.size());
+        std::fill(data()._r_s.base().begin(),data()._r_s.base().end(),0.0);
+      }
   }
 
   template<typename EG, typename LFSV_S>
   void onUnbindLFSV(const EG& eg, const LFSV_S& lfsv_s)
   {
     // accumulate local residual into global residual
-    if (data().r_s.modified())
-      lfsv_s.vadd(data()._r_s,*data().r);
-    data().r_s.resetModified();
+    if (localAssembler().writeData())
+      {
+        if (data().r_s.modified())
+          lfsv_s.vadd(data()._r_s,*data().r);
+        data().r_s.resetModified();
+      }
   }
 
 
   template<typename IG, typename LFSU_N, typename LFSV_N>
   void onBindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
-    data().x_n.resize(lfsu_n.size());
+    if (localAssembler().readData())
+      data().x_n.resize(lfsu_n.size());
   }
 
   template<typename IG, typename LFSV_N>
   void onBindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
   {
     // clear local residual
-    data()._r_n.resize(lfsv_n.size());
-    std::fill(data()._r_n.base().begin(),data()._r_n.base().end(),0.0);
+    if (localAssembler().readData())
+      {
+        data()._r_n.resize(lfsv_n.size());
+        std::fill(data()._r_n.base().begin(),data()._r_n.base().end(),0.0);
+      }
   }
 
   template<typename IG, typename LFSV_N>
   void onUnbindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
   {
     // accumulate local residual into global residual
-    if (data().r_n.modified())
-      lfsv_n.vadd(data()._r_n,*data().r);
-    data().r_n.resetModified();
+    if (localAssembler().writeData())
+      {
+        if (data().r_n.modified())
+          lfsv_n.vadd(data()._r_n,*data().r);
+        data().r_n.resetModified();
+      }
   }
 
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
   void onBindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
-    data().x_c.resize(lfsu_c.size());
+    if (localAssembler().readData())
+      data().x_c.resize(lfsu_c.size());
   }
 
   template<typename IG, typename LFSV_C>
   void onBindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
   {
     // clear local residual
-    data()._r_c.resize(lfsv_c.size());
-    std::fill(data()._r_c.base().begin(),data()._r_c.base().end(),0.0);
+    if (localAssembler().readData())
+      {
+        data()._r_c.resize(lfsv_c.size());
+        std::fill(data()._r_c.base().begin(),data()._r_c.base().end(),0.0);
+      }
   }
 
   template<typename IG, typename LFSV_C>
   void onUnbindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
   {
     // accumulate local residual into global residual
-    if (data().r_c.modified())
-      lfsv_c.vadd(data()._r_c,*data().r);
-    data().r_c.resetModified();
+    if (localAssembler().writeData())
+      {
+        if (data().r_c.modified())
+          lfsv_c.vadd(data()._r_c,*data().r);
+        data().r_c.resetModified();
+      }
   }
 
 
@@ -216,21 +237,24 @@ public:
   void loadCoefficientsLFSUInside(const LFSU& lfsu_s)
   {
     // read local data
-    lfsu_s.vread(*data().x,data().x_s);
+    if (localAssembler().readData())
+      lfsu_s.vread(*data().x,data().x_s);
   }
 
   template<typename LFSU_N>
   void loadCoefficientsLFSUOutside(const LFSU_N& lfsu_n)
   {
     // read local data
-    lfsu_n.vread(*data().x,data().x_n);
+    if (localAssembler().readData())
+      lfsu_n.vread(*data().x,data().x_n);
   }
 
   template<typename LFSU_C>
   void loadCoefficientsLFSUCoupling(const LFSU_C& lfsu_c)
   {
     // read local data
-    lfsu_c.vread(*data().x,data().x_c);
+    if (localAssembler().readData())
+      lfsu_c.vread(*data().x,data().x_c);
   }
 
 
@@ -374,12 +398,14 @@ public:
 
   void setSolution(const Domain& x_)
   {
-    data().x = &x_;
+    if (localAssembler().readData())
+      data().x = &x_;
   }
 
   void setResidual(Range& r_)
   {
-    data().r = &r_;
+    if (localAssembler().readData())
+      data().r = &r_;
   }
 
   const LocalAssembler& localAssembler() const

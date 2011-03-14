@@ -309,17 +309,30 @@ public:
     , _subProblems(*this)
     , _couplings(*this)
     , _weight(1.0)
+    , _readData(true)
+    , _writeData(true)
     , _jacobianAssemblerEngine(*this)
     , _residualAssemblerEngine(*this)
     , _patternAssemblerEngine(*this)
   {}
 
+  bool readData() const
+  {
+    return _readData;
+  }
+
+  bool writeData() const
+  {
+    return _writeData;
+  }
 
 private:
 
   SubProblems _subProblems;
   Couplings _couplings;
   double _weight;
+  bool _readData;
+  bool _writeData;
 
   LocalJacobianAssemblerEngine _jacobianAssemblerEngine;
   LocalResidualAssemblerEngine _residualAssemblerEngine;

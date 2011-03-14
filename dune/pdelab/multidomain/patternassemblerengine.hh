@@ -109,45 +109,55 @@ public:
   template<typename EG, typename LFSU, typename LFSV>
   void onBindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    data().pattern_ss.clear();
+    if (localAssembler().readData())
+      data().pattern_ss.clear();
   }
 
   template<typename EG, typename LFSU, typename LFSV>
   void onUnbindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    addToGlobalPattern(data().pattern_ss,lfsv,lfsu);
+    if (localAssembler().writeData())
+      addToGlobalPattern(data().pattern_ss,lfsv,lfsu);
   }
 
 
   template<typename IG, typename LFSU_N, typename LFSV_N>
   void onBindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
-    data().pattern_sn.clear();
-    data().pattern_ns.clear();
-    data().pattern_nn.clear();
+    if (localAssembler().readData())
+      {
+        data().pattern_sn.clear();
+        data().pattern_ns.clear();
+        data().pattern_nn.clear();
+      }
   }
 
   template<typename IG, typename LFSU_N, typename LFSV_N>
   void onUnbindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
-    addToGlobalPattern(data().pattern_nn,lfsv_n,lfsu_n);
+    if (localAssembler().writeData())
+      addToGlobalPattern(data().pattern_nn,lfsv_n,lfsu_n);
   }
 
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
   void onBindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
-    data().pattern_cc.clear();
-    data().pattern_sc.clear();
-    data().pattern_nc.clear();
-    data().pattern_cs.clear();
-    data().pattern_cn.clear();
+    if (localAssembler().readData())
+      {
+        data().pattern_cc.clear();
+        data().pattern_sc.clear();
+        data().pattern_nc.clear();
+        data().pattern_cs.clear();
+        data().pattern_cn.clear();
+      }
   }
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
   void onUnbindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
-    addToGlobalPattern(data().pattern_cc,lfsv_c,lfsu_c);
+    if (localAssembler().writeData())
+      addToGlobalPattern(data().pattern_cc,lfsv_c,lfsu_c);
   }
 
 
@@ -184,8 +194,11 @@ public:
                                                                 wrap_pattern_nn(data().pattern_nn),
                                                                 wrap_pattern_ns(data().pattern_ns)));
 
-    addToGlobalPattern(data().pattern_sn,lfsv_s,lfsu_n);
-    addToGlobalPattern(data().pattern_ns,lfsv_n,lfsu_s);
+    if (localAssembler().writeData())
+      {
+        addToGlobalPattern(data().pattern_sn,lfsv_s,lfsu_n);
+        addToGlobalPattern(data().pattern_ns,lfsv_n,lfsu_s);
+      }
   }
 
   template<typename IG, typename LFSU, typename LFSV>
@@ -218,10 +231,14 @@ public:
                                                                 wrap_pattern_cc(data().pattern_cc),
                                                                 wrap_pattern_cs(data().pattern_cs),
                                                                 wrap_pattern_cn(data().pattern_cn)));
-    addToGlobalPattern(data().pattern_sc,lfsv_s,lfsu_c);
-    addToGlobalPattern(data().pattern_cs,lfsv_c,lfsu_s);
-    addToGlobalPattern(data().pattern_nc,lfsv_n,lfsu_c);
-    addToGlobalPattern(data().pattern_cn,lfsv_c,lfsu_n);
+
+    if (localAssembler().writeData())
+      {
+        addToGlobalPattern(data().pattern_sc,lfsv_s,lfsu_c);
+        addToGlobalPattern(data().pattern_cs,lfsv_c,lfsu_s);
+        addToGlobalPattern(data().pattern_nc,lfsv_n,lfsu_c);
+        addToGlobalPattern(data().pattern_cn,lfsv_c,lfsu_n);
+      }
   }
 
   template<typename EG, typename LFSU, typename LFSV>
@@ -236,7 +253,8 @@ public:
 
   void setPattern(GlobalPattern& globalPattern)
   {
-    data()._globalPattern = &globalPattern;
+    if (localAssembler().writeData())
+      data()._globalPattern = &globalPattern;
   }
 
   const LocalAssembler& localAssembler() const

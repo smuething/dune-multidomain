@@ -172,9 +172,9 @@ public:
   typedef typename GridOperator::Traits::Jacobian Jacobian;
   typedef typename GridOperator::Traits::MatrixBackend::Pattern Pattern;
 
-  typedef Dune::PDELab::MultiDomain::JacobianAssemblerEngine<LocalAssembler> JacobianAssemblerEngine;
-  typedef Dune::PDELab::MultiDomain::ResidualAssemblerEngine<LocalAssembler> ResidualAssemblerEngine;
-  typedef Dune::PDELab::MultiDomain::PatternAssemblerEngine<LocalAssembler> PatternAssemblerEngine;
+  typedef Dune::PDELab::MultiDomain::JacobianAssemblerEngine<LocalAssembler> LocalJacobianAssemblerEngine;
+  typedef Dune::PDELab::MultiDomain::ResidualAssemblerEngine<LocalAssembler> LocalResidualAssemblerEngine;
+  typedef Dune::PDELab::MultiDomain::PatternAssemblerEngine<LocalAssembler> LocalPatternAssemblerEngine;
 
   template<typename TReal>
   void setTime(TReal time)
@@ -219,21 +219,21 @@ public:
     return applyToParticipants(visitor<functors::suggest_time_step>::add_data(store_dt(dt))).dt();
   }
 
-  JacobianAssemblerEngine& jacobianAssemblerEngine(const Domain& x, Jacobian& a)
+  LocalJacobianAssemblerEngine& localJacobianAssemblerEngine(Jacobian& a, const Domain& x)
   {
     _jacobianAssemblerEngine.setSolution(x);
     _jacobianAssemblerEngine.setJacobian(a);
     return _jacobianAssemblerEngine;
   }
 
-  ResidualAssemblerEngine& residualAssemblerEngine(const Domain& x, Range& r)
+  LocalResidualAssemblerEngine& localResidualAssemblerEngine(Range& r, const Domain& x)
   {
     _residualAssemblerEngine.setSolution(x);
     _residualAssemblerEngine.setResidual(r);
     return _residualAssemblerEngine;
   }
 
-  PatternAssemblerEngine& patternAssemblerEngine(Pattern& pattern)
+  LocalPatternAssemblerEngine& localPatternAssemblerEngine(Pattern& pattern)
   {
     _patternAssemblerEngine.setPattern(pattern);
     return _patternAssemblerEngine;
@@ -316,9 +316,9 @@ private:
   Couplings _couplings;
   double _weight;
 
-  JacobianAssemblerEngine _jacobianAssemblerEngine;
-  ResidualAssemblerEngine _residualAssemblerEngine;
-  PatternAssemblerEngine _patternAssemblerEngine;
+  LocalJacobianAssemblerEngine _jacobianAssemblerEngine;
+  LocalResidualAssemblerEngine _residualAssemblerEngine;
+  LocalPatternAssemblerEngine _patternAssemblerEngine;
 
 };
 

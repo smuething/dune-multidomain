@@ -46,17 +46,17 @@ public:
   template<typename P>
   void fill_pattern(P& globalpattern) const
   {
-    _assembler.assemble(_localAssembler.patternAssemblerEngine(globalpattern));
+    _assembler.assemble(_localAssembler.localPatternAssemblerEngine(globalpattern));
   }
 
   void residual(const typename Traits::Domain& x, typename Traits::Range& r) const
   {
-    _assembler.assemble(_localAssembler.residualAssemblerEngine(x,r));
+    _assembler.assemble(_localAssembler.localResidualAssemblerEngine(r,x));
   }
 
   void jacobian(const typename Traits::Domain& x, typename Traits::Jacobian& a) const
   {
-    _assembler.assemble(_localAssembler.jacobianAssemblerEngine(x,a));
+    _assembler.assemble(_localAssembler.localJacobianAssemblerEngine(a,x));
   }
 
   typename Traits::Assembler& assembler()

@@ -9,3 +9,4 @@ testlocalfunctionspace
 stokesdarcy
 testcouplinggfs
 testassembler
+testinstationarypoisson

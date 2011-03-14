@@ -55,3 +55,6 @@ testvisitor_SOURCES = testvisitor.cc
 
 check_PROGRAMS += testassembler
 testassembler_SOURCES = testassembler.cc
+
+check_PROGRAMS += testinstationarypoisson
+testinstationarypoisson_SOURCES = testinstationarypoisson.cc

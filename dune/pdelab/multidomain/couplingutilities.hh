@@ -109,7 +109,7 @@ public:
         for (int i=0; i<m_s; i++)
           mat_ss.accumulate(lfsv_s,i,lfsu_s,j,(up_s(lfsv_s,i)-down_s(lfsv_s,i))/delta);
         for (int i=0; i<m_n; i++)
-          mat_ns.accumulate(lfsv_n,i,lfsu_s,j,(up_s(lfsv_n,i)-down_s(lfsv_n,i))/delta);
+          mat_ns.accumulate(lfsv_n,i,lfsu_s,j,(up_n(lfsv_n,i)-down_n(lfsv_n,i))/delta);
         u_s(lfsu_s,j) = x_s(lfsu_s,j);
       }
 
@@ -124,7 +124,7 @@ public:
         for (int i=0; i<m_s; i++)
           mat_sn.accumulate(lfsv_s,i,lfsu_n,j,(up_s(lfsv_s,i)-down_s(lfsv_s,i))/delta);
         for (int i=0; i<m_n; i++)
-          mat_nn.accumulate(lfsv_n,i,lfsu_n,j,(up_s(lfsv_n,i)-down_s(lfsv_n,i))/delta);
+          mat_nn.accumulate(lfsv_n,i,lfsu_n,j,(up_n(lfsv_n,i)-down_n(lfsv_n,i))/delta);
         u_n(lfsu_n,j) = x_n(lfsu_n,j);
       }
   }

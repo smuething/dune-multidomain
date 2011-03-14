@@ -202,7 +202,7 @@ public:
         Dune::FieldVector<DF,dim> normal1 = ig.unitOuterNormal(it->position());
         Dune::FieldVector<DF,dim> normal2 = ig.unitOuterNormal(it->position());
         normal2 *= -1;
-        const RF mean_u = 0.5*(u1 + u2);
+        //const RF mean_u = 0.5*(u1 + u2);
         const RF jump_u1 = u1 - u2;
         const RF jump_u2 = u2 - u1;
         Dune::FieldVector<RF,dim> mean_gradu = gradu1 + gradu2;

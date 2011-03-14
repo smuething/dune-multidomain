@@ -283,8 +283,6 @@ int main(int argc, char** argv) {
 
     gridOperator.jacobian(x0,m);
 
-    Dune::printmatrix(std::cout,m.base(),"","");
-
     std::cout << "jacobian evaluation: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 

@@ -18,6 +18,42 @@ namespace PDELab {
 namespace MultiDomain {
 
 
+namespace {
+
+  template<typename Domain, typename Range>
+  struct ResidualAssemblerEngineData
+  {
+
+    const Domain* x;
+    Range* r;
+
+    typedef LocalVector<typename Domain::ElementType, TrialSpaceTag> SolutionVector;
+    typedef LocalVector<typename Range::ElementType, TestSpaceTag> ResidualVector;
+
+    SolutionVector x_s;
+    ResidualVector _r_s;
+    SolutionVector x_n;
+    ResidualVector _r_n;
+    SolutionVector x_c;
+    ResidualVector _r_c;
+
+    typename ResidualVector::WeightedAccumulationView r_s;
+    typename ResidualVector::WeightedAccumulationView r_n;
+    typename ResidualVector::WeightedAccumulationView r_c;
+
+    ResidualAssemblerEngineData()
+      : x(nullptr)
+      , r(nullptr)
+      , r_s(_r_s.weightedAccumulationView(1.0))
+      , r_n(_r_n.weightedAccumulationView(1.0))
+      , r_c(_r_c.weightedAccumulationView(1.0))
+    {}
+
+  };
+
+} // anonymous namespace
+
+
 template<typename LA>
 class ResidualAssemblerEngine
   : public LocalAssemblerEngineBase
@@ -28,6 +64,8 @@ public:
   typedef LA LocalAssembler;
   typedef typename LA::Range Range;
   typedef typename LA::Domain Domain;
+
+  typedef ResidualAssemblerEngineData<Domain,Range> EngineData;
 
   bool requireSkeleton() const
   {
@@ -105,72 +143,72 @@ public:
   template<typename EG, typename LFSU, typename LFSV>
   void onBindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
-    x_s.resize(lfsu.size());
+    data().x_s.resize(lfsu.size());
   }
 
   template<typename EG, typename LFSV>
   void onBindLFSV(const EG& eg, const LFSV& lfsv)
   {
     // clear local residual
-    _r_s.resize(lfsv.size());
-    std::fill(_r_s.base().begin(),_r_s.base().end(),0.0);
+    data()._r_s.resize(lfsv.size());
+    std::fill(data()._r_s.base().begin(),data()._r_s.base().end(),0.0);
   }
 
   template<typename EG, typename LFSV_S>
   void onUnbindLFSV(const EG& eg, const LFSV_S& lfsv_s)
   {
     // accumulate local residual into global residual
-    if (r_s.modified())
-      lfsv_s.vadd(_r_s,*r);
-    r_s.resetModified();
+    if (data().r_s.modified())
+      lfsv_s.vadd(data()._r_s,*data().r);
+    data().r_s.resetModified();
   }
 
 
   template<typename IG, typename LFSU_N, typename LFSV_N>
   void onBindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
-    x_n.resize(lfsu_n.size());
+    data().x_n.resize(lfsu_n.size());
   }
 
   template<typename IG, typename LFSV_N>
   void onBindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
   {
     // clear local residual
-    _r_n.resize(lfsv_n.size());
-    std::fill(_r_n.base().begin(),_r_n.base().end(),0.0);
+    data()._r_n.resize(lfsv_n.size());
+    std::fill(data()._r_n.base().begin(),data()._r_n.base().end(),0.0);
   }
 
   template<typename IG, typename LFSV_N>
   void onUnbindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
   {
     // accumulate local residual into global residual
-    if (r_n.modified())
-      lfsv_n.vadd(_r_n,*r);
-    r_n.resetModified();
+    if (data().r_n.modified())
+      lfsv_n.vadd(data()._r_n,*data().r);
+    data().r_n.resetModified();
   }
 
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
   void onBindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
-    x_c.resize(lfsu_c.size());
+    data().x_c.resize(lfsu_c.size());
   }
 
   template<typename IG, typename LFSV_C>
   void onBindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
   {
     // clear local residual
-    _r_c.resize(lfsv_c.size());
-    std::fill(_r_c.base().begin(),_r_c.base().end(),0.0);
+    data()._r_c.resize(lfsv_c.size());
+    std::fill(data()._r_c.base().begin(),data()._r_c.base().end(),0.0);
   }
 
   template<typename IG, typename LFSV_C>
   void onUnbindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
   {
     // accumulate local residual into global residual
-    if (r_c.modified())
-      lfsv_c.vadd(_r_c,*r);
-    r_c.resetModified();
+    if (data().r_c.modified())
+      lfsv_c.vadd(data()._r_c,*data().r);
+    data().r_c.resetModified();
   }
 
 
@@ -178,21 +216,21 @@ public:
   void loadCoefficientsLFSUInside(const LFSU& lfsu_s)
   {
     // read local data
-    lfsu_s.vread(*x,x_s);
+    lfsu_s.vread(*data().x,data().x_s);
   }
 
   template<typename LFSU_N>
   void loadCoefficientsLFSUOutside(const LFSU_N& lfsu_n)
   {
     // read local data
-    lfsu_n.vread(*x,x_n);
+    lfsu_n.vread(*data().x,data().x_n);
   }
 
   template<typename LFSU_C>
   void loadCoefficientsLFSUCoupling(const LFSU_C& lfsu_c)
   {
     // read local data
-    lfsu_c.vread(*x,x_c);
+    lfsu_c.vread(*data().x,data().x_c);
   }
 
 
@@ -200,18 +238,18 @@ public:
   void assembleUVVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
     typedef visitor<functors::alpha_volume,do_alpha_volume<> > Visitor;
-    r_s.setWeight(localAssembler().weight());
+    data().r_s.setWeight(localAssembler().weight());
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_eg(eg),
-                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
+                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(data().x_s),wrap_r(data().r_s)));
   }
 
   template<typename EG, typename LFSV>
   void assembleVVolume(const EG& eg, const LFSV& lfsv)
   {
     typedef visitor<functors::lambda_volume,do_lambda_volume<> > Visitor;
-    r_s.setWeight(localAssembler().weight());
+    data().r_s.setWeight(localAssembler().weight());
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_eg(eg),
-                                                          wrap_lfsv(lfsv),wrap_r(r_s)));
+                                                          wrap_lfsv(lfsv),wrap_r(data().r_s)));
   }
 
 
@@ -221,16 +259,16 @@ public:
                           const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
     typedef visitor<functors::alpha_skeleton_or_boundary,do_alpha_skeleton_or_boundary<> > SubProblemVisitor;
-    r_s.setWeight(localAssembler().weight());
-    r_n.setWeight(localAssembler().weight());
+    data().r_s.setWeight(localAssembler().weight());
+    data().r_n.setWeight(localAssembler().weight());
     localAssembler().applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
-                                                                    wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
-                                                                    wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),wrap_r_n(r_n)));
+                                                                    wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(data().x_s),wrap_r_s(data().r_s),
+                                                                    wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(data().x_n),wrap_r_n(data().r_n)));
 
     typedef visitor<functors::alpha_coupling,do_alpha_coupling<> > CouplingVisitor;
     localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
-                                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
-                                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),wrap_r_n(r_n)));
+                                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(data().x_s),wrap_r_s(data().r_s),
+                                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(data().x_n),wrap_r_n(data().r_n)));
   }
 
   template<typename IG, typename LFSV_S, typename LFSV_N>
@@ -239,16 +277,16 @@ public:
                          const LFSV_N& lfsv_n)
   {
     typedef visitor<functors::lambda_skeleton_or_boundary,do_lambda_skeleton_or_boundary<> > Visitor;
-    r_s.setWeight(localAssembler().weight());
-    r_n.setWeight(localAssembler().weight());
+    data().r_s.setWeight(localAssembler().weight());
+    data().r_n.setWeight(localAssembler().weight());
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
-                                                          wrap_lfsv_s(lfsv_s),wrap_r_s(r_s),
-                                                          wrap_lfsv_n(lfsv_n),wrap_r_n(r_n)));
+                                                          wrap_lfsv_s(lfsv_s),wrap_r_s(data().r_s),
+                                                          wrap_lfsv_n(lfsv_n),wrap_r_n(data().r_n)));
 
     typedef visitor<functors::lambda_coupling,do_lambda_coupling<> > CouplingVisitor;
     localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
-                                                                wrap_lfsv_s(lfsv_s),wrap_r_s(r_s),
-                                                                wrap_lfsv_n(lfsv_n),wrap_r_n(r_n)));
+                                                                wrap_lfsv_s(lfsv_s),wrap_r_s(data().r_s),
+                                                                wrap_lfsv_n(lfsv_n),wrap_r_n(data().r_n)));
   }
 
 
@@ -256,18 +294,18 @@ public:
   void assembleUVBoundary(const IG& ig, const LFSU& lfsu, const LFSV& lfsv)
   {
     typedef visitor<functors::alpha_boundary,do_alpha_boundary<> > Visitor;
-    r_s.setWeight(localAssembler().weight());
+    data().r_s.setWeight(localAssembler().weight());
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
-                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
+                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(data().x_s),wrap_r(data().r_s)));
   }
 
   template<typename IG, typename LFSV>
   void assembleVBoundary(const IG& ig, const LFSV& lfsv)
   {
     typedef visitor<functors::lambda_boundary,do_lambda_boundary<> > Visitor;
-    r_s.setWeight(localAssembler().weight());
+    data().r_s.setWeight(localAssembler().weight());
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
-                                                          wrap_lfsv(lfsv),wrap_r(r_s)));
+                                                          wrap_lfsv(lfsv),wrap_r(data().r_s)));
   }
 
 
@@ -281,13 +319,13 @@ public:
                                   const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
     typedef visitor<functors::alpha_enriched_coupling,do_alpha_enriched_coupling<> > CouplingVisitor;
-    r_s.setWeight(localAssembler().weight());
-    r_n.setWeight(localAssembler().weight());
-    r_c.setWeight(localAssembler().weight());
+    data().r_s.setWeight(localAssembler().weight());
+    data().r_n.setWeight(localAssembler().weight());
+    data().r_c.setWeight(localAssembler().weight());
     localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
-                                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(x_s),wrap_r_s(r_s),
-                                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(x_n),wrap_r_n(r_n),
-                                                                wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),wrap_x_c(x_c),wrap_r_c(r_c)));
+                                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),wrap_x_s(data().x_s),wrap_r_s(data().r_s),
+                                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(data().x_n),wrap_r_n(data().r_n),
+                                                                wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),wrap_x_c(data().x_c),wrap_r_c(data().r_c)));
   }
 
   template<typename IG,
@@ -300,13 +338,13 @@ public:
                                  const LFSV_C& lfsv_c)
   {
     typedef visitor<functors::lambda_enriched_coupling,do_lambda_enriched_coupling<> > CouplingVisitor;
-    r_s.setWeight(localAssembler().weight());
-    r_n.setWeight(localAssembler().weight());
-    r_c.setWeight(localAssembler().weight());
+    data().r_s.setWeight(localAssembler().weight());
+    data().r_n.setWeight(localAssembler().weight());
+    data().r_c.setWeight(localAssembler().weight());
     localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
-                                                                wrap_lfsv_s(lfsv_s),wrap_r_s(r_s),
-                                                                wrap_lfsv_n(lfsv_n),wrap_r_n(r_n),
-                                                                wrap_lfsv_c(lfsv_c),wrap_r_c(r_c)));
+                                                                wrap_lfsv_s(lfsv_s),wrap_r_s(data().r_s),
+                                                                wrap_lfsv_n(lfsv_n),wrap_r_n(data().r_n),
+                                                                wrap_lfsv_c(lfsv_c),wrap_r_c(data().r_c)));
   }
 
 
@@ -314,34 +352,34 @@ public:
   void assembleUVVolumePostSkeleton(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
     typedef visitor<functors::alpha_volume_post_skeleton,do_alpha_volume_post_skeleton<> > Visitor;
-    r_s.setWeight(localAssembler().weight());
+    data().r_s.setWeight(localAssembler().weight());
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_eg(eg),
-                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(x_s),wrap_r(r_s)));
+                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_x(data().x_s),wrap_r(data().r_s)));
   }
 
   template<typename EG, typename LFSV>
   void assembleVVolumePostSkeleton(const EG& eg, const LFSV& lfsv)
   {
     typedef visitor<functors::lambda_volume_post_skeleton,do_lambda_volume_post_skeleton<> > Visitor;
-    r_s.setWeight(localAssembler().weight());
+    data().r_s.setWeight(localAssembler().weight());
     localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_eg(eg),
-                                                          wrap_lfsv(lfsv),wrap_r(r_s)));
+                                                          wrap_lfsv(lfsv),wrap_r(data().r_s)));
   }
 
 
   void postAssembly()
   {
-    Dune::PDELab::constrain_residual(localAssembler().testConstraints(),*r);
+    Dune::PDELab::constrain_residual(localAssembler().testConstraints(),*data().r);
   }
 
   void setSolution(const Domain& x_)
   {
-    x = &x_;
+    data().x = &x_;
   }
 
   void setResidual(Range& r_)
   {
-    r = &r_;
+    data().r = &r_;
   }
 
   const LocalAssembler& localAssembler() const
@@ -351,33 +389,19 @@ public:
 
   ResidualAssemblerEngine(const LocalAssembler& localAssembler)
     : _localAssembler(localAssembler)
-    , x(nullptr)
-    , r(nullptr)
-    , r_s(_r_s.weightedAccumulationView(1.0))
-    , r_n(_r_n.weightedAccumulationView(1.0))
-    , r_c(_r_c.weightedAccumulationView(1.0))
+    , _engineData(make_shared<EngineData>())
   {}
 
 private:
 
+  EngineData& data()
+  {
+    return *_engineData;
+  }
+
   const LocalAssembler& _localAssembler;
 
-  const Domain* x;
-  Range* r;
-
-  typedef LocalVector<typename Domain::ElementType, TrialSpaceTag> SolutionVector;
-  typedef LocalVector<typename Range::ElementType, TestSpaceTag> ResidualVector;
-
-  SolutionVector x_s;
-  ResidualVector _r_s;
-  SolutionVector x_n;
-  ResidualVector _r_n;
-  SolutionVector x_c;
-  ResidualVector _r_c;
-
-  typename ResidualVector::WeightedAccumulationView r_s;
-  typename ResidualVector::WeightedAccumulationView r_n;
-  typename ResidualVector::WeightedAccumulationView r_c;
+  shared_ptr<EngineData> _engineData;
 
 };
 

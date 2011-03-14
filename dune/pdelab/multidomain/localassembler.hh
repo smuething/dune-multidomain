@@ -137,12 +137,12 @@ namespace functors {
 }
 
 
-template<typename GridOperator, typename... AssemblyParticipants>
+template<typename GO, typename... AssemblyParticipants>
 class LocalAssembler
   : public Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...>
-  , public Dune::PDELab::LocalAssemblerBase<typename GridOperator::Traits::MatrixBackend,
-                                            typename GridOperator::Traits::TrialGridFunctionSpaceConstraints,
-                                            typename GridOperator::Traits::TestGridFunctionSpaceConstraints>
+  , public Dune::PDELab::LocalAssemblerBase<typename GO::Traits::MatrixBackend,
+                                            typename GO::Traits::TrialGridFunctionSpaceConstraints,
+                                            typename GO::Traits::TestGridFunctionSpaceConstraints>
 {
 
   template<typename>
@@ -154,6 +154,11 @@ class LocalAssembler
   template<typename>
   friend class PatternAssemblerEngine;
 
+public:
+
+  typedef GO GridOperator;
+
+private:
 
   typedef Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...> NodeT;
   typedef Dune::PDELab::LocalAssemblerBase<

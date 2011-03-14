@@ -3,6 +3,7 @@
 
 #include <dune/pdelab/gridfunctionspace/interpolate.hh>
 #include <dune/pdelab/multidomain/utility.hh>
+#include <dune/common/tupleutility.hh>
 
 namespace Dune {
 namespace PDELab {
@@ -31,7 +32,7 @@ void interpolate_subproblems(const IB& ib,
 
 // interpolation from a given grid function
 template<typename GFS, typename LFS, typename XG, typename... SubProblems>
-void interpolate(const GFS& gfs, LFS& lfs, XG& xg, SubProblems&&... subProblems)
+void do_interpolate(const GFS& gfs, LFS& lfs, XG& xg, SubProblems&&... subProblems)
 {
 
   // get some types
@@ -59,16 +60,67 @@ template<typename GFS, typename XG, typename... SubProblems>
 void interpolateOnTrialSpace(const GFS& gfs, XG& xg, const SubProblems&... subProblems)
 {
   LocalFunctionSpace<GFS> lfs(gfs);
-  interpolate(gfs,lfs,xg,extract_trial_lfs(lfs,subProblems)...);
+  do_interpolate(gfs,lfs,xg,extract_trial_lfs(lfs,subProblems)...);
 }
 
 template<typename GFS, typename XG, typename... SubProblems>
 void interpolateOnTestSpace(const GFS& gfs, XG& xg, const SubProblems&... subProblems)
 {
   LocalFunctionSpace<GFS> lfs(gfs);
-  interpolate(gfs,lfs,xg,extract_test_lfs(lfs,subProblems)...);
+  do_interpolate(gfs,lfs,xg,extract_test_lfs(lfs,subProblems)...);
 }
 
+
+
+template <typename R>
+struct interpolation_descriptors_set_time {
+
+  template <class T>
+  void visit(T& elem) const
+  {
+    elem.setTime(time);
+  }
+
+  interpolation_descriptors_set_time(const R& t)
+    : time(t)
+  {}
+
+  const R time;
+};
+
+
+template<typename... T>
+struct interpolation_descriptors
+  : public tuple<T&...>
+{
+
+  typedef tuple<T&...> BaseT;
+
+  interpolation_descriptors(T&... t)
+    : BaseT(t...)
+  {}
+
+  template<typename R>
+  void setTime(const R& time)
+  {
+    Dune::ForEachValue<BaseT> forEach(*this);
+    interpolation_descriptors_set_time<R> f(time);
+    forEach.apply(f);
+  }
+
+  const BaseT& base() const
+  {
+    return static_cast<const BaseT&>(*this);
+  }
+
+};
+
+template<typename... T>
+interpolation_descriptors<T...>
+interpolateOnSubProblems(T&... t)
+{
+  return interpolation_descriptors<T...>(t...);
+}
 
 } // namespace MultiDomain
 } // namespace PDELab

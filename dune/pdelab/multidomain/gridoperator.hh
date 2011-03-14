@@ -7,12 +7,31 @@
 #include <dune/pdelab/multidomain/multidomaingridoperatorspaceutilities.hh>
 #include <dune/pdelab/multidomain/localassembler.hh>
 #include <dune/pdelab/multidomain/globalassembler.hh>
+#include <dune/pdelab/multidomain/interpolate.hh>
 
 namespace Dune {
 
 namespace PDELab {
 
 namespace MultiDomain {
+
+namespace {
+
+  template<typename GFS, typename XG, typename Tuple, typename... InterpolationPairs>
+  typename enable_if<(sizeof...(InterpolationPairs) == tuple_size<Tuple>::value)>::type
+  interpolate_from_tuple(const GFS& gfs, XG& xg, const Tuple& tuple, const InterpolationPairs&... pairs)
+  {
+    Dune::PDELab::MultiDomain::interpolateOnTrialSpace(gfs,xg,pairs...);
+  }
+
+  template<typename GFS, typename XG, typename Tuple, typename... InterpolationPairs>
+  typename enable_if<(sizeof...(InterpolationPairs) < tuple_size<Tuple>::value)>::type
+  interpolate_from_tuple(const GFS& gfs, XG& xg, const Tuple& tuple, const InterpolationPairs&... pairs)
+  {
+    interpolate_from_tuple(gfs,xg,tuple,pairs...,get<sizeof...(InterpolationPairs)>(tuple),get<sizeof...(InterpolationPairs)+1>(tuple));
+  }
+
+} // anonymous namespace
 
 
 template<typename GFSU,
@@ -104,6 +123,7 @@ public:
                    const F& f,
                    typename Traits::Domain& xnew)
   {
+    interpolate_from_tuple(_assembler.trialGridFunctionSpace(),xnew,f.base());
   }
 
   GridOperator(const GFSU& gfsu,

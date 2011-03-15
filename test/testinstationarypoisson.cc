@@ -45,29 +45,45 @@ END_INSTATIONARY_ANALYTIC_FUNCTION
 struct DirichletBoundary :
   public Dune::PDELab::DirichletConstraintsParameters
 {
+
+  enum BCType { dirichlet, neumann, none };
+
   template<typename I>
-  bool isDirichlet(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
+  BCType bc_type(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
   {
     Dune::FieldVector<typename I::ctype,I::dimension>
       xg = ig.geometry().global(x);
 
     if (!ig.boundary())
       {
-        return false;
+        return none;
       }
 
     if (xg[1]<1E-6 || xg[1]>1.0-1E-6)
       {
-        return false;
+        return neumann;
       }
 
     if (xg[0]>1.0-1E-6 && xg[1]>0.5+1E-6)
       {
-        return false;
+        return neumann;
       }
 
-    return true;
+    return dirichlet;
   }
+
+  template<typename I>
+  bool isDirichlet(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
+  {
+    return bc_type(ig,x) == dirichlet;
+  }
+
+  template<typename I>
+  bool isNeumann(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
+  {
+    return bc_type(ig,x) == neumann;
+  }
+
 
   template<typename R>
   void setTime(const R& r)

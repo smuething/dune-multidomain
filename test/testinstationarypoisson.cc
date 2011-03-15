@@ -115,6 +115,7 @@ INSTATIONARY_ANALYTIC_FUNCTION(J,x,y)
       y = -5.0;
       return;
     }
+  assert(false);
 }
 END_INSTATIONARY_ANALYTIC_FUNCTION
 

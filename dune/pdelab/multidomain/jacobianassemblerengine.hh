@@ -138,6 +138,7 @@ public:
     return any_child<typename LocalAssembler::SubProblems,do_alpha_volume_post_skeleton<> >::value;
   }
 
+
   template<typename EG, typename LFSU, typename LFSV>
   void onBindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
@@ -149,18 +150,6 @@ public:
       }
   }
 
-  template<typename EG, typename LFSU, typename LFSV>
-  void onUnbindLFSUV(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
-  {
-    // write back local jacobian contributions
-    if (localAssembler().writeData())
-      {
-        if (data().a_ss.modified())
-          localAssembler().etadd(lfsv,lfsu,data()._a_ss,*data().a);
-        data().a_ss.resetModified();
-      }
-  }
-
   template<typename IG, typename LFSU_N, typename LFSV_N>
   void onBindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
@@ -169,18 +158,8 @@ public:
         data().x_n.resize(lfsu_n.size());
         // initialize local jacobian matrix
         data()._a_nn.assign(lfsv_n.size(),lfsu_n.size(),0.0);
-      }
-  }
-
-  template<typename IG, typename LFSU_N, typename LFSV_N>
-  void onUnbindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
-  {
-    // write back local jacobian contributions
-    if (localAssembler().writeData())
-      {
-        if (data().a_nn.modified())
-          localAssembler().etadd(lfsv_n,lfsu_n,data()._a_nn,*data().a);
-        data().a_nn.resetModified();
+        data()._a_sn.assign(data()._a_ss.nrows(),lfsu_n.size(),0.0);
+        data()._a_ns.assign(lfsv_n.size(),data()._a_ss.ncols(),0.0);
       }
   }
 
@@ -192,18 +171,10 @@ public:
         data().x_c.resize(lfsu_c.size());
         // initialize local jacobian matrix
         data()._a_cc.assign(lfsv_c.size(),lfsu_c.size(),0.0);
-      }
-  }
-
-  template<typename IG, typename LFSU_C, typename LFSV_C>
-  void onUnbindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
-  {
-    // write back local jacobian contributions
-    if (localAssembler().writeData())
-      {
-        if (data().a_cc.modified())
-          localAssembler().etadd(lfsv_c,lfsu_c,data()._a_cc,*data().a);
-        data().a_cc.resetModified();
+        data()._a_sc.assign(data()._a_ss.nrows(),lfsu_c.size(),0.0);
+        data()._a_cs.assign(lfsv_c.size(),data()._a_ss.ncols(),0.0);
+        data()._a_nc.assign(data()._a_nn.nrows(),lfsu_c.size(),0.0);
+        data()._a_cn.assign(lfsv_c.size(),data()._a_nn.ncols(),0.0);
       }
   }
 
@@ -233,6 +204,67 @@ public:
   }
 
 
+  template<typename LFSU_S, typename LFSV_S>
+  void writeResultsInside(const LFSU_S & lfsu_s, const LFSV_S & lfsv_s)
+  {
+    // write back local jacobian contributions
+    if (localAssembler().writeData())
+      {
+        if (data().a_ss.modified())
+          localAssembler().etadd(lfsv_s,lfsu_s,data()._a_ss,*data().a);
+        data().a_ss.resetModified();
+      }
+  }
+
+  template<typename LFSU_S, typename LFSV_S,
+           typename LFSU_N, typename LFSV_N>
+  void writeResultsOutside(const LFSU_S & lfsu_s, const LFSV_S & lfsv_s,
+                           const LFSU_N & lfsu_n, const LFSV_N & lfsv_n)
+  {
+    // write back local jacobian contributions
+    if (localAssembler().writeData())
+      {
+        if (data().a_nn.modified())
+          localAssembler().etadd(lfsv_n,lfsu_n,data()._a_nn,*data().a);
+        data().a_nn.resetModified();
+        if (data().a_sn.modified())
+          localAssembler().etadd(lfsv_s,lfsu_n,data()._a_sn,*data().a);
+        data().a_sn.resetModified();
+        if (data().a_ns.modified())
+          localAssembler().etadd(lfsv_n,lfsu_s,data()._a_ns,*data().a);
+        data().a_ns.resetModified();
+      }
+  }
+
+  template<typename LFSU_S, typename LFSV_S,
+           typename LFSU_N, typename LFSV_N,
+           typename LFSU_C, typename LFSV_C>
+  void writeResultsCoupling(const LFSU_S & lfsu_s, const LFSV_S & lfsv_s,
+                            const LFSU_N & lfsu_n, const LFSV_N & lfsv_n,
+                            const LFSU_C & lfsu_c, const LFSV_C & lfsv_c)
+  {
+    // write back local jacobian contributions
+    if (localAssembler().writeData())
+      {
+        if (data().a_cc.modified())
+          localAssembler().etadd(lfsv_c,lfsu_c,data()._a_cc,*data().a);
+        data().a_cc.resetModified();
+        if (data().a_sc.modified())
+          localAssembler().etadd(lfsv_s,lfsu_c,data()._a_sc,*data().a);
+        data().a_sc.resetModified();
+        if (data().a_cs.modified())
+          localAssembler().etadd(lfsv_c,lfsu_s,data()._a_cs,*data().a);
+        data().a_cs.resetModified();
+        if (data().a_nc.modified())
+          localAssembler().etadd(lfsv_n,lfsu_c,data()._a_nc,*data().a);
+        data().a_nc.resetModified();
+        if (data().a_cn.modified())
+          localAssembler().etadd(lfsv_c,lfsu_n,data()._a_cn,*data().a);
+        data().a_cn.resetModified();
+      }
+  }
+
+
   template<typename EG, typename LFSU, typename LFSV>
   void assembleUVVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
   {
@@ -247,11 +279,6 @@ public:
                           const LFSU_S& lfsu_s, const LFSV_S& lfsv_s,
                           const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
-    if (localAssembler().readData())
-      {
-        data()._a_sn.assign(lfsv_s.size(),lfsu_n.size(),0.0);
-        data()._a_ns.assign(lfsv_n.size(),lfsu_s.size(),0.0);
-      }
     data().a_ss.setWeight(localAssembler().weight());
     data().a_sn.setWeight(localAssembler().weight());
     data().a_ns.setWeight(localAssembler().weight());
@@ -269,15 +296,6 @@ public:
                                                                 wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),wrap_x_n(data().x_n),
                                                                 wrap_a_ss(data().a_ss),wrap_a_sn(data().a_sn),
                                                                 wrap_a_ns(data().a_ns),wrap_a_nn(data().a_nn)));
-    if (localAssembler().writeData())
-      {
-        if (data().a_sn.modified())
-          localAssembler().etadd(lfsv_s,lfsu_n,data()._a_sn,*data().a);
-        data().a_sn.resetModified();
-        if (data().a_ns.modified())
-          localAssembler().etadd(lfsv_n,lfsu_s,data()._a_ns,*data().a);
-        data().a_ns.resetModified();
-      }
   }
 
   template<typename IG, typename LFSU, typename LFSV>
@@ -298,13 +316,6 @@ public:
                                   const LFSU_N& lfsu_n, const LFSV_N& lfsv_n,
                                   const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
-    if (localAssembler().readData())
-      {
-        data()._a_sc.assign(lfsv_s.size(),lfsu_c.size(),0.0);
-        data()._a_cs.assign(lfsv_c.size(),lfsu_s.size(),0.0);
-        data()._a_nc.assign(lfsv_n.size(),lfsu_c.size(),0.0);
-        data()._a_cn.assign(lfsv_c.size(),lfsu_n.size(),0.0);
-      }
     data().a_ss.setWeight(localAssembler().weight());
     data().a_sc.setWeight(localAssembler().weight());
     data().a_nn.setWeight(localAssembler().weight());
@@ -320,21 +331,6 @@ public:
                                                                 wrap_a_ss(data().a_ss),wrap_a_sc(data().a_sc),
                                                                 wrap_a_nn(data().a_nn),wrap_a_nc(data().a_nc),
                                                                 wrap_a_cc(data().a_cc),wrap_a_cs(data().a_cs),wrap_a_cn(data().a_cn)));
-    if (localAssembler().writeData())
-      {
-        if (data().a_sc.modified())
-          localAssembler().etadd(lfsv_s,lfsu_c,data()._a_sc,*data().a);
-        data().a_sc.resetModified();
-        if (data().a_cs.modified())
-          localAssembler().etadd(lfsv_c,lfsu_s,data()._a_cs,*data().a);
-        data().a_cs.resetModified();
-        if (data().a_nc.modified())
-          localAssembler().etadd(lfsv_n,lfsu_c,data()._a_nc,*data().a);
-        data().a_nc.resetModified();
-        if (data().a_cn.modified())
-          localAssembler().etadd(lfsv_c,lfsu_n,data()._a_cn,*data().a);
-        data().a_cn.resetModified();
-      }
   }
 
   template<typename EG, typename LFSU, typename LFSV>

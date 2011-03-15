@@ -161,18 +161,6 @@ public:
       }
   }
 
-  template<typename EG, typename LFSV_S>
-  void onUnbindLFSV(const EG& eg, const LFSV_S& lfsv_s)
-  {
-    // accumulate local residual into global residual
-    if (localAssembler().writeData())
-      {
-        if (data().r_s.modified())
-          lfsv_s.vadd(data()._r_s,*data().r);
-        data().r_s.resetModified();
-      }
-  }
-
 
   template<typename IG, typename LFSU_N, typename LFSV_N>
   void onBindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
@@ -192,18 +180,6 @@ public:
       }
   }
 
-  template<typename IG, typename LFSV_N>
-  void onUnbindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
-  {
-    // accumulate local residual into global residual
-    if (localAssembler().writeData())
-      {
-        if (data().r_n.modified())
-          lfsv_n.vadd(data()._r_n,*data().r);
-        data().r_n.resetModified();
-      }
-  }
-
 
   template<typename IG, typename LFSU_C, typename LFSV_C>
   void onBindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
@@ -220,18 +196,6 @@ public:
       {
         data()._r_c.resize(lfsv_c.size());
         std::fill(data()._r_c.base().begin(),data()._r_c.base().end(),0.0);
-      }
-  }
-
-  template<typename IG, typename LFSV_C>
-  void onUnbindLFSVCoupling(const IG& ig, const LFSV_C& lfsv_c)
-  {
-    // accumulate local residual into global residual
-    if (localAssembler().writeData())
-      {
-        if (data().r_c.modified())
-          lfsv_c.vadd(data()._r_c,*data().r);
-        data().r_c.resetModified();
       }
   }
 
@@ -258,6 +222,49 @@ public:
     // read local data
     if (localAssembler().readData())
       lfsu_c.vread(*data().x,data().x_c);
+  }
+
+
+  template<typename LFSU_S, typename LFSV_S>
+  void writeResultsInside(const LFSU_S & lfsu_s, const LFSV_S & lfsv_s)
+  {
+    // accumulate local residual into global residual
+    if (localAssembler().writeData())
+      {
+        if (data().r_s.modified())
+          lfsv_s.vadd(data()._r_s,*data().r);
+        data().r_s.resetModified();
+      }
+  }
+
+  template<typename LFSU_S, typename LFSV_S,
+           typename LFSU_N, typename LFSV_N>
+  void writeResultsOutside(const LFSU_S & lfsu_s, const LFSV_S & lfsv_s,
+                           const LFSU_N & lfsu_n, const LFSV_N & lfsv_n)
+  {
+    // accumulate local residual into global residual
+    if (localAssembler().writeData())
+      {
+        if (data().r_n.modified())
+          lfsv_n.vadd(data()._r_n,*data().r);
+        data().r_n.resetModified();
+      }
+  }
+
+  template<typename LFSU_S, typename LFSV_S,
+           typename LFSU_N, typename LFSV_N,
+           typename LFSU_C, typename LFSV_C>
+  void writeResultsCoupling(const LFSU_S & lfsu_s, const LFSV_S & lfsv_s,
+                            const LFSU_N & lfsu_n, const LFSV_N & lfsv_n,
+                            const LFSU_C & lfsu_c, const LFSV_C & lfsv_c)
+  {
+    // accumulate local residual into global residual
+    if (localAssembler().writeData())
+      {
+        if (data().r_c.modified())
+          lfsv_c.vadd(data()._r_c,*data().r);
+        data().r_c.resetModified();
+      }
   }
 
 
@@ -396,7 +403,8 @@ public:
 
   void postAssembly()
   {
-    Dune::PDELab::constrain_residual(localAssembler().testConstraints(),*data().r);
+    if (localAssembler().writeData())
+      Dune::PDELab::constrain_residual(localAssembler().testConstraints(),*data().r);
   }
 
   void setSolution(const Domain& x_)

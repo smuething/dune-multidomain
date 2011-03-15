@@ -184,9 +184,13 @@ public:
                             engine.assembleUVEnrichedCoupling(skeletonIntersectionWrapper,_lfsu_s,_lfsv_s,_lfsu_n,_lfsv_n,_lfsu_c,_lfsv_c);
                             engine.assembleVEnrichedCoupling(skeletonIntersectionWrapper,_lfsv_c,_lfsv_n,_lfsv_c);
 
+                            engine.writeResultsCoupling(_lfsu_s,_lfsv_s,_lfsu_n,_lfsv_n,_lfsu_c,_lfsv_c);
+
                             engine.onUnbindLFSUVCoupling(skeletonIntersectionWrapper,_lfsu_c,_lfsv_c);
                             engine.onUnbindLFSVCoupling(skeletonIntersectionWrapper,_lfsv_c);
                           }
+
+                        engine.writeResultsOutside(_lfsu_s,_lfsv_s,_lfsu_n,_lfsv_n);
 
                         engine.onUnbindLFSUVOutside(skeletonIntersectionWrapper,_lfsu_n,_lfsv_n);
                         engine.onUnbindLFSVOutside(skeletonIntersectionWrapper,_lfsv_n);
@@ -221,6 +225,8 @@ public:
 
         engine.assembleUVVolumePostSkeleton(elementWrapper,_lfsu_s,_lfsv_s);
         engine.assembleVVolumePostSkeleton(elementWrapper,_lfsv_s);
+
+        engine.writeResultsInside(_lfsu_s,_lfsv_s);
 
         engine.onUnbindLFSUV(elementWrapper,_lfsu_s,_lfsv_s);
         engine.onUnbindLFSV(elementWrapper,_lfsv_s);

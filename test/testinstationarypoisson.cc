@@ -97,7 +97,7 @@ INSTATIONARY_ANALYTIC_FUNCTION(G,x,y)
   typename Traits::DomainType center;
   for (int i=0; i<GV::dimension; i++) center[i] = 0.5;
   center -= x;
-  y = exp(-center.two_norm2());
+  y = -exp(-center.two_norm2());
 }
 END_INSTATIONARY_ANALYTIC_FUNCTION
 
@@ -345,7 +345,7 @@ int main(int argc, char** argv) {
     R time = 0;
     const R dt = atof(argv[3]);
     const R tend = atof(argv[4]);
-    V unew(multigfs,0.0);                                              // solution to be computed
+    V unew(uold);                                              // solution to be computed
     while (time<tend-1e-8) {
       // do time step
       /*

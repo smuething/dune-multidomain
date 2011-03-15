@@ -154,6 +154,9 @@ class LocalAssembler
   template<typename>
   friend class PatternAssemblerEngine;
 
+  template<typename, typename...>
+  friend class LocalAssembler;
+
 public:
 
   typedef GO GridOperator;
@@ -324,6 +327,16 @@ public:
   bool writeData() const
   {
     return _writeData;
+  }
+
+  template<typename LA>
+  void shareData(LA& la)
+  {
+    la._writeData = false;
+    _readData = false;
+    _jacobianAssemblerEngine.shareData(la._jacobianAssemblerEngine);
+    _patternAssemblerEngine.shareData(la._patternAssemblerEngine);
+    _residualAssemblerEngine.shareData(la._residualAssemblerEngine);
   }
 
 private:

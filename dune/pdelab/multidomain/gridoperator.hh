@@ -135,6 +135,26 @@ public:
     , _localAssembler(cu,cv,participants...)
   {}
 
+  template<typename Tuple, std::size_t k>
+  static typename enable_if<(k == tuple_size<Tuple>::value - 1)>::type
+  shareData(const Tuple& gridOperators)
+  {
+  }
+
+  template<typename Tuple, std::size_t k>
+  static typename enable_if<(k < tuple_size<Tuple>::value - 1)>::type
+  shareData(const Tuple& gridOperators)
+  {
+    get<k+1>(gridOperators).localAssembler().shareData(get<k>(gridOperators).localAssembler());
+    shareData<Tuple,k+1>(gridOperators);
+  }
+
+  template<typename... GridOperators>
+  static void setupGridOperators(const tuple<GridOperators&...>& gridOperators)
+  {
+    shareData<tuple<GridOperators&...>,0>(gridOperators);
+  }
+
  private:
 
   mutable typename Traits::Assembler _assembler;

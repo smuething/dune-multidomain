@@ -59,6 +59,9 @@ class ResidualAssemblerEngine
   : public LocalAssemblerEngineBase
 {
 
+  template<typename>
+  friend class ResidualAssemblerEngine;
+
 public:
 
   typedef LA LocalAssembler;
@@ -417,6 +420,12 @@ public:
     : _localAssembler(localAssembler)
     , _engineData(make_shared<EngineData>())
   {}
+
+  template<typename Engine>
+  void shareData(Engine& engine)
+  {
+    _engineData = engine._engineData;
+  }
 
 private:
 

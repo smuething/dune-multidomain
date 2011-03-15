@@ -40,9 +40,10 @@ namespace functors {
       typedef typename Data::Operator LOP;
       if (!subProblem.appliesTo(data().ig().insideElement()))
         return;
-      if (subProblem.appliesTo(data().ig().outsideElement()) &&
-          (LOP::doSkeletonTwoSided || data().ig().oneSidedDirection()))
+      if (subProblem.appliesTo(data().ig().outsideElement()))
         {
+          if (!(LOP::doSkeletonTwoSided || data().ig().oneSidedDirection()))
+            return;
           LocalAssemblerCallSwitch<LOP,LOP::doPatternSkeleton>::
             pattern_skeleton(Data::Operator::extract(subProblem),
                              LFS::lfsu_s(data(),subProblem),LFS::lfsv_s(data(),subProblem),

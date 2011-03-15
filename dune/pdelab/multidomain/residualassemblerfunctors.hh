@@ -67,9 +67,10 @@ namespace functors {
       typedef typename Data::Operator::template ExtractType<SubProblem>::Type LOP;
       if (!subProblem.appliesTo(data().ig().insideElement()))
         return;
-      if (subProblem.appliesTo(data().ig().outsideElement()) &&
-          (LOP::doSkeletonTwoSided || data().ig().oneSidedDirection()))
+      if (subProblem.appliesTo(data().ig().outsideElement()))
         {
+          if (!(LOP::doSkeletonTwoSided || data().ig().oneSidedDirection()))
+            return;
           LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
             alpha_skeleton(Data::Operator::extract(subProblem),data().ig(),
                            LFS::lfsu_s(data(),subProblem),data().x_s(),LFS::lfsv_s(data(),subProblem),
@@ -101,9 +102,10 @@ namespace functors {
       typedef typename Data::Operator::template ExtractType<SubProblem>::Type LOP;
       if (!subProblem.appliesTo(data().ig().insideElement()))
         return;
-      if (subProblem.appliesTo(data().ig().outsideElement()) &&
-          (LOP::doSkeletonTwoSided || data().ig().oneSidedDirection()))
+      if (subProblem.appliesTo(data().ig().outsideElement()))
         {
+          if (!(LOP::doSkeletonTwoSided || data().ig().oneSidedDirection()))
+            return;
           LocalAssemblerCallSwitch<LOP,LOP::doLambdaSkeleton>::
             lambda_skeleton(Data::Operator::extract(subProblem),data().ig(),
                             LFS::lfsv_s(data(),subProblem),

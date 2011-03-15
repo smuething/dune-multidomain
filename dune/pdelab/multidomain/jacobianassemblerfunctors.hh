@@ -42,9 +42,10 @@ namespace functors {
       typedef typename Data::Operator LOP;
       if (!subProblem.appliesTo(data().ig().insideElement()))
         return;
-      if (subProblem.appliesTo(data().ig().outsideElement()) &&
-          (LOP::doSkeletonTwoSided || data().ig().oneSidedDirection()))
+      if (subProblem.appliesTo(data().ig().outsideElement()))
         {
+          if (!(LOP::doSkeletonTwoSided || data().ig().oneSidedDirection()))
+            return;
           LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
             jacobian_skeleton(Data::Operator::extract(subProblem),data().ig(),
                               LFS::lfsu_s(data(),subProblem),data().x_s(),LFS::lfsv_s(data(),subProblem),

@@ -67,9 +67,10 @@ namespace functors {
     {
       if (!descriptor.appliesTo(data().ig().insideElement()))
         return;
-      if (descriptor.appliesTo(data().ig().outsideElement()) &&
-          data().ig().oneSidedDirection()) // Constraints are always applied one-sided
+      if (descriptor.appliesTo(data().ig().outsideElement()))
         {
+          if (!data().ig().oneSidedDirection())  // Constraints are always applied one-sided
+            return;
           typedef SkeletonConstraints<typename Data::IG,typename Data::CG> Visitor;
           Dune::PDELab::TypeTree::applyToTreePair(descriptor.lfs_s(),
                                                   descriptor.lfs_n(),

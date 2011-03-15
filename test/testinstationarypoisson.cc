@@ -157,9 +157,9 @@ int main(int argc, char** argv) {
     for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
       {
         if (it->geometry().center()[0] > 0.5)
-          grid.addToSubDomain(0,*it);
-        else
           grid.addToSubDomain(1,*it);
+        else
+          grid.addToSubDomain(0,*it);
       }
     grid.preUpdateSubDomains();
     grid.updateSubDomains();
@@ -170,8 +170,8 @@ int main(int argc, char** argv) {
 
     typedef MDGV::Grid::ctype DF;
 
-    typedef Dune::PDELab::Q22DLocalFiniteElementMap<ctype,double> FEM0;
-    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM1;
+    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM0;
+    typedef Dune::PDELab::Q22DLocalFiniteElementMap<ctype,double> FEM1;
 
     typedef FEM0::Traits::FiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
@@ -233,7 +233,7 @@ int main(int argc, char** argv) {
     LeftSubProblem_dt1 left_sp_dt1(tlop,c0);
 
     typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,GFS1> RightSubProblem_dt0;
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,TLOP,Condition,GFS0> RightSubProblem_dt1;
+    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,TLOP,Condition,GFS1> RightSubProblem_dt1;
 
     RightSubProblem_dt0 right_sp_dt0(lop,c1);
     RightSubProblem_dt1 right_sp_dt1(tlop,c1);
@@ -326,7 +326,7 @@ int main(int argc, char** argv) {
     {
       typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> DGF;
       DGF dgf(sgfs0,uold);
-      Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv0,2);
+      Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTKOptions::conforming);
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
       vtkwriter.write(fn_left.getName(),Dune::VTKOptions::ascii);
       fn_left.increment();
@@ -335,7 +335,7 @@ int main(int argc, char** argv) {
     {
       typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> DGF;
       DGF dgf(sgfs1,uold);
-      Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
+      Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv1,2);
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
       vtkwriter.write(fn_right.getName(),Dune::VTKOptions::ascii);
       fn_right.increment();
@@ -362,7 +362,7 @@ int main(int argc, char** argv) {
       {
         typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> DGF;
         DGF dgf(sgfs0,unew);
-        Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv0,2);
+        Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTKOptions::conforming);
         vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
         vtkwriter.write(fn_left.getName(),Dune::VTKOptions::ascii);
         fn_left.increment();
@@ -371,7 +371,7 @@ int main(int argc, char** argv) {
       {
         typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> DGF;
         DGF dgf(sgfs1,unew);
-        Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
+        Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv1,2);
         vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
         vtkwriter.write(fn_right.getName(),Dune::VTKOptions::ascii);
         fn_right.increment();

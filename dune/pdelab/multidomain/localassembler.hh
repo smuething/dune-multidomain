@@ -160,6 +160,7 @@ class LocalAssembler
 public:
 
   typedef GO GridOperator;
+  typedef typename GridOperator::Traits Traits;
 
 private:
 

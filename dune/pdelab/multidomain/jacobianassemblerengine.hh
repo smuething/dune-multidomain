@@ -150,31 +150,41 @@ public:
       }
   }
 
-  template<typename IG, typename LFSU_N, typename LFSV_N>
-  void onBindLFSUVOutside(const IG& ig, const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
+  template<typename IG,
+           typename LFSU_S, typename LFSV_S,
+           typename LFSU_N, typename LFSV_N>
+  void onBindLFSUVOutside(const IG& ig,
+                          const LFSU_S& lfsu_s, const LFSV_S& lfsv_s,
+                          const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
   {
     if (localAssembler().readData())
       {
         data().x_n.resize(lfsu_n.size());
         // initialize local jacobian matrix
         data()._a_nn.assign(lfsv_n.size(),lfsu_n.size(),0.0);
-        data()._a_sn.assign(data()._a_ss.nrows(),lfsu_n.size(),0.0);
-        data()._a_ns.assign(lfsv_n.size(),data()._a_ss.ncols(),0.0);
+        data()._a_sn.assign(lfsv_s.size(),lfsu_n.size(),0.0);
+        data()._a_ns.assign(lfsv_n.size(),lfsu_s.size(),0.0);
       }
   }
 
-  template<typename IG, typename LFSU_C, typename LFSV_C>
-  void onBindLFSUVCoupling(const IG& ig, const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
+  template<typename IG,
+           typename LFSU_S, typename LFSV_S,
+           typename LFSU_N, typename LFSV_N,
+           typename LFSU_C, typename LFSV_C>
+  void onBindLFSUVCoupling(const IG& ig,
+                           const LFSU_S& lfsu_s, const LFSV_S& lfsv_s,
+                           const LFSU_N& lfsu_n, const LFSV_N& lfsv_n,
+                           const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
   {
     if (localAssembler().readData())
       {
         data().x_c.resize(lfsu_c.size());
         // initialize local jacobian matrix
         data()._a_cc.assign(lfsv_c.size(),lfsu_c.size(),0.0);
-        data()._a_sc.assign(data()._a_ss.nrows(),lfsu_c.size(),0.0);
-        data()._a_cs.assign(lfsv_c.size(),data()._a_ss.ncols(),0.0);
-        data()._a_nc.assign(data()._a_nn.nrows(),lfsu_c.size(),0.0);
-        data()._a_cn.assign(lfsv_c.size(),data()._a_nn.ncols(),0.0);
+        data()._a_sc.assign(lfsv_s.size(),lfsu_c.size(),0.0);
+        data()._a_cs.assign(lfsv_c.size(),lfsu_s.size(),0.0);
+        data()._a_nc.assign(lfsv_n.size(),lfsu_c.size(),0.0);
+        data()._a_cn.assign(lfsv_c.size(),lfsu_n.size(),0.0);
       }
   }
 
@@ -204,8 +214,9 @@ public:
   }
 
 
-  template<typename LFSU_S, typename LFSV_S>
-  void writeResultsInside(const LFSU_S & lfsu_s, const LFSV_S & lfsv_s)
+  template<typename EG,
+           typename LFSU_S, typename LFSV_S>
+  void onUnbindLFSUV(const EG& eg, const LFSU_S & lfsu_s, const LFSV_S & lfsv_s)
   {
     // write back local jacobian contributions
     if (localAssembler().writeData())
@@ -216,10 +227,12 @@ public:
       }
   }
 
-  template<typename LFSU_S, typename LFSV_S,
+  template<typename IG,
+           typename LFSU_S, typename LFSV_S,
            typename LFSU_N, typename LFSV_N>
-  void writeResultsOutside(const LFSU_S & lfsu_s, const LFSV_S & lfsv_s,
-                           const LFSU_N & lfsu_n, const LFSV_N & lfsv_n)
+  void onUnbindLFSUVOutside(const IG& ig,
+                            const LFSU_S & lfsu_s, const LFSV_S & lfsv_s,
+                            const LFSU_N & lfsu_n, const LFSV_N & lfsv_n)
   {
     // write back local jacobian contributions
     if (localAssembler().writeData())
@@ -236,12 +249,14 @@ public:
       }
   }
 
-  template<typename LFSU_S, typename LFSV_S,
+  template<typename IG,
+           typename LFSU_S, typename LFSV_S,
            typename LFSU_N, typename LFSV_N,
            typename LFSU_C, typename LFSV_C>
-  void writeResultsCoupling(const LFSU_S & lfsu_s, const LFSV_S & lfsv_s,
-                            const LFSU_N & lfsu_n, const LFSV_N & lfsv_n,
-                            const LFSU_C & lfsu_c, const LFSV_C & lfsv_c)
+  void onUnbindLFSUVCoupling(const IG& ig,
+                             const LFSU_S & lfsu_s, const LFSV_S & lfsv_s,
+                             const LFSU_N & lfsu_n, const LFSV_N & lfsv_n,
+                             const LFSU_C & lfsu_c, const LFSV_C & lfsv_c)
   {
     // write back local jacobian contributions
     if (localAssembler().writeData())

@@ -358,8 +358,12 @@ public:
     applyVisitor(visitor<functors::rebind_subproblem_lfs_s>::add_data());
   }
 
-  template<typename IG, typename LFSV_N>
-  void onBindLFSVOutside(const IG& ig, const LFSV_N& lfsv_n)
+  template<typename IG,
+           typename LFSV_S,
+           typename LFSV_N>
+  void onBindLFSVOutside(const IG& ig,
+                         const LFSV_S& lfsv_s,
+                         const LFSV_N& lfsv_n)
   {
     applyVisitor(visitor<functors::rebind_subproblem_lfs_n>::add_data());
   }

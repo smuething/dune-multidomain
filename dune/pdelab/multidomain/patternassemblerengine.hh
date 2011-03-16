@@ -109,8 +109,8 @@ public:
   }
 
 
-  template<typename LFSU_S, typename LFSV_S>
-  void writeResultsInside(const LFSU_S & lfsu_s, const LFSV_S & lfsv_s)
+  template<typename EG, typename LFSU_S, typename LFSV_S>
+  void onUnbindLFSUV(const EG& eg, const LFSU_S & lfsu_s, const LFSV_S & lfsv_s)
   {
     if (localAssembler().writeData())
       {
@@ -119,10 +119,12 @@ public:
       }
   }
 
-  template<typename LFSU_S, typename LFSV_S,
+  template<typename IG,
+           typename LFSU_S, typename LFSV_S,
            typename LFSU_N, typename LFSV_N>
-  void writeResultsOutside(const LFSU_S & lfsu_s, const LFSV_S & lfsv_s,
-                           const LFSU_N & lfsu_n, const LFSV_N & lfsv_n)
+  void onUnbindLFSUVOutside(const IG& ig,
+                            const LFSU_S & lfsu_s, const LFSV_S & lfsv_s,
+                            const LFSU_N & lfsu_n, const LFSV_N & lfsv_n)
   {
     if (localAssembler().writeData())
       {
@@ -135,12 +137,14 @@ public:
       }
   }
 
-  template<typename LFSU_S, typename LFSV_S,
+  template<typename IG,
+           typename LFSU_S, typename LFSV_S,
            typename LFSU_N, typename LFSV_N,
            typename LFSU_C, typename LFSV_C>
-  void writeResultsCoupling(const LFSU_S & lfsu_s, const LFSV_S & lfsv_s,
-                            const LFSU_N & lfsu_n, const LFSV_N & lfsv_n,
-                            const LFSU_C & lfsu_c, const LFSV_C & lfsv_c)
+  void onUnbindLFSUVCoupling(const IG& ig,
+                             const LFSU_S & lfsu_s, const LFSV_S & lfsv_s,
+                             const LFSU_N & lfsu_n, const LFSV_N & lfsv_n,
+                             const LFSU_C & lfsu_c, const LFSV_C & lfsv_c)
   {
     if (localAssembler().writeData())
       {

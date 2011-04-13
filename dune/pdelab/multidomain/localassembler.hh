@@ -159,16 +159,15 @@ class LocalAssembler
 
 public:
 
-  typedef GO GridOperator;
-  typedef typename GridOperator::Traits Traits;
+  typedef LocalAssemblerTraits<GO> Traits;
 
 private:
 
   typedef Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...> NodeT;
   typedef Dune::PDELab::LocalAssemblerBase<
-    typename GridOperator::Traits::MatrixBackend,
-    typename GridOperator::Traits::TrialGridFunctionSpaceConstraints,
-    typename GridOperator::Traits::TestGridFunctionSpaceConstraints
+    typename GO::Traits::MatrixBackend,
+    typename GO::Traits::TrialGridFunctionSpaceConstraints,
+    typename GO::Traits::TestGridFunctionSpaceConstraints
     > BaseT;
 
   typedef Dune::PDELab::TypeTree::FilteredCompositeNode<LocalAssembler,SubProblemFilter> SubProblems;
@@ -176,10 +175,10 @@ private:
 
 public:
 
-  typedef typename GridOperator::Traits::Domain Domain;
-  typedef typename GridOperator::Traits::Range Range;
-  typedef typename GridOperator::Traits::Jacobian Jacobian;
-  typedef typename GridOperator::Traits::MatrixBackend::Pattern Pattern;
+  typedef typename Traits::Solution Domain;
+  typedef typename Traits::Residual Range;
+  typedef typename Traits::Jacobian Jacobian;
+  typedef typename Traits::MatrixBackend::Pattern Pattern;
 
   typedef Dune::PDELab::MultiDomain::JacobianAssemblerEngine<LocalAssembler> LocalJacobianAssemblerEngine;
   typedef Dune::PDELab::MultiDomain::ResidualAssemblerEngine<LocalAssembler> LocalResidualAssemblerEngine;
@@ -305,8 +304,8 @@ public:
     , _patternAssemblerEngine(*this)
   {}
 
-  LocalAssembler(const typename GridOperator::Traits::TrialGridFunctionSpaceConstraints& cu,
-                 const typename GridOperator::Traits::TestGridFunctionSpaceConstraints& cv,
+  LocalAssembler(const typename Traits::TrialGridFunctionSpaceConstraints& cu,
+                 const typename Traits::TestGridFunctionSpaceConstraints& cv,
                  AssemblyParticipants&... participants)
     : NodeT(stackobject_to_shared_ptr(participants)...)
     , BaseT(cu,cv)

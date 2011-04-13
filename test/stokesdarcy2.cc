@@ -1,6 +1,6 @@
 #include "config.h"
 
-#include <dune/common/configparser.hh>
+#include <dune/common/parametertreeparser.hh>
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/sgrid.hh>
 #include <dune/grid/uggrid.hh>
@@ -547,8 +547,8 @@ int main(int argc, char** argv) {
 
     Dune::MPIHelper::instance(argc,argv);
 
-    Dune::ConfigParser parameters;
-    parameters.parseFile(argv[1]);
+    Dune::ParameterTree parameters;
+    Dune::ParameterTreeParser::readINITree(argv[1],parameters);
 
     const int dim = 2;
 

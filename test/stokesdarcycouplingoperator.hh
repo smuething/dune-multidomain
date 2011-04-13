@@ -150,7 +150,7 @@ public:
 
     const Dune::QuadratureRule<DF,dim-1>& rule = Dune::QuadratureRules<DF,dim-1>::rule(gt,qorder);
 
-    const typename IG::EntityPointer darcyCell = ig.outside();
+    const typename IG::Element& darcyCell = ig.outsideElement();
 
     const RF g = parameters.gravity();
     const RF alpha = parameters.alpha();
@@ -186,7 +186,7 @@ public:
         darcylfsu.finiteElement().localBasis().evaluateJacobian(darcyPos,js);
 
         // transform gradient to real element
-        const Dune::FieldMatrix<DF,dimw,dim> jac = darcyCell->geometry().jacobianInverseTransposed(darcyPos);
+        const Dune::FieldMatrix<DF,dimw,dim> jac = darcyCell.geometry().jacobianInverseTransposed(darcyPos);
         std::vector<Dune::FieldVector<RF,dim> > gradpsi(dsize);
         for (size_type i=0; i<vsize; i++)
             jac.mv(js[i][0],gradpsi[i]);

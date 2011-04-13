@@ -209,12 +209,12 @@ public:
             const LFSU_V& lfsu_v = lfsu_v_pfs.child(d);
             // calculate d-th component of u
             for (size_type i = 0; i < lfsu_v.size(); ++i)
-              u[d] += stokesx[lfsu_v.localIndex(i)] * v[i];
+              u[d] += stokesx(lfsu_v,i) * v[i];
           }
 
 
         for (size_type i = 0; i < darcylfsu.size(); ++i)
-          darcyr[darcylfsu.localIndex(i)] -= gamma * porosity * (u * n) * psi[i] * factor;
+          darcyr.accumulate(darcylfsv,i, -gamma * porosity * (u * n) * psi[i] * factor);
 
         Dune::FieldVector<RF,dim> tangentialFlow(0.0);
         kabs.mv(gradphi,tangentialFlow);
@@ -230,12 +230,12 @@ public:
             const LFSU_V& lfsu_v = lfsu_v_pfs.child(d);
             for (size_type i = 0; i < lfsu_v.size(); ++i)
               {
-                stokesr[lfsu_v.localIndex(i)] -= rho * g * (phi - pos[dim-1]) * v[i] * n[d] * factor;
+                stokesr.accumulate(lfsu_v,i, - rho * g * (phi - pos[dim-1]) * v[i] * n[d] * factor);
               }
 
             for (size_type i = 0; i < lfsu_v.size(); ++i)
               {
-                stokesr[lfsu_v.localIndex(i)] += alpha * sqrt(dim) / sqrt(tracePi) * tangentialFlow[d] * v[i] * factor;
+                stokesr.accumulate(lfsu_v,i, alpha * sqrt(dim) / sqrt(tracePi) * tangentialFlow[d] * v[i] * factor);
               }
           }
 

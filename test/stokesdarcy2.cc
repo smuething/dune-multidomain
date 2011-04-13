@@ -32,7 +32,7 @@
 
 #include<typeinfo>
 
-#include "../../dune-pm/dune/pm/finiteelements/opbfem.hh"
+#include <dune/pdelab/finiteelementmap/opbfem.hh>
 #include "../../dune-pm/dune/pm/models/adrwip.hh"
 
 #include "stokesdarcycouplingoperator.hh"

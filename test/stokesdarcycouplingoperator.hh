@@ -113,10 +113,10 @@ public:
 
     // extract local function spaces
     typedef typename StokesLFSU::template Child<0>::Type LFSU_V_PFS;
-    const LFSU_V_PFS& lfsu_v_pfs = stokeslfsu.template getChild<0>();
+    const LFSU_V_PFS& lfsu_v_pfs = stokeslfsu.template child<0>();
 
     typedef typename LFSU_V_PFS::template Child<0>::Type LFSU_V;
-    const unsigned int vsize = lfsu_v_pfs.getChild(0).size();
+    const unsigned int vsize = lfsu_v_pfs.child(0).size();
 
     // domain and range field type
     typedef typename LFSU_V::Traits::FiniteElementType::
@@ -145,7 +145,7 @@ public:
 
     // select quadrature rule
     Dune::GeometryType gt = ig.geometry().type();
-    const int qorder = 2 * std::max(lfsu_v_pfs.template getChild(0).finiteElement().localBasis().order(),
+    const int qorder = 2 * std::max(lfsu_v_pfs.template child(0).finiteElement().localBasis().order(),
                                     darcylfsu.finiteElement().localBasis().order());
 
     const Dune::QuadratureRule<DF,dim-1>& rule = Dune::QuadratureRules<DF,dim-1>::rule(gt,qorder);
@@ -176,7 +176,7 @@ public:
         const RF factor = it->weight() * ig.geometry().integrationElement(it->position());
 
         std::vector<RT_V> v(vsize);
-        lfsu_v_pfs.getChild(0).finiteElement().localBasis().evaluateFunction(stokesPos,v);
+        lfsu_v_pfs.child(0).finiteElement().localBasis().evaluateFunction(stokesPos,v);
 
         std::vector<RT_D> psi(dsize);
         darcylfsu.finiteElement().localBasis().evaluateFunction(darcyPos,psi);
@@ -196,8 +196,8 @@ public:
         GC gradphi(0.0);
         for (size_type i = 0; i < darcylfsu.size(); ++i)
           {
-            phi += darcyx[darcylfsu.localIndex(i)] * psi[i];
-            gradphi.axpy(darcyx[darcylfsu.localIndex(i)],gradpsi[i]);
+            phi += darcyx(darcylfsu,i) * psi[i];
+            gradphi.axpy(darcyx(darcylfsu,i),gradpsi[i]);
           }
 
         Dune::FieldVector<RF,dim> u(0.0);
@@ -206,7 +206,7 @@ public:
         // calculate u
         for (int d = 0; d < dim; ++d)
           {
-            const LFSU_V& lfsu_v = lfsu_v_pfs.getChild(d);
+            const LFSU_V& lfsu_v = lfsu_v_pfs.child(d);
             // calculate d-th component of u
             for (size_type i = 0; i < lfsu_v.size(); ++i)
               u[d] += stokesx[lfsu_v.localIndex(i)] * v[i];
@@ -227,7 +227,7 @@ public:
 
         for (int d = 0; d < dim; ++d)
           {
-            const LFSU_V& lfsu_v = lfsu_v_pfs.getChild(d);
+            const LFSU_V& lfsu_v = lfsu_v_pfs.child(d);
             for (size_type i = 0; i < lfsu_v.size(); ++i)
               {
                 stokesr[lfsu_v.localIndex(i)] -= rho * g * (phi - pos[dim-1]) * v[i] * n[d] * factor;

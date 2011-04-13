@@ -91,72 +91,63 @@ private:
 };
 
 
-template<typename GV>
-class ScalarNeumannBoundaryFunction :
-  public Dune::PDELab::BoundaryGridFunctionBase<
-  Dune::PDELab::BoundaryGridFunctionTraits<
-    GV,int,1,Dune::FieldVector<int,1> >,
-  ScalarNeumannBoundaryFunction<GV> >
+struct ScalarNeumannBoundaryType :
+  public Dune::PDELab::DirichletConstraintsParameters
 {
-  const GV& gv;
-
-public:
-  typedef Dune::PDELab::BoundaryGridFunctionTraits<GV,int,1,Dune::FieldVector<int,1> > Traits;
-  typedef Dune::PDELab::BoundaryGridFunctionBase<Traits,ScalarNeumannBoundaryFunction<GV> > BaseT;
-
-    ScalarNeumannBoundaryFunction (const GV& gv_) : gv(gv_) {}
 
   template<typename I>
-  inline void evaluate (const Dune::PDELab::IntersectionGeometry<I>& ig,
-                        const typename Traits::DomainType& x,
-                        typename Traits::RangeType& y) const
+  bool isDirichlet(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
   {
-    y = 0; // Neumann
+    return false;
   }
 
-  //! get a reference to the GridView
-  inline const GV& getGridView ()
+  template<typename I>
+  bool isNeumann(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
   {
-    return gv;
+    return true;
   }
+
+  template<typename R>
+  void setTime(const R& r)
+  {
+  }
+
 };
 
-template<typename GV>
-class PressureDropBoundaryFunction :
-  public Dune::PDELab::BoundaryGridFunctionBase<
-  Dune::PDELab::BoundaryGridFunctionTraits<
-    GV,int,1,Dune::FieldVector<int,1> >,
-  PressureDropBoundaryFunction<GV> >
+
+struct PressureDropBoundaryType :
+  public Dune::PDELab::DirichletConstraintsParameters
 {
-  const GV& gv;
-
-public:
-  typedef Dune::PDELab::BoundaryGridFunctionTraits<GV,int,1,Dune::FieldVector<int,1> > Traits;
-  typedef Dune::PDELab::BoundaryGridFunctionBase<Traits,PressureDropBoundaryFunction<GV> > BaseT;
-
-    PressureDropBoundaryFunction (const GV& gv_) : gv(gv_) {}
 
   template<typename I>
-  inline void evaluate (const Dune::PDELab::IntersectionGeometry<I>& ig,
-                        const typename Traits::DomainType& x,
-                        typename Traits::RangeType& y) const
+  bool isDirichlet(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
   {
     if (!ig.boundary())
-      y = -1; // no bc
-    else {
-      auto xg = ig.geometry().global(x);
-      if (xg[0] < 1e-6 || xg[0] > 100-1e-6)
-        y = 0; // Neumann
-      else
-        y = 1; // Dirichlet
-    }
+      return false; // no bc
+    auto xg = ig.geometry().global(x);
+    if (xg[0] < 1e-6 || xg[0] > 100-1e-6)
+      return false; // Neumann
+    else
+      return true; // Dirichlet
   }
 
-  //! get a reference to the GridView
-  inline const GV& getGridView ()
+  template<typename I>
+  bool isNeumann(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
   {
-    return gv;
+    if (!ig.boundary())
+      return false; // no bc
+    auto xg = ig.geometry().global(x);
+    if (xg[0] < 1e-6 || xg[0] > 100-1e-6)
+      return true; // Neumann
+    else
+      return false; // Dirichlet
   }
+
+  template<typename R>
+  void setTime(const R& r)
+  {
+  }
+
 };
 
 
@@ -232,10 +223,11 @@ private:
 template<typename GV, typename RF>
 class DarcyParameters
 {
-  typedef Dune::PM::ADRBoundaryConditions BC;
 
 public:
   typedef Dune::PM::ADRTraits<GV,RF> Traits;
+  typedef Dune::PM::ADRBoundaryConditions BC;
+
 
   //! constructor
   DarcyParameters(GV gridview,
@@ -353,27 +345,39 @@ private:
   const typename Traits::RangeFieldType bottomPotential, bottomflux;
 };
 
-// boundary condition type
-SIMPLE_BOUNDARYTYPE_FUNCTION(DarcyBoundaryFunctionType,ig,x,y)
+
+template<typename DarcyParameters>
+struct DarcyBoundaryTypeAdapter :
+  public Dune::PDELab::DirichletConstraintsParameters
 {
-  Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
-    xg = ig.geometry().global(x);
 
-  if (!ig.boundary())
-    {
-      y = Traits::None; // no bc on subdomain interface
-      return;
-    }
+  template<typename I>
+  bool isDirichlet(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
+  {
+    return parameters.bc(ig,x) == DarcyParameters::BC::Dirichlet;
+  }
 
-  if (xg[0]<1E-6 || xg[0]>100-1E-6)
-    {
-      y = Traits::Neumann; // Neumann
-      return;
-    }
-  y = Traits::Dirichlet; // Dirichlet
-}
-END_SIMPLE_BOUNDARYTYPE_FUNCTION
+  template<typename I>
+  bool isNeumann(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
+  {
+    typename DarcyParameters::BC::Type bc = parameters.bc(ig,x);
+    return
+      bc == DarcyParameters::BC::Flux ||
+      bc == DarcyParameters::BC::Outflow;
+  }
 
+  template<typename R>
+  void setTime(const R& r)
+  {
+    parameters.setTime(r);
+  }
+
+  DarcyBoundaryTypeAdapter(DarcyParameters& params)
+    : parameters(params)
+  {}
+
+  DarcyParameters& parameters;
+};
 
 namespace Dune {
 namespace PDELab {
@@ -411,7 +415,7 @@ public:
    * \param x_  The coefficients vector
    */
   DiscretePressureGridFunction (const GFS& gfs, const Params& params, const X& x_, const typename Traits::RangeFieldType& factor_)
-    : pgfs(&gfs), parameters(params), xg(x_), lfs(gfs), xl(gfs.maxLocalSize()), yb(gfs.maxLocalSize()), factor(factor_)
+    : pgfs(Dune::stackobject_to_shared_ptr(gfs)), parameters(params), xg(x_), lfs(gfs), xl(gfs.maxLocalSize()), yb(gfs.maxLocalSize()), factor(factor_)
   {
   }
 
@@ -438,10 +442,10 @@ public:
   }
 
 private:
-  CountingPointer<GFS const> pgfs;
+  shared_ptr<GFS const> pgfs;
   const Params& parameters;
   const X& xg;
-  mutable typename GFS::LocalFunctionSpace lfs;
+  mutable Dune::PDELab::LocalFunctionSpace<GFS> lfs;
   mutable std::vector<typename Traits::RangeFieldType> xl;
   mutable std::vector<typename Traits::RangeType> yb;
   const typename Traits::RangeFieldType factor;
@@ -488,7 +492,7 @@ public:
    * \param x_  The coefficients vector
    */
   DarcyFlowFromPotential (const GFS& gfs, const Params& params, const X& x_)
-    : pgfs(&gfs), parameters(params), xg(x_)
+    : pgfs(Dune::stackobject_to_shared_ptr(gfs)), parameters(params), xg(x_)
   { }
 
   // Evaluate
@@ -497,7 +501,7 @@ public:
                         typename Traits::RangeType& y) const
   {
     // get and bind local functions space
-    typename GFS::LocalFunctionSpace lfs(*pgfs);
+    Dune::PDELab::LocalFunctionSpace<GFS> lfs(*pgfs);
     lfs.bind(e);
 
     // get local coefficients
@@ -533,7 +537,7 @@ public:
   }
 
 private:
-  CountingPointer<GFS const> pgfs;
+  shared_ptr<GFS const> pgfs;
   const Params& parameters;
   const X& xg;
 };

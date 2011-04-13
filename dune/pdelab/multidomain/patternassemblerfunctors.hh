@@ -37,7 +37,7 @@ namespace functors {
     template<typename SubProblem>
     void operator()(const SubProblem& subProblem)
     {
-      typedef typename Data::Operator LOP;
+      typedef typename Data::Operator::template ExtractType<SubProblem>::Type LOP;
       if (!subProblem.appliesTo(data().ig().insideElement()))
         return;
       if (subProblem.appliesTo(data().ig().outsideElement()))

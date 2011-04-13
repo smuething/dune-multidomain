@@ -17,7 +17,7 @@
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/couplinggridfunctionspace.hh>
 #include <dune/pdelab/multidomain/couplinglocalfunctionspace.hh>
-#include <dune/pdelab/multidomain/multidomaingridoperatorspace.hh>
+#include <dune/pdelab/multidomain/gridoperator.hh>
 #include <dune/pdelab/multidomain/subproblem.hh>
 #include <dune/pdelab/finiteelementmap/conformingconstraints.hh>
 #include <dune/pdelab/localoperator/poisson.hh>
@@ -616,14 +616,14 @@ int main(int argc, char** argv) {
     EC c0(0);
     EC c1(1);
 
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,V_FEM,NOCON,VBE> V_GFS;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,V_FEM,DCON,VBE> V_GFS;
     V_GFS vgfs(stokesGV,vfem);
 
     typedef Dune::PDELab::PowerGridFunctionSpace<V_GFS,dim,Dune::PDELab::GridFunctionSpaceLexicographicMapper> PGFS_V_GFS;
 
     PGFS_V_GFS powervgfs(vgfs);
 
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,P_FEM,NOCON,VBE> P_GFS;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,P_FEM,DCON,VBE> P_GFS;
     P_GFS pgfs(stokesGV,pfem);
 
     typedef Dune::PDELab::CompositeGridFunctionSpace<Dune::PDELab::GridFunctionSpaceLexicographicMapper,PGFS_V_GFS,P_GFS> StokesGFS;
@@ -650,18 +650,15 @@ int main(int argc, char** argv) {
     PressureInitialFunction pressureInitialFunction(mdgv);
     StokesInitialFunction stokesInitialFunction(velocityInitialFunction,pressureInitialFunction);
 
-    typedef PressureDropBoundaryFunction<MDGV> StokesScalarVelocityBoundaryFunction;
-    typedef Dune::PDELab::PowerGridFunction<StokesScalarVelocityBoundaryFunction,dim> StokesVelocityBoundaryFunction;
-    typedef ScalarNeumannBoundaryFunction<MDGV> StokesPressureBoundaryFunction;
-    typedef Dune::PDELab::CompositeGridFunction<StokesVelocityBoundaryFunction,StokesPressureBoundaryFunction> StokesBoundaryFunction;
+    typedef PressureDropBoundaryType StokesScalarVelocityBoundaryFunction;
+    typedef Dune::PDELab::PowerConstraintsParameters<StokesScalarVelocityBoundaryFunction,dim> StokesVelocityBoundaryFunction;
+    typedef ScalarNeumannBoundaryType StokesPressureBoundaryFunction;
+    typedef Dune::PDELab::CompositeConstraintsParameters<StokesVelocityBoundaryFunction,StokesPressureBoundaryFunction> StokesBoundaryFunction;
 
-    StokesScalarVelocityBoundaryFunction stokesScalarVelocityBoundaryFunction(mdgv);
+    StokesScalarVelocityBoundaryFunction stokesScalarVelocityBoundaryFunction;
     StokesVelocityBoundaryFunction stokesVelocityBoundaryFunction(stokesScalarVelocityBoundaryFunction);
-    StokesPressureBoundaryFunction stokesPressureBoundaryFunction(mdgv);
+    StokesPressureBoundaryFunction stokesPressureBoundaryFunction;
     StokesBoundaryFunction stokesBoundaryFunction(stokesVelocityBoundaryFunction,stokesPressureBoundaryFunction);
-
-    typedef DarcyBoundaryFunctionType<MDGV> DarcyBoundaryFunction;
-    DarcyBoundaryFunction darcyBoundaryFunction(mdgv);
 
     typedef PressureDropFlux<MDGV,RF> NeumannFlux;
     NeumannFlux neumannFlux(mdgv,parameters.get<RF>("boundaries.inflow"),parameters.get<RF>("boundaries.outflow"));
@@ -678,6 +675,9 @@ int main(int argc, char** argv) {
     typedef DarcyParameters<MDGV,RF> DarcyParams;
     DarcyParams darcyParams(mdgv,elementIndexToPhysicalGroup,parameters);
 
+    typedef DarcyBoundaryTypeAdapter<DarcyParams> DarcyBoundaryFunction;
+    DarcyBoundaryFunction darcyBoundaryFunction(darcyParams);
+
     typedef Dune::PM::ADRWIP<DarcyParams> DarcyOperator;
     DarcyOperator darcyOperator(darcyParams,Dune::PM::ADRWIPMethod::OBB,Dune::PM::ADRWIPWeights::weightsOn,0.0);
 
@@ -687,27 +687,41 @@ int main(int argc, char** argv) {
     typedef StokesDarcyCouplingOperator<CouplingParams> CouplingOperator;
     CouplingOperator couplingOperator(couplingParams);
 
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,DCON,MultiGFS,DCON,StokesOperator,EC,StokesGFS> StokesSubProblem;
+    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,StokesOperator,EC,StokesGFS> StokesSubProblem;
 
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,DarcyOperator,EC,DarcyGFS> DarcySubProblem;
+    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,DarcyOperator,EC,DarcyGFS> DarcySubProblem;
 
-    StokesSubProblem stokesSubProblem(dcon,dcon,stokesOperator,c0);
-    DarcySubProblem darcySubProblem(con,con,darcyOperator,c1);
+    StokesSubProblem stokesSubProblem(stokesOperator,c0);
+    DarcySubProblem darcySubProblem(darcyOperator,c1);
 
     //typedef Dune::PDELab::MultiDomain::EnrichedCoupling<StokesSubProblem,DarcySubProblem,CouplingOperator,2> Coupling;
     typedef Dune::PDELab::MultiDomain::Coupling<StokesSubProblem,DarcySubProblem,CouplingOperator> Coupling;
     Coupling coupling(stokesSubProblem,darcySubProblem,couplingOperator);
 
-    Dune::PDELab::MultiDomain::trialSpaceConstraints(stokesBoundaryFunction,multigfs,cg,stokesBoundaryFunction,stokesSubProblem);
+
+    auto constraints = Dune::PDELab::MultiDomain::constraints<RF>(multigfs,
+                                                                  Dune::PDELab::MultiDomain::constrainSubProblem(stokesSubProblem,
+                                                                                                                 stokesBoundaryFunction));
+
+    constraints.assemble(cg);
+
+    //Dune::PDELab::MultiDomain::trialSpaceConstraints(stokesBoundaryFunction,multigfs,cg,stokesBoundaryFunction,stokesSubProblem);
     std::cout << multigfs.size() << " DOF, " << cg.size() << " restricted" << std::endl;
 
     typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridOperatorSpace<MultiGFS,MultiGFS,MBE,StokesSubProblem,DarcySubProblem,Coupling> MultiGOS;
 
-    MultiGOS multigos(multigfs,multigfs,cg,cg,stokesSubProblem,darcySubProblem,coupling);
+    typedef Dune::PDELab::MultiDomain::GridOperator<
+      MultiGFS,MultiGFS,
+      MBE,RF,RF,RF,C,C,
+      StokesSubProblem,
+      DarcySubProblem,
+      Coupling
+      > GridOperator;
 
-    typedef MultiGFS::VectorContainer<RF>::Type V;
+    GridOperator gridoperator(multigfs,multigfs,cg,cg,stokesSubProblem,darcySubProblem,coupling);
+
+    typedef GridOperator::Traits::Domain V;
 
     V u(multigfs,0.0);
 
@@ -716,8 +730,8 @@ int main(int argc, char** argv) {
     typedef Dune::PDELab::ISTLBackend_SEQ_SuperLU LS;
     LS ls(true);
 
-    typedef Dune::PDELab::StationaryLinearProblemSolver<MultiGOS,LS,V> PDESOLVER;
-    PDESOLVER pdesolver(multigos,ls,1e-10);
+    typedef Dune::PDELab::StationaryLinearProblemSolver<GridOperator,LS,V> PDESOLVER;
+    PDESOLVER pdesolver(gridoperator,ls,1e-10);
 
     /*typedef Dune::PDELab::Newton<MultiGOS,LS,V> PDESOLVER;
     PDESOLVER pdesolver(multigos,ls);
@@ -732,7 +746,7 @@ int main(int argc, char** argv) {
 
     V r(u);
     r = 0.0;
-    multigos.residual(u,r);
+    gridoperator.residual(u,r);
 
     typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,StokesGFS> StokesSubGFS;
     typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,DarcyGFS> DarcySubGFS;

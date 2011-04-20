@@ -3,6 +3,7 @@
 #define DUNE_PDELAB_MULTIDOMAIN_GRIDOPERATOR_HH
 
 #include <dune/pdelab/gridoperator/common/gridoperatorutilities.hh>
+#include <dune/pdelab/gridfunctionspace/genericdatahandle.hh>
 
 #include <dune/pdelab/multidomain/multidomaingridoperatorspaceutilities.hh>
 #include <dune/pdelab/multidomain/localassembler.hh>
@@ -127,6 +128,10 @@ public:
 
     // Copy non-constrained dofs from old time step
     Dune::PDELab::copy_nonconstrained_dofs(_localAssembler.trialConstraints(),xold,xnew);
+
+    // Make solution consistent
+    CopyDataHandle<typename Traits::TrialGridFunctionSpace,typename Traits::Range> cdh(trialGridFunctionSpace(),xnew);
+    trialGridFunctionSpace().gridview().communicate(cdh,Dune::InteriorBorder_All_Interface,Dune::ForwardCommunication);
   }
 
   GridOperator(const GFSU& gfsu,

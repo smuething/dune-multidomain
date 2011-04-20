@@ -124,6 +124,9 @@ public:
                    typename Traits::Domain& xnew)
   {
     interpolate_from_tuple(_assembler.trialGridFunctionSpace(),xnew,f.base());
+
+    // Copy non-constrained dofs from old time step
+    Dune::PDELab::copy_nonconstrained_dofs(_localAssembler.trialConstraints(),xold,xnew);
   }
 
   GridOperator(const GFSU& gfsu,

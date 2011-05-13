@@ -1,6 +1,7 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTS_HH
 #define DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTS_HH
 
+#include <dune/pdelab/multidomain/globalassembler.hh>
 #include <dune/pdelab/gridoperator/common/localassemblerenginebase.hh>
 #include <dune/pdelab/multidomain/operatorflagtests.hh>
 #include <dune/pdelab/multidomain/constraintsfunctors.hh>

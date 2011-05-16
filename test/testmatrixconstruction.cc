@@ -8,7 +8,7 @@
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/backend/istlmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
-#include <dune/pdelab/multidomain/multidomaingridoperatorspace.hh>
+#include <dune/pdelab/multidomain/gridoperator.hh>
 #include <dune/pdelab/multidomain/subproblem.hh>
 #include <dune/pdelab/finiteelementmap/conformingconstraints.hh>
 #include <dune/pdelab/localoperator/poisson.hh>
@@ -33,30 +33,54 @@ END_SIMPLE_ANALYTIC_FUNCTION
 
 
 // boundary condition type
-SIMPLE_BOUNDARYTYPE_FUNCTION(B,ig,x,y)
+struct BoundaryType :
+  public Dune::PDELab::DirichletConstraintsParameters
 {
-  Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
-    xg = ig.geometry().global(x);
 
-  if (!ig.boundary())
-    {
-      y = Traits::None; // no bc on subdomain interface
-      return;
-    }
+  enum BCType { dirichlet, neumann, none };
 
-  if (xg[1]<1E-6 || xg[1]>1.0-1E-6)
-    {
-      y = Traits::Neumann; // Neumann
-      return;
-    }
-  if (xg[0]>1.0-1E-6 && xg[1]>0.5+1E-6)
-    {
-      y = Traits::Neumann; // Neumann
-      return;
-    }
-  y = Traits::Dirichlet; // Dirichlet
-}
-END_SIMPLE_BOUNDARYTYPE_FUNCTION
+  template<typename I>
+  BCType bc_type(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
+  {
+    Dune::FieldVector<typename I::ctype,I::dimension>
+      xg = ig.geometry().global(x);
+
+    if (!ig.boundary())
+      {
+        return none;
+      }
+
+    if (xg[1]<1E-6 || xg[1]>1.0-1E-6)
+      {
+        return neumann;
+      }
+
+    if (xg[0]>1.0-1E-6 && xg[1]>0.5+1E-6)
+      {
+        return neumann;
+      }
+
+    return dirichlet;
+  }
+
+  template<typename I>
+  bool isDirichlet(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
+  {
+    return bc_type(ig,x) == dirichlet;
+  }
+
+  template<typename I>
+  bool isNeumann(const I & ig, const Dune::FieldVector<typename I::ctype, I::dimension-1> & x) const
+  {
+    return bc_type(ig,x) == neumann;
+  }
+
+
+  template<typename R>
+  void setTime(const R& r)
+  {}
+};
+
 
 
 // dirichlet bc
@@ -135,8 +159,8 @@ int main(int argc, char** argv) {
   typedef Dune::PDELab::Q12DLocalFiniteElementMap<ctype,double> FEM1;
   typedef Dune::PDELab::Q22DLocalFiniteElementMap<ctype,double> FEM2;
 
-  typedef FEM0::Traits::LocalFiniteElementType::Traits::
-  LocalBasisType::Traits::RangeFieldType R;
+  typedef FEM0::Traits::FiniteElementType::Traits::
+    LocalBasisType::Traits::RangeFieldType R;
 
   FEM fem;
   FEM0 fem0;
@@ -173,8 +197,8 @@ int main(int argc, char** argv) {
   MultiGFS multigfs(grid,gfs,gfs0,gfs1,gfs2);
 
 
-  typedef B<MDGV> BType;
-  BType b(mdgv);
+  typedef BoundaryType BType;
+  BType b;
 
   typedef F<MDGV,R> FType;
   FType f(mdgv);
@@ -197,17 +221,17 @@ int main(int argc, char** argv) {
   EC c3(1);
   SC c4(0);
 
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,SC,GFS> SubProblem0;
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,SC,GFS2> SubProblem1;
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,EC,GFS0,GFS1> SubProblem2;
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,EC,GFS1> SubProblem3;
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,SC,GFS0> SubProblem4;
+  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,SC,GFS> SubProblem0;
+  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,SC,GFS2> SubProblem1;
+  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,EC,GFS0,GFS1> SubProblem2;
+  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,EC,GFS1> SubProblem3;
+  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,SC,GFS0> SubProblem4;
 
-  SubProblem0 sp0(con,con,lop,c0);
-  SubProblem1 sp1(con,con,lop,c1);
-  SubProblem2 sp2(con,con,lop,c2);
-  SubProblem3 sp3(con,con,lop,c3);
-  SubProblem4 sp4(con,con,lop,c4);
+  SubProblem0 sp0(lop,c0);
+  SubProblem1 sp1(lop,c1);
+  SubProblem2 sp2(lop,c2);
+  SubProblem3 sp3(lop,c3);
+  SubProblem4 sp4(lop,c4);
 
   ProportionalFlowCoupling proportionalFlowCoupling(atof(argv[2]));
 
@@ -216,12 +240,25 @@ int main(int argc, char** argv) {
 
   typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 
-  typedef Dune::PDELab::MultiDomain::MultiDomainGridOperatorSpace<MultiGFS,MultiGFS,MBE,SubProblem0,SubProblem1,Coupling,SubProblem2,SubProblem4,SubProblem3> MultiGOS;
+  typedef Dune::PDELab::MultiDomain::GridOperator<
+    MultiGFS,MultiGFS,
+    MBE,
+    R,R,R,
+    C,C,
+    SubProblem0,
+    SubProblem1,
+    Coupling,
+    SubProblem2,
+    SubProblem4,
+    SubProblem3
+    > GO;
 
-  MultiGOS multigos(multigfs,multigfs,cg,cg,sp0,sp1,coupling,sp2,sp4,sp3);
+  GO go(multigfs,multigfs,
+        cg,cg,
+        sp0,sp1,coupling,sp2,sp4,sp3);
 
-  typedef MultiGOS::MatrixContainer<R>::Type M;
-  M m(multigos);
+  typedef GO::Traits::Jacobian M;
+  M m(go);
   m = 0.0;
 
   }

@@ -52,16 +52,21 @@ namespace {
     void afterChild(SPLFS& splfs, const ChildLFS& childLFS, TreePath treePath, ChildIndex childIndex)
     {
       for(std::size_t i = 0; i < childLFS.size(); ++i, ++offset)
-        container[offset] = childLFS.globalIndex(i);
+        {
+          global_container[offset] = childLFS.globalIndex(i);
+          local_container[offset] = childLFS.localIndex(i);
+        }
     }
 
-    FillIndices(Container& container_)
+    FillIndices(Container& global_container_, Container& local_container_)
       : offset(0)
-      , container(container_)
+      , global_container(global_container_)
+      , local_container(local_container_)
     {}
 
     std::size_t offset;
-    Container& container;
+    Container& global_container;
+    Container& local_container;
 
   };
 
@@ -224,8 +229,7 @@ public:
   template<typename T>
   typename Traits::IndexContainer::size_type localIndex (T index) const
   {
-    dune_static_assert((AlwaysFalse<T>::value),"SubProblemLocalFunctionSpace::localIndex() is not implemented," \
-                       "use the localIndex() methods of its children instead.");
+    return local_storage[index];
   }
 
   //! \brief bind local function space to entity
@@ -237,7 +241,8 @@ public:
     Dune::PDELab::TypeTree::applyToTree(*this,accumulateSize);
     n = accumulateSize.size;
     global_storage.resize(n);
-    Dune::PDELab::TypeTree::applyToTree(*this,FillIndices<typename Traits::IndexContainer>(global_storage));
+    local_storage.resize(n);
+    Dune::PDELab::TypeTree::applyToTree(*this,FillIndices<typename Traits::IndexContainer>(global_storage,local_storage));
   }
 
   const SubProblem& subProblem() const {
@@ -257,6 +262,7 @@ private:
   using BaseT::n;
   using NodeT::unfiltered;
 
+  typename Traits::IndexContainer local_storage;
 
   const MDLFS mdlfs() const
   {

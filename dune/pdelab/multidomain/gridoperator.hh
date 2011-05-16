@@ -62,6 +62,11 @@ public:
     LocalAssembler<GridOperator,AssemblyParticipants...>
     > Traits;
 
+  //! This is here for backwards compatibility only
+  template <typename MFT>
+  struct MatrixContainer{
+    typedef typename Traits::Jacobian Type;
+  };
 
   template<typename P>
   void fill_pattern(P& globalpattern) const

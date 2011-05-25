@@ -31,3 +31,5 @@ stamp-vc
 .libs
 *#
 *.dSYM
+*.pyc
+*.pyo

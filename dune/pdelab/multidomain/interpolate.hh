@@ -57,14 +57,14 @@ void do_interpolate(const GFS& gfs, LFS& lfs, XG& xg, SubProblems&&... subProble
 
 
 template<typename GFS, typename XG, typename... SubProblems>
-void interpolateOnTrialSpace(const GFS& gfs, XG& xg, const SubProblems&... subProblems)
+void interpolateOnTrialSpace(const GFS& gfs, XG& xg, SubProblems&&... subProblems)
 {
   LocalFunctionSpace<GFS> lfs(gfs);
   do_interpolate(gfs,lfs,xg,extract_trial_lfs(lfs,subProblems)...);
 }
 
 template<typename GFS, typename XG, typename... SubProblems>
-void interpolateOnTestSpace(const GFS& gfs, XG& xg, const SubProblems&... subProblems)
+void interpolateOnTestSpace(const GFS& gfs, XG& xg, SubProblems&&... subProblems)
 {
   LocalFunctionSpace<GFS> lfs(gfs);
   do_interpolate(gfs,lfs,xg,extract_test_lfs(lfs,subProblems)...);

@@ -133,6 +133,8 @@ public:
 
   typedef Predicate_ Predicate;
 
+  typedef LeafOrdering<CouplingGridFunctionSpace> Ordering;
+
   //! extract type of container storing Ts
   template<typename T>
   struct VectorContainer
@@ -158,14 +160,23 @@ public:
 
   //! constructor
   CouplingGridFunctionSpace (const GV& gridview, const LFEM& lfem, const Predicate& predicate, const CE& ce_)
-    : defaultce(ce_), gv(gridview), plfem(stackobject_to_shared_ptr(lfem)), predicate_(predicate), ce(ce_)
+    : defaultce(ce_)
+    , gv(gridview)
+    , plfem(stackobject_to_shared_ptr(lfem))
+    , predicate_(predicate)
+    , ordering_(make_shared<Ordering>(*this))
+    , ce(ce_)
   {
     update();
   }
 
   //! constructor
   CouplingGridFunctionSpace (const GV& gridview, const LFEM& lfem, const Predicate& predicate)
-    : gv(gridview), plfem(stackobject_to_shared_ptr(lfem)), ce(defaultce), predicate_(predicate)
+    : gv(gridview)
+    , plfem(stackobject_to_shared_ptr(lfem))
+    , ce(defaultce)
+    , predicate_(predicate)
+    , ordering_(make_shared<Ordering>(*this))
   {
     update();
   }
@@ -408,7 +419,15 @@ public:
         nglobal += size;
       }
     Dune::dinfo << "total number of dofs is " << nglobal << std::endl;
+    ordering_->update();
   }
+
+  //! Direct access to the DOF ordering.
+  const Ordering &ordering() const { return *ordering_; }
+
+  //! Direct access to the storage of the DOF ordering.
+  shared_ptr<const Ordering> orderingPtr() const { return ordering_; }
+
 
 private:
   CE defaultce;
@@ -418,6 +437,7 @@ private:
   typename Traits::SizeType nglobal;
   const CE& ce;
   const Predicate_& predicate_;
+  shared_ptr<Ordering> ordering_;
 
   std::map<Dune::GeometryType,typename Traits::SizeType> gtoffset; // offset in vector for given geometry type
   std::vector<typename Traits::SizeType> offset; // offset into big vector for each entity;

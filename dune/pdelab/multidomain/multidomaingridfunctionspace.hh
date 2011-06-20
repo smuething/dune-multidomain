@@ -287,7 +287,7 @@ public:
                                              sizeof...(Children)>
   Traits;
 
-  typedef CompositeLexicographicOrdering<typename Traits::SizeType,typename Children::Ordering...> Ordering;
+  typedef CompositeLexicographicOrdering<typename Traits::SizeType,const typename Children::Ordering...> Ordering;
 
   template<typename T>
   struct IndexForChild
@@ -361,15 +361,12 @@ public:
     return _g;
   }
 
-  Ordering& ordering()
-  {
-    return *_ordering;
-  }
+  //! Direct access to the DOF ordering.
+  const Ordering &ordering() const { return *_ordering; }
 
-  const Ordering& ordering() const
-  {
-    return *_ordering;
-  }
+  //! Direct access to the storage of the DOF ordering.
+  shared_ptr<const Ordering> orderingPtr() const { return _ordering; }
+
 
 
 private:

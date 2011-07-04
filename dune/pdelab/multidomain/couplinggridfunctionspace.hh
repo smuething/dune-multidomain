@@ -400,7 +400,7 @@ public:
                 Dune::GeometryType gt=Dune::GenericReferenceElements<double,GV::Grid::dimension - 1>
                   ::general(iit->type()).type(lc.localKey(i).subEntity(),lc.localKey(i).codim());
                 unsigned int index = gtoffset[gt] +
-                  is.subIndex(*it,
+                  is.subIndex(dm.element(),
                               dm.mapSubIndex(lc.localKey(i).subEntity(),lc.localKey(i).codim()),
                               lc.localKey(i).codim()+1);
                 offset[index] = std::max(offset[index],

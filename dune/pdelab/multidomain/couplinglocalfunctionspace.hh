@@ -1,6 +1,8 @@
 #ifndef DUNE_MULTIDOMAIN_COUPLINGLOCALFUNCTIONSPACE_HH
 #define DUNE_MULTIDOMAIN_COUPLINGLOCALFUNCTIONSPACE_HH
 
+#include <dune/pdelab/gridfunctionspace/localfunctionspace.hh>
+
 namespace Dune {
 namespace PDELab {
 namespace MultiDomain {
@@ -39,106 +41,55 @@ struct CouplingLocalFunctionSpaceTraits
 
 };
 
-#if 0
+
+
+struct CouplingLocalFunctionSpaceTag {};
+struct CouplingGridFunctionSpaceTag {};
+
 
 template <typename GFS>
 class CouplingLocalFunctionSpaceNode
-  : public Dune::PDELab::TypeTree::LeafNode
+  : public LocalFunctionSpaceBaseNode<GFS>
+  , public TypeTree::LeafNode
 {
   typedef typename GFS::Traits::BackendType B;
 
-  template<typename T, bool b, typename E, typename It, typename Int>
-  friend struct LocalFunctionSpaceBaseVisitNodeMetaProgram;
-  template<typename T, typename E, typename It, typename Int, int n, int i>
-  friend struct LocalFunctionSpaceBaseVisitChildMetaProgram;
+  typedef LocalFunctionSpaceBaseNode<GFS> BaseT;
+
+  template<typename>
+  friend struct PropagateGlobalStorageVisitor;
+
+  template<typename>
+  friend struct ClearSizeVisitor;
+
+  template<typename>
+  friend struct ComputeSizeVisitor;
+
+  template<typename>
+  friend struct FillIndicesVisitor;
+
+  typedef FiniteElementInterfaceSwitch<
+    typename Traits::FiniteElementType
+    > FESwitch;
+
+  using BaseT::n;
+  using BaseT::global_storage;
+  using BaseT::globalIndex;
 
 public:
   typedef CouplingLocalFunctionSpaceTraits<GFS> Traits;
 
-  //! \brief construct without associating a global function space
-  CouplingLocalFunctionSpaceNode () {}
+  typedef CouplingLocalFunctionSpaceTag ImplementationTag;
 
-  //! \brief construct from global function space
-  CouplingLocalFunctionSpaceNode (const GFS& gfs) :
-    pgfs(&gfs), global(gfs.maxLocalSize())
-  {
-  }
+  template<typename Transformation>
+  CouplingLocalFunctionSpaceNode (shared_ptr<const GFS> gfs, const Tranformation& t)
+    : BaseT(gfs)
+  {}
 
-  //! \brief initialize with grid function space
-  void setup (const GFS& gfs)
-  {
-    pgfs = &gfs;
-  }
-
-  //! \brief get current size
-  typename Traits::IndexContainer::size_type size () const
-  {
-    return n;
-  }
-
-  //! \brief get maximum possible size (which is maxLocalSize from grid function space)
-  typename Traits::IndexContainer::size_type maxSize () const
-  {
-    return pgfs->maxLocalSize();
-  }
-
-  //! \brief get size of an appropriate local vector object
-  /**
-     this is the number of dofs of the complete local function
-     space tree, i.e. the size() of the root node. The local
-     vector objects must always have this size and the localIndex
-     method maps into the range [0,localVectorSize()[
-  */
-  typename Traits::IndexContainer::size_type localVectorSize () const
-  {
-    return lvsize;
-  }
-
-  //! \brief map index in this local function space to root local function space
-  typename Traits::IndexContainer::size_type localIndex (typename Traits::IndexContainer::size_type index) const
-  {
-    return offset+index;
-  }
-
-  //! \brief map index in this local function space to global index space
-  typename Traits::SizeType globalIndex (typename Traits::IndexContainer::size_type index) const
-  {
-    return i[index];
-  }
-
-  //! \brief extract coefficients for one element from container
-  template<typename GC, typename LC>
-  void vread (const GC& globalcontainer, LC& localcontainer) const
-  {
-    localcontainer.resize(n);
-    for (typename Traits::IndexContainer::size_type k=0; k<n; ++k)
-      localcontainer[typename LC::size_type(k)] = B::access(globalcontainer,i[k]);
-  }
-
-  //! \brief write back coefficients for one element to container
-  template<typename GC, typename LC>
-  void vwrite (const LC& localcontainer, GC& globalcontainer) const
-  {
-    for (typename Traits::IndexContainer::size_type k=0; k<n; ++k)
-      B::access(globalcontainer,i[k]) = localcontainer[typename LC::size_type(k)];
-  }
-
-  //! \brief add coefficients for one element to container
-  template<typename GC, typename LC>
-  void vadd (const LC& localcontainer, GC& globalcontainer) const
-  {
-    for (typename Traits::IndexContainer::size_type k=0; k<n; ++k)
-      B::access(globalcontainer,i[k]) += localcontainer[typename LC::size_type(k)];
-  }
-
-  //! \brief print debug information about this local function space
-  void debug () const
-  {
-    std::cout << n << " indices = (";
-    for (typename Traits::IndexContainer::size_type k=0; k<n; k++)
-      std::cout << i[k] << " ";
-    std::cout << ")" << std::endl;
-  }
+  template<typename Transformation>
+  CouplingLocalFunctionSpaceNode (const GFS& gfs, const Tranformation& t)
+    : BaseT(stackobject_to_shared_ptr(gfs))
+  {}
 
   //! \brief bind local function space to entity
   /**
@@ -159,35 +110,22 @@ public:
     // we should only call bind on out selfs
     assert(&node == this);
 
+    typedef typename Traits::Intersection Intersection;
+
     if (!pgfs->contains(is))
       return false;
 
-    // make offset
-    typename Traits::IndexContainer::size_type offset=0;
+    ComputeSizeVisitor<Intersection> csv(is);
+    TypeTree::applyToTree(*this,csv);
 
-    // compute sizes
-    LocalFunctionSpaceBaseVisitNodeMetaProgram<NodeType,NodeType::isLeaf,
-                                               typename Traits::Intersection,
-                                               typename Traits::IndexContainer::iterator,
-                                               typename Traits::IndexContainer::size_type>::
-      reserve(node,is,offset);
+    global_storage.resize(n);
 
-    // now reserve space in vector
-    global.resize(offset);
-    lvsize = global.size();
-
-    // initialize iterators and fill indices
-    offset = 0;
-    LocalFunctionSpaceBaseVisitNodeMetaProgram<NodeType,NodeType::isLeaf,
-                                               typename Traits::Intersection,
-                                               typename Traits::IndexContainer::iterator,
-                                               typename Traits::IndexContainer::size_type>::
-      fill_indices(node,is,global.begin(),offset,lvsize);
+    FillIndicesVisitor<Intersection> fiv(is);
+    TypeTree::applyToTree(*this,fiv);
 
     // apply upMap
-    assert(offset == global.size());
-    for (typename Traits::IndexContainer::size_type i=0; i<offset; i++)
-      global[i] = pgfs->upMap(global[i]);
+    for (typename Traits::IndexContainer::size_type i=0; i<n; ++i)
+      global_storage[i] = pgfs->upMap(global_storage[i]);
 
     return true;
   }
@@ -196,7 +134,7 @@ public:
   //! \brief get local finite element
   const typename Traits::FiniteElementType& finiteElement () const
   {
-    return *plfem;
+    return *pfe;
   }
 
   //! \brief get constraints engine
@@ -205,20 +143,39 @@ public:
     return this->pgfs->constraints();
   }
 
-  const GFS& gridFunctionSpace() const
+  /** \brief write back coefficients for one element to container */
+  template<typename GC, typename LC>
+  void mwrite (const LC& lc, GC& gc) const
   {
-    return *pgfs;
+    // LC and GC are maps of maps
+    typedef typename LC::const_iterator local_col_iterator;
+    typedef typename LC::value_type::second_type local_row_type;
+    typedef typename local_row_type::const_iterator local_row_iterator;
+    typedef typename GC::iterator global_col_iterator;
+    typedef typename GC::value_type::second_type global_row_type;
+
+    for (local_col_iterator cit=lc.begin(); cit!=lc.end(); ++cit)
+      {
+        typename Traits::SizeType i = globalIndex(cit->first);
+        // insert empty row in global container if necessary
+        global_col_iterator gcit = gc.find(i);
+        if (gcit==gc.end())
+          gc[i] = global_row_type();
+
+        // copy row to global container with transformed indices
+        for (local_row_iterator rit=(cit->second).begin(); rit!=(cit->second).end(); ++rit)
+          gc[i][globalIndex(rit->first)] = rit->second;
+      }
   }
 
 private:
-  CountingPointer<GFS const> pgfs;
-  typename Traits::IndexContainer global;
-  typename Traits::IndexContainer::iterator i;
-  typename Traits::IndexContainer::size_type n;
-  typename Traits::IndexContainer::size_type offset;
-  typename Traits::IndexContainer::size_type lvsize;
-  const typename Traits::FiniteElementType* plfem;
+
+  typename FESwitch::Store plfem;
 };
+
+template<typename GridFunctionSpace>
+Dune::PDELab::TypeTree::GenericLeafNodeTransformation<GridFunctionSpace,gfs_to_lfs,CouplingLocalFunctionSpaceNode<GridFunctionSpace> >
+lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_lfs* t, CouplingGridFunctionSpaceTag tag);
 
 #endif
 

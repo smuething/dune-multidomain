@@ -151,7 +151,7 @@ public:
   template<typename LFS>
   static const typename CouplingLocalFunctionSpace<LFS>::Type couplingLocalFunctionSpace(const LFS& lfs)
   {
-    return lfs.template getChild<Traits::couplingLFSIndex>();
+    return lfs.template child<Traits::couplingLFSIndex>();
   }
 
   const CouplingOperator& couplingOperator() const {

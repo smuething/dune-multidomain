@@ -57,20 +57,16 @@ class CouplingLocalFunctionSpaceNode
   typedef LocalFunctionSpaceBaseNode<GFS> BaseT;
 
   template<typename>
-  friend struct PropagateGlobalStorageVisitor;
+  friend struct Dune::PDELab::PropagateGlobalStorageVisitor;
 
   template<typename>
-  friend struct ClearSizeVisitor;
+  friend struct Dune::PDELab::ClearSizeVisitor;
 
   template<typename>
-  friend struct ComputeSizeVisitor;
+  friend struct Dune::PDELab::ComputeSizeVisitor;
 
   template<typename>
-  friend struct FillIndicesVisitor;
-
-  typedef FiniteElementInterfaceSwitch<
-    typename Traits::FiniteElementType
-    > FESwitch;
+  friend struct Dune::PDELab::FillIndicesVisitor;
 
   using BaseT::n;
   using BaseT::global_storage;
@@ -78,6 +74,14 @@ class CouplingLocalFunctionSpaceNode
 
 public:
   typedef CouplingLocalFunctionSpaceTraits<GFS> Traits;
+
+private:
+
+  typedef FiniteElementInterfaceSwitch<
+    typename Traits::FiniteElementType
+    > FESwitch;
+
+public:
 
   typedef CouplingLocalFunctionSpaceTag ImplementationTag;
 

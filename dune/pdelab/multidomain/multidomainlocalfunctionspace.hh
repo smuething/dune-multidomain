@@ -144,10 +144,15 @@ struct ComputeSizeVisitor<Intersection,CouplingLFSTag>
   {
     if (child.gridFunctionSpace().contains(e))
       {
-        // TODO: Fix this - it is definitely wrong!
         Dune::PDELab::ComputeSizeVisitor<Intersection> child_visitor(e,offset);
         Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
         offset = child_visitor.offset;
+      }
+    else
+      {
+        // make sure all children know they are empty
+        Dune::PDELab::ClearSizeVisitor<> child_visitor(offset);
+        Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
       }
   }
 

@@ -131,8 +131,8 @@ namespace functors {
       typedef typename Coupling::Traits::RemoteSubProblem RemoteSubProblem;
       const LocalSubProblem& localSubProblem = coupling.localSubProblem();
       const RemoteSubProblem& remoteSubProblem = coupling.remoteSubProblem();
-      typename LFS::LFSU_C<Data,Coupling> lfsu_c = LFS::lfsu_c(data(),coupling);
-      typename LFS::LFSV_C<Data,Coupling> lfsv_c = LFS::lfsv_c(data(),coupling);
+      typename LFS::LFSU_C<Data,Coupling>::type lfsu_c = LFS::lfsu_c(data(),coupling);
+      typename LFS::LFSV_C<Data,Coupling>::type lfsv_c = LFS::lfsv_c(data(),coupling);
       Data::Operator::extract(coupling).jacobian_enriched_coupling_first(data().ig(),
                                                                          LFS::lfsu_s(data(),localSubProblem),
                                                                          data().x_s(),

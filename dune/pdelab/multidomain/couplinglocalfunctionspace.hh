@@ -178,6 +178,10 @@ private:
 };
 
 template<typename GridFunctionSpace>
+Dune::PDELab::TypeTree::GenericLeafNodeTransformation<GridFunctionSpace,gfs_to_coupling_lfs,CouplingLocalFunctionSpaceNode<GridFunctionSpace> >
+lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs* t, CouplingGridFunctionSpaceTag tag);
+
+template<typename GridFunctionSpace>
 Dune::PDELab::TypeTree::GenericLeafNodeTransformation<GridFunctionSpace,gfs_to_lfs,CouplingLocalFunctionSpaceNode<GridFunctionSpace> >
 lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_lfs* t, CouplingGridFunctionSpaceTag tag);
 

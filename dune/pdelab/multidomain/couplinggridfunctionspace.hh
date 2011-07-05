@@ -133,6 +133,8 @@ public:
 
   typedef Predicate_ Predicate;
 
+  typedef CouplingGridFunctionSpaceTag ImplementationTag;
+
   typedef LeafOrdering<CouplingGridFunctionSpace> Ordering;
 
   //! extract type of container storing Ts

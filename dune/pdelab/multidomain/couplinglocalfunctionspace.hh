@@ -181,8 +181,6 @@ template<typename GridFunctionSpace>
 Dune::PDELab::TypeTree::GenericLeafNodeTransformation<GridFunctionSpace,gfs_to_lfs,CouplingLocalFunctionSpaceNode<GridFunctionSpace> >
 lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_lfs* t, CouplingGridFunctionSpaceTag tag);
 
-#endif
-
 } // namespace MultiDomain
 } // namespace PDELab
 } // namespace Dune

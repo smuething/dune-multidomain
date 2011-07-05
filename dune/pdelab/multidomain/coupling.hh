@@ -174,9 +174,11 @@ public:
     return _remoteSubProblem;
   }
 
-  template<typename SDS1, typename SDS2>
-  bool appliesTo(const SDS1& localSubDomains, const SDS2& remoteSubDomains) const {
-    return localSubProblem().appliesTo(localSubDomains) && remoteSubProblem().appliesTo(remoteSubDomains);
+  template<typename IG>
+  bool appliesTo(const IG& ig) const {
+    return
+      localSubProblem().appliesTo(ig.insideElement()) &&
+      remoteSubProblem().appliesTo(ig.outsideElement());
   }
 
 private:

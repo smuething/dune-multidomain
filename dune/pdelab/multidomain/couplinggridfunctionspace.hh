@@ -267,13 +267,6 @@ public:
       }
   }
 
-  // global Indices from element, needs additional finite element lookup
-  void globalIndices (const Intersection& is,
-                      std::vector<typename Traits::SizeType>& global) const
-  {
-    globalIndices(plfem->find(is),is,global);
-  }
-
   //------------------------------
   // generic data handle interface
   //------------------------------

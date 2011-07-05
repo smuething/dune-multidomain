@@ -158,6 +158,14 @@ public:
     return _operator;
   }
 
+  const CouplingOperator& localOperator() const {
+    return _operator;
+  }
+
+  CouplingOperator& localOperator() {
+    return _operator;
+  }
+
   const LocalSubProblem& localSubProblem() const {
     return _localSubProblem;
   }

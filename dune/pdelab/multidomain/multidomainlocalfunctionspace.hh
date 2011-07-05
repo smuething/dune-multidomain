@@ -52,7 +52,7 @@ struct ComputeSizeVisitorBase
   template<typename LFS, typename Child, typename TreePath, typename ChildIndex>
   void beforeChild(LFS& lfs, Child& child, TreePath treePath, ChildIndex childIndex)
   {
-    impl().compute_size(child,typename gfs_flavor_tag<Child>::type());
+    impl().compute_size(child,typename gfs_flavor_tag<typename Child::Traits::GridFunctionSpaceType>::type());
   }
 
   Impl& impl()
@@ -163,7 +163,7 @@ struct FillIndicesVisitorBase
   template<typename LFS, typename Child, typename TreePath, typename ChildIndex>
   void afterChild(LFS& lfs, Child& child, TreePath treePath, ChildIndex childIndex)
   {
-    impl().fill_indices(child,typename gfs_flavor_tag<Child>::type());
+    impl().fill_indices(child,typename gfs_flavor_tag<typename Child::Traits::GridFunctionSpaceType>::type());
     for (std::size_t i = 0; i<child.size(); ++i)
       (*lfs.global)[child.localIndex(i)] = lfs.pgfs->subMap(childIndex,(*lfs.global)[child.localIndex(i)]);
   }

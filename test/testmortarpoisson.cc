@@ -392,6 +392,27 @@ int main(int argc, char** argv) {
 
   pdesolver.apply(u);
 
+    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,0> SGFS0;
+    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,1> SGFS1;
+    SGFS0 sgfs0(multigfs);
+    SGFS1 sgfs1(multigfs);
+
+    {
+      typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> DGF0;
+      DGF0 dgf0(sgfs0,u);
+      Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTKOptions::conforming);
+      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF0>(dgf0,"u"));
+      vtkwriter.write("testmortarpoisson-left",Dune::VTKOptions::ascii);
+    }
+
+    {
+      typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> DGF1;
+      DGF1 dgf1(sgfs1,u);
+      Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
+      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF1>(dgf1,"u"));
+      vtkwriter.write("testmortarpoisson-right",Dune::VTKOptions::ascii);
+    }
+
   }
   catch (Dune::Exception &e){
     std::cerr << "Dune reported error: " << e << std::endl;

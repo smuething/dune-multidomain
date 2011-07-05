@@ -190,7 +190,7 @@ public:
   }
 
   // get finite element map, I think we dont need it
-  const LFEM& localFiniteElementMap () const
+  const LFEM& finiteElementMap () const
   {
     return *plfem;
   }

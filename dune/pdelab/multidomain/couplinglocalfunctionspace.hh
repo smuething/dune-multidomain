@@ -116,20 +116,20 @@ public:
 
     typedef typename Traits::Intersection Intersection;
 
-    if (!pgfs->contains(is))
+    if (!this->gridFunctionSpace().contains(is))
       return false;
 
-    ComputeSizeVisitor<Intersection> csv(is);
+    Dune::PDELab::ComputeSizeVisitor<Intersection> csv(is);
     TypeTree::applyToTree(*this,csv);
 
     global_storage.resize(n);
 
-    FillIndicesVisitor<Intersection> fiv(is);
+    Dune::PDELab::FillIndicesVisitor<Intersection> fiv(is);
     TypeTree::applyToTree(*this,fiv);
 
     // apply upMap
     for (typename Traits::IndexContainer::size_type i=0; i<n; ++i)
-      global_storage[i] = pgfs->upMap(global_storage[i]);
+      global_storage[i] = this->gridFunctionSpace().upMap(global_storage[i]);
 
     return true;
   }
@@ -174,7 +174,7 @@ public:
 
 private:
 
-  typename FESwitch::Store plfem;
+  typename FESwitch::Store pfe;
 };
 
 template<typename GridFunctionSpace>

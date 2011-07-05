@@ -86,12 +86,12 @@ public:
   typedef CouplingLocalFunctionSpaceTag ImplementationTag;
 
   template<typename Transformation>
-  CouplingLocalFunctionSpaceNode (shared_ptr<const GFS> gfs, const Tranformation& t)
+  CouplingLocalFunctionSpaceNode (shared_ptr<const GFS> gfs, const Transformation& t)
     : BaseT(gfs)
   {}
 
   template<typename Transformation>
-  CouplingLocalFunctionSpaceNode (const GFS& gfs, const Tranformation& t)
+  CouplingLocalFunctionSpaceNode (const GFS& gfs, const Transformation& t)
     : BaseT(stackobject_to_shared_ptr(gfs))
   {}
 

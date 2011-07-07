@@ -56,7 +56,7 @@ class NumericalJacobianCoupling
 {
 public:
   NumericalJacobianCoupling ()
-    : epsilon(1e-11)
+    : epsilon(1e-8)
   {}
 
   NumericalJacobianCoupling (double epsilon_)
@@ -148,7 +148,7 @@ class NumericalJacobianApplyCoupling
 {
 public:
   NumericalJacobianApplyCoupling ()
-    : epsilon(1e-11)
+    : epsilon(1e-8)
   {}
 
   NumericalJacobianApplyCoupling (double epsilon_)
@@ -301,7 +301,7 @@ class NumericalJacobianEnrichedCoupling
 {
 public:
   NumericalJacobianEnrichedCoupling ()
-    : epsilon(1e-11)
+    : epsilon(1e-8)
   {}
 
   NumericalJacobianEnrichedCoupling (double epsilon_)

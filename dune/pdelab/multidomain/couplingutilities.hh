@@ -136,13 +136,7 @@ private:
 };
 
 
-//! Implement jacobian_apply_skeleton() based on alpha_skeleton()
-/**
- * Derive from this class to add numerical jacobian application for
- * skeleton.  The derived class needs to implement alpha_skeleton().
- *
- * \tparam Imp Type of the derived class (CRTP-trick).
- */
+//! FIXME: This still needs to be ported!!!
 template<typename Imp>
 class NumericalJacobianApplyCoupling
 {
@@ -289,13 +283,7 @@ public:
 };
 
 
-//! Implement jacobian_skeleton() based on alpha_skeleton()
-/**
- * Derive from this class to add numerical jacobian for skeleton.  The
- * derived class needs to implement alpha_skeleton().
- *
- * \tparam Imp Type of the derived class (CRTP-trick).
- */
+//! Implement jacobian_enriched_coupling_first() and jacobian_enriched_coupling_second() based numerical differentiation of the residuals.
 template<typename Imp>
 class NumericalJacobianEnrichedCoupling
 {
@@ -472,13 +460,7 @@ private:
 };
 
 
-//! Implement jacobian_apply_skeleton() based on alpha_skeleton()
-/**
- * Derive from this class to add numerical jacobian application for
- * skeleton.  The derived class needs to implement alpha_skeleton().
- *
- * \tparam Imp Type of the derived class (CRTP-trick).
- */
+//! FIXME: This still needs to be ported!!!
 template<typename Imp>
 class NumericalJacobianApplyEnrichedCoupling
 {

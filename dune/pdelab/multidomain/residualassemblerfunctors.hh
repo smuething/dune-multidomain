@@ -2,6 +2,7 @@
 #define DUNE_PDELAB_MULTIDOMAIN_RESIDUALASSEMBLERFUNCTORS_HH
 
 #include <dune/pdelab/multidomain/datawrappers.hh>
+#include <dune/pdelab/multidomain/operatorcallguards.hh>
 #include <dune/pdelab/multidomain/localfunctionspaceutility.hh>
 #include <dune/pdelab/gridoperatorspace/gridoperatorspaceutilities.hh>
 #include <dune/pdelab/constraints/constraints.hh>
@@ -71,19 +72,17 @@ namespace functors {
         {
           if (!(LOP::doSkeletonTwoSided || data().ig().oneSidedDirection()))
             return;
-          LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
-            alpha_skeleton(Data::Operator::extract(subProblem),data().ig(),
-                           LFS::lfsu_s(data(),subProblem),data().x_s(),LFS::lfsv_s(data(),subProblem),
-                           LFS::lfsu_n(data(),subProblem),data().x_n(),LFS::lfsv_n(data(),subProblem),
-                           data().r_s(),data().r_n());
+          guarded_call::alpha_skeleton(Data::Operator::extract(subProblem),data().ig(),
+                                       LFS::lfsu_s(data(),subProblem),data().x_s(),LFS::lfsv_s(data(),subProblem),
+                                       LFS::lfsu_n(data(),subProblem),data().x_n(),LFS::lfsv_n(data(),subProblem),
+                                       data().r_s(),data().r_n());
         }
       else
         {
-          LocalAssemblerCallSwitch<LOP,LOP::doAlphaBoundary>::
-            alpha_boundary(Data::Operator::extract(subProblem),
-                           data().ig(),
-                           LFS::lfsu_s(data(),subProblem),data().x_s(),LFS::lfsv_s(data(),subProblem),
-                           data().r_s());
+          guarded_call::alpha_boundary(Data::Operator::extract(subProblem),
+                                       data().ig(),
+                                       LFS::lfsu_s(data(),subProblem),data().x_s(),LFS::lfsv_s(data(),subProblem),
+                                       data().r_s());
         }
     }
   };
@@ -106,18 +105,16 @@ namespace functors {
         {
           if (!(LOP::doSkeletonTwoSided || data().ig().oneSidedDirection()))
             return;
-          LocalAssemblerCallSwitch<LOP,LOP::doLambdaSkeleton>::
-            lambda_skeleton(Data::Operator::extract(subProblem),data().ig(),
-                            LFS::lfsv_s(data(),subProblem),
-                            LFS::lfsv_n(data(),subProblem),
-                            data().r_s(),data().r_n());
+          guarded_call::lambda_skeleton(Data::Operator::extract(subProblem),data().ig(),
+                                        LFS::lfsv_s(data(),subProblem),
+                                        LFS::lfsv_n(data(),subProblem),
+                                        data().r_s(),data().r_n());
         }
       else
         {
-          LocalAssemblerCallSwitch<LOP,LOP::doLambdaBoundary>::
-            lambda_boundary(Data::Operator::extract(subProblem),data().ig(),
-                            LFS::lfsv_s(data(),subProblem),
-                            data().r_s());
+          guarded_call::lambda_boundary(Data::Operator::extract(subProblem),data().ig(),
+                                        LFS::lfsv_s(data(),subProblem),
+                                        data().r_s());
         }
     }
   };

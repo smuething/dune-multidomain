@@ -235,20 +235,26 @@ namespace functors {
       typedef typename Coupling::Traits::RemoteSubProblem RemoteSubProblem;
       const LocalSubProblem& localSubProblem = coupling.localSubProblem();
       const RemoteSubProblem& remoteSubProblem = coupling.remoteSubProblem();
-      typename LFS::LFSU_C<Data,Coupling> lfsu_c = LFS::lfsu_c(data(),coupling);
-      typename LFS::LFSV_C<Data,Coupling> lfsv_c = LFS::lfsv_c(data(),coupling);
-      Data::Operator::extract(coupling).alpha_enriched_coupling_first(data().ig(),
-                                                                      LFS::lfsu_s(data(),localSubProblem),
-                                                                      data().x_s(),
-                                                                      LFS::lfsv_s(data(),localSubProblem),
-                                                                      lfsu_c,data().x_c(),lfsv_c,
-                                                                      data().r_s(),data().r_c());
-      Data::Operator::extract(coupling).alpha_enriched_coupling_second(data().ig(),
-                                                                       LFS::lfsu_n(data(),remoteSubProblem),
-                                                                       data().x_n(),
-                                                                       LFS::lfsv_n(data(),remoteSubProblem),
-                                                                       lfsu_c,data().x_c(),lfsv_c,
-                                                                       data().r_n(),data().r_c());
+      typename LFS::LFSU_C<Data,Coupling>::type lfsu_c = LFS::lfsu_c(data(),coupling);
+      typename LFS::LFSV_C<Data,Coupling>::type lfsv_c = LFS::lfsv_c(data(),coupling);
+      guarded_call::alpha_enriched_coupling_first(Data::Operator::extract(coupling),
+                                                  data().ig(),
+                                                  LFS::lfsu_s(data(),localSubProblem),
+                                                  data().x_s(),
+                                                  LFS::lfsv_s(data(),localSubProblem),
+                                                  lfsu_c,data().x_c(),lfsv_c,
+                                                  data().r_s(),data().r_c());
+      guarded_call::alpha_enriched_coupling_second(Data::Operator::extract(coupling),
+                                                   data().ig(),
+                                                   LFS::lfsu_n(data(),remoteSubProblem),
+                                                   data().x_n(),
+                                                   LFS::lfsv_n(data(),remoteSubProblem),
+                                                   lfsu_c,data().x_c(),lfsv_c,
+                                                   data().r_n(),data().r_c());
+      guarded_call::alpha_enriched_coupling(Data::Operator::extract(coupling),
+                                            data().ig(),
+                                            lfsu_c,data().x_c(),lfsv_c,
+                                            data().r_c());
     }
 
   };
@@ -272,14 +278,20 @@ namespace functors {
       const LocalSubProblem& localSubProblem = coupling.localSubProblem();
       const RemoteSubProblem& remoteSubProblem = coupling.remoteSubProblem();
       typename LFS::LFSV_C<Data,Coupling> lfsv_c = LFS::lfsv_c(data(),coupling);
-      Data::Operator::extract(coupling).alpha_enriched_coupling_first(data().ig(),
-                                                                      LFS::lfsv_s(data(),localSubProblem),
-                                                                      lfsv_c,
-                                                                      data().r_s(),data().r_c());
-      Data::Operator::extract(coupling).alpha_enriched_coupling_second(data().ig(),
-                                                                       LFS::lfsv_n(data(),remoteSubProblem),
-                                                                       lfsv_c,
-                                                                       data().r_n(),data().r_c());
+      guarded_call::lambda_enriched_coupling_first(Data::Operator::extract(coupling),
+                                                   data().ig(),
+                                                   LFS::lfsv_s(data(),localSubProblem),
+                                                   lfsv_c,
+                                                   data().r_s(),data().r_c());
+      guarded_call::lambda_enriched_coupling_second(Data::Operator::extract(coupling),
+                                                    data().ig(),
+                                                    LFS::lfsv_n(data(),remoteSubProblem),
+                                                    lfsv_c,
+                                                    data().r_n(),data().r_c());
+      guarded_call::lambda_enriched_coupling(Data::Operator::extract(coupling),
+                                             data().ig(),
+                                             lfsv_c,
+                                             data().r_c());
     }
 
   };

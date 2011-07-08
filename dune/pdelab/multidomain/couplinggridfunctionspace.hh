@@ -133,6 +133,8 @@ public:
 
   typedef Predicate_ Predicate;
 
+  typedef CouplingGridFunctionSpaceTag ImplementationTag;
+
   typedef LeafOrdering<CouplingGridFunctionSpace> Ordering;
 
   //! extract type of container storing Ts
@@ -188,7 +190,7 @@ public:
   }
 
   // get finite element map, I think we dont need it
-  const LFEM& localFiniteElementMap () const
+  const LFEM& finiteElementMap () const
   {
     return *plfem;
   }
@@ -230,27 +232,30 @@ public:
   }
 
   //! compute global indices for one element
-  void globalIndices (const typename Traits::FiniteElementType& lfe,
+  template<typename StorageIterator>
+  void globalIndices (const typename Traits::FiniteElementType& fe,
                       const Intersection& is,
-                      std::vector<typename Traits::SizeType>& global) const
+                      StorageIterator it, StorageIterator endit) const
   {
     // get layout of entity
     if (!predicate_(is))
       {
-        global.resize(0);
         return;
       }
-    const typename Traits::FiniteElementType::Traits::LocalCoefficientsType&
-      lc = lfe.localCoefficients();
-    global.resize(lc.size());
+
+    typedef FiniteElementInterfaceSwitch<
+      typename Traits::FiniteElementType
+      > FESwitch;
+    const typename FESwitch::Coefficients &lc =
+      FESwitch::coefficients(fe);
 
     DOFMapper<GV> dm(is);
 
-    for (std::size_t i=0; i<lc.size(); ++i)
+    for (std::size_t i=0; i<lc.size(); ++i, ++it)
       {
         // get geometry type of subentity
         Dune::GeometryType gt=Dune::GenericReferenceElements<double,GV::Grid::dimension - 1>
-          ::general(lfe.type()).type(lc.localKey(i).subEntity(),lc.localKey(i).codim());
+          ::general(fe.type()).type(lc.localKey(i).subEntity(),lc.localKey(i).codim());
 
         // evaluate consecutive index of subentity
         int index = gv.indexSet().subIndex(dm.element(),
@@ -258,15 +263,8 @@ public:
                                            lc.localKey(i).codim() + 1);
 
         // now compute
-        global[i] = offset[(gtoffset.find(gt)->second)+index]+lc.localKey(i).index();
+        (*it) = offset[(gtoffset.find(gt)->second)+index]+lc.localKey(i).index();
       }
-  }
-
-  // global Indices from element, needs additional finite element lookup
-  void globalIndices (const Intersection& is,
-                      std::vector<typename Traits::SizeType>& global) const
-  {
-    globalIndices(plfem->find(is),is,global);
   }
 
   //------------------------------
@@ -400,7 +398,7 @@ public:
                 Dune::GeometryType gt=Dune::GenericReferenceElements<double,GV::Grid::dimension - 1>
                   ::general(iit->type()).type(lc.localKey(i).subEntity(),lc.localKey(i).codim());
                 unsigned int index = gtoffset[gt] +
-                  is.subIndex(*it,
+                  is.subIndex(dm.element(),
                               dm.mapSubIndex(lc.localKey(i).subEntity(),lc.localKey(i).codim()),
                               lc.localKey(i).codim()+1);
                 offset[index] = std::max(offset[index],

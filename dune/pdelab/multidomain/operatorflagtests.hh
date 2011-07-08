@@ -157,7 +157,9 @@ struct do_pattern_enriched_coupling
 {
   template<typename T>
   struct test {
-    static const bool value = Operator::template ExtractType<T>::Type::doPatternEnrichedCoupling;
+    static const bool value =
+      Operator::template ExtractType<T>::Type::doPatternEnrichedCouplingToSubProblems ||
+      Operator::template ExtractType<T>::Type::doPatternEnrichedCoupling;
   };
 };
 
@@ -222,7 +224,9 @@ struct do_alpha_enriched_coupling
 {
   template<typename T>
   struct test {
-    static const bool value = Operator::template ExtractType<T>::Type::doAlphaEnrichedCoupling;
+    static const bool value =
+      Operator::template ExtractType<T>::Type::doAlphaEnrichedCouplingToSubProblems ||
+      Operator::template ExtractType<T>::Type::doAlphaEnrichedCoupling;
   };
 };
 
@@ -289,7 +293,9 @@ struct do_lambda_enriched_coupling
 {
   template<typename T>
   struct test {
-    static const bool value = Operator::template ExtractType<T>::Type::doLambdaEnrichedCoupling;
+    static const bool value =
+      Operator::template ExtractType<T>::Type::doLambdaEnrichedCouplingToSubProblems ||
+      Operator::template ExtractType<T>::Type::doLambdaEnrichedCoupling;
   };
 };
 

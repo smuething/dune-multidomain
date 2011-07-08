@@ -94,7 +94,7 @@ namespace LFS {
   template<typename Data, typename Coupling>
   struct LFSU_C
   {
-    typedef typename Coupling::template CouplingLocalFunctionSpace<typename Data::LFSU_C>::Type type;
+    typedef const typename Coupling::template CouplingLocalFunctionSpace<typename Data::LFSU_C>::Type& type;
   };
 
   template<typename Data, typename Coupling>
@@ -107,7 +107,7 @@ namespace LFS {
   template<typename Data, typename Coupling>
   struct LFSV_C
   {
-    typedef typename Coupling::template CouplingLocalFunctionSpace<typename Data::LFSV_C>::Type type;
+    typedef const typename Coupling::template CouplingLocalFunctionSpace<typename Data::LFSV_C>::Type& type;
   };
 
   template<typename Data, typename Coupling>

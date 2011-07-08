@@ -131,20 +131,26 @@ namespace functors {
       typedef typename Coupling::Traits::RemoteSubProblem RemoteSubProblem;
       const LocalSubProblem& localSubProblem = coupling.localSubProblem();
       const RemoteSubProblem& remoteSubProblem = coupling.remoteSubProblem();
-      typename LFS::LFSU_C<Data,Coupling> lfsu_c = LFS::lfsu_c(data(),coupling);
-      typename LFS::LFSV_C<Data,Coupling> lfsv_c = LFS::lfsv_c(data(),coupling);
-      Data::Operator::extract(coupling).jacobian_enriched_coupling_first(data().ig(),
-                                                                         LFS::lfsu_s(data(),localSubProblem),
-                                                                         data().x_s(),
-                                                                         LFS::lfsv_s(data(),localSubProblem),
-                                                                         lfsu_c,data().x_c(),lfsv_c,
-                                                                         data().a_ss(),data().a_sc(),data().a_cs(),data().a_cc());
-      Data::Operator::extract(coupling).jacobian_enriched_coupling_second(data().ig(),
-                                                                          LFS::lfsu_n(data(),remoteSubProblem),
-                                                                          data().x_n(),
-                                                                          LFS::lfsv_n(data(),remoteSubProblem),
-                                                                          lfsu_c,data().x_c(),lfsv_c,
-                                                                          data().a_nn(),data().a_nc(),data().a_cn(),data().a_cc());
+      typename LFS::LFSU_C<Data,Coupling>::type lfsu_c = LFS::lfsu_c(data(),coupling);
+      typename LFS::LFSV_C<Data,Coupling>::type lfsv_c = LFS::lfsv_c(data(),coupling);
+      guarded_call::jacobian_enriched_coupling_first(Data::Operator::extract(coupling),
+                                                     data().ig(),
+                                                     LFS::lfsu_s(data(),localSubProblem),
+                                                     data().x_s(),
+                                                     LFS::lfsv_s(data(),localSubProblem),
+                                                     lfsu_c,data().x_c(),lfsv_c,
+                                                     data().a_ss(),data().a_sc(),data().a_cs(),data().a_cc());
+      guarded_call::jacobian_enriched_coupling_second(Data::Operator::extract(coupling),
+                                                      data().ig(),
+                                                      LFS::lfsu_n(data(),remoteSubProblem),
+                                                      data().x_n(),
+                                                      LFS::lfsv_n(data(),remoteSubProblem),
+                                                      lfsu_c,data().x_c(),lfsv_c,
+                                                      data().a_nn(),data().a_nc(),data().a_cn(),data().a_cc());
+      guarded_call::jacobian_enriched_coupling(Data::Operator::extract(coupling),
+                                               data().ig(),
+                                               lfsu_c,data().x_c(),lfsv_c,
+                                               data().a_cc());
     }
 
   };

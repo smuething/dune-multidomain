@@ -13,10 +13,13 @@ class CouplingOperatorDefaultFlags
 public:
   static const bool doSkeletonTwoSided = false;
   static const bool doPatternCoupling = false;
+  static const bool doPatternEnrichedCouplingToSubProblems = false;
   static const bool doPatternEnrichedCoupling = false;
   static const bool doAlphaCoupling = false;
+  static const bool doAlphaEnrichedCouplingToSubProblems = false;
   static const bool doAlphaEnrichedCoupling = false;
   static const bool doLambdaCoupling = false;
+  static const bool doLambdaEnrichedCouplingToSubProblems = false;
   static const bool doLambdaEnrichedCoupling = false;
 };
 
@@ -56,7 +59,7 @@ class NumericalJacobianCoupling
 {
 public:
   NumericalJacobianCoupling ()
-    : epsilon(1e-11)
+    : epsilon(1e-8)
   {}
 
   NumericalJacobianCoupling (double epsilon_)
@@ -136,19 +139,13 @@ private:
 };
 
 
-//! Implement jacobian_apply_skeleton() based on alpha_skeleton()
-/**
- * Derive from this class to add numerical jacobian application for
- * skeleton.  The derived class needs to implement alpha_skeleton().
- *
- * \tparam Imp Type of the derived class (CRTP-trick).
- */
+//! FIXME: This still needs to be ported!!!
 template<typename Imp>
 class NumericalJacobianApplyCoupling
 {
 public:
   NumericalJacobianApplyCoupling ()
-    : epsilon(1e-11)
+    : epsilon(1e-8)
   {}
 
   NumericalJacobianApplyCoupling (double epsilon_)
@@ -217,7 +214,7 @@ private:
 };
 
 
-class FullEnrichedCouplingFirstPattern
+class FullEnrichedCouplingFirstSubProblemPattern
 {
 
 public:
@@ -243,7 +240,7 @@ public:
 };
 
 
-class FullEnrichedCouplingSecondPattern
+class FullEnrichedCouplingSecondSubProblemPattern
 {
 
 public:
@@ -289,37 +286,36 @@ public:
 };
 
 
-//! Implement jacobian_skeleton() based on alpha_skeleton()
-/**
- * Derive from this class to add numerical jacobian for skeleton.  The
- * derived class needs to implement alpha_skeleton().
- *
- * \tparam Imp Type of the derived class (CRTP-trick).
- */
+//! Implement jacobian_enriched_coupling_first() based on numerical differentiation of the residuals.
 template<typename Imp>
-class NumericalJacobianEnrichedCoupling
+class NumericalJacobianEnrichedCouplingToFirstSubProblem
 {
 public:
-  NumericalJacobianEnrichedCoupling ()
-    : epsilon(1e-11)
+  NumericalJacobianEnrichedCouplingToFirstSubProblem ()
+    : epsilon(1e-8)
   {}
 
-  NumericalJacobianEnrichedCoupling (double epsilon_)
+  NumericalJacobianEnrichedCouplingToFirstSubProblem (double epsilon_)
     : epsilon(epsilon_)
   {}
 
-  //! compute local jacobian of the skeleton term
+  //! compute local jacobian of the coupling term between mortar space and first subproblem
   template<typename IG, typename X,
            typename LFSU_S, typename LFSV_S,
            typename LFSU_C, typename LFSV_C,
-           typename R>
+           typename Jacobian>
   void jacobian_enriched_coupling_first
   ( const IG& ig,
     const LFSU_S& lfsu_s, const X& x_s, const LFSV_S& lfsv_s,
     const LFSU_C& lfsu_c, const X& x_c, const LFSV_C& lfsv_c,
-    LocalMatrix<R>& mat_ss, LocalMatrix<R>& mat_sc,
-    LocalMatrix<R>& mat_cs, LocalMatrix<R>& mat_cc) const
+    Jacobian& mat_ss, Jacobian& mat_sc,
+    Jacobian& mat_cs, Jacobian& mat_cc) const
   {
+    typedef typename X::value_type D;
+    typedef typename Jacobian::value_type R;
+    typedef LocalVector<R,TestSpaceTag,typename Jacobian::weight_type> ResidualVector;
+    typedef typename ResidualVector::WeightedAccumulationView ResidualView;
+
     const int m_s=lfsv_s.size();
     const int m_c=lfsv_c.size();
     const int n_s=lfsu_s.size();
@@ -327,119 +323,57 @@ public:
 
     X u_s(x_s);
     X u_c(x_c);
-    std::vector<R> down_s(m_s,0.0),up_s(m_s);
-    std::vector<R> down_c(m_c,0.0),up_c(m_c);
+
+    ResidualVector down_s(mat_ss.nrows()),up_s(mat_ss.nrows());
+    ResidualView downview_s = down_s.weightedAccumulationView(1.0);
+    ResidualView upview_s = up_s.weightedAccumulationView(1.0);
+
+    ResidualVector down_c(mat_cc.nrows()),up_c(mat_cc.nrows());
+    ResidualView downview_c = down_c.weightedAccumulationView(1.0);
+    ResidualView upview_c = up_c.weightedAccumulationView(1.0);
 
     // base line
     asImp().alpha_enriched_coupling_first(ig,
                                           lfsu_s,u_s,lfsv_s,
                                           lfsu_c,u_c,lfsv_c,
-                                          down_s,down_c);
+                                          downview_s,downview_c);
 
     // jiggle in self
-    for (int j=0; j<n_s; j++)
+    for (int j=0; j<n_s; ++j)
       {
-        std::fill(up_s.begin(),up_s.end(),0.0);
-        std::fill(up_c.begin(),up_c.end(),0.0);
+        up_s = 0.0;
+        up_c = 0.0;
 
-        R delta = epsilon*(1.0+std::abs(u_s[j]));
-        u_s[j] += delta;
+        D delta = epsilon*(1.0+std::abs(u_s(lfsu_s,j)));
+        u_s(lfsu_s,j) += delta;
         asImp().alpha_enriched_coupling_first(ig,
                                               lfsu_s,u_s,lfsv_s,
                                               lfsu_c,u_c,lfsv_c,
-                                              up_s,up_c);
-        for (int i=0; i<m_s; i++)
-          mat_ss(i,j) += (up_s[i]-down_s[i])/delta;
-        for (int i=0; i<m_c; i++)
-          mat_cs(i,j) += (up_c[i]-down_c[i])/delta;
-        u_s[j] = x_s[j];
+                                              upview_s,upview_c);
+        for (int i=0; i<m_s; ++i)
+          mat_ss.accumulate(lfsv_s,i,lfsu_s,j,(up_s(lfsv_s,i)-down_s(lfsv_s,i))/delta);
+        for (int i=0; i<m_c; ++i)
+          mat_cs.accumulate(lfsv_c,i,lfsu_s,j,(up_c(lfsv_c,i)-down_c(lfsv_c,i))/delta);
+        u_s(lfsu_s,j) = x_s(lfsu_s,j);
       }
 
     // jiggle in coupling
     for (int j=0; j<n_c; j++)
       {
-        std::fill(up_s.begin(),up_s.end(),0.0);
-        std::fill(up_c.begin(),up_c.end(),0.0);
+        up_s = 0.0;
+        up_c = 0.0;
 
-        R delta = epsilon*(1.0+std::abs(u_c[j]));
-        u_c[j] += delta;
+        D delta = epsilon*(1.0+std::abs(u_c(lfsu_c,j)));
+        u_c(lfsu_c,j) += delta;
         asImp().alpha_enriched_coupling_first(ig,
                                               lfsu_s,u_s,lfsv_s,
                                               lfsu_c,u_c,lfsv_c,
-                                              up_s,up_c);
-        for (int i=0; i<m_s; i++)
-          mat_sc(i,j) += (up_s[i]-down_s[i])/delta;
-        for (int i=0; i<m_c; i++)
-          mat_cc(i,j) += (up_c[i]-down_c[i])/delta;
-        u_c[j] = x_c[j];
-      }
-  }
-
-
-  //! compute local jacobian of the skeleton term
-  template<typename IG, typename X,
-           typename LFSU_N, typename LFSV_N,
-           typename LFSU_C, typename LFSV_C,
-           typename R>
-  void jacobian_enriched_coupling_second
-  ( const IG& ig,
-    const LFSU_N& lfsu_n, const X& x_n, const LFSV_N& lfsv_n,
-    const LFSU_C& lfsu_c, const X& x_c, const LFSV_C& lfsv_c,
-    LocalMatrix<R>& mat_nn, LocalMatrix<R>& mat_nc,
-    LocalMatrix<R>& mat_cn, LocalMatrix<R>& mat_cc) const
-  {
-    const int m_n=lfsv_n.size();
-    const int m_c=lfsv_c.size();
-    const int n_n=lfsu_n.size();
-    const int n_c=lfsu_c.size();
-
-    X u_n(x_n);
-    X u_c(x_c);
-    std::vector<R> down_n(m_n,0.0),up_n(m_n);
-    std::vector<R> down_c(m_c,0.0),up_c(m_c);
-
-    // base line
-    asImp().alpha_enriched_coupling_second(ig,
-                                           lfsu_n,u_n,lfsv_n,
-                                           lfsu_c,u_c,lfsv_c,
-                                           down_n,down_c);
-
-    // jiggle in neighbor
-    for (int j=0; j<n_n; j++)
-      {
-        std::fill(up_n.begin(),up_n.end(),0.0);
-        std::fill(up_c.begin(),up_c.end(),0.0);
-
-        R delta = epsilon*(1.0+std::abs(u_n[j]));
-        u_n[j] += delta;
-        asImp().alpha_enriched_coupling_second(ig,
-                                               lfsu_n,u_n,lfsv_n,
-                                               lfsu_c,u_c,lfsv_c,
-                                               up_n,up_c);
-        for (int i=0; i<m_n; i++)
-          mat_nn(i,j) += (up_n[i]-down_n[i])/delta;
-        for (int i=0; i<m_c; i++)
-          mat_cn(i,j) += (up_c[i]-down_c[i])/delta;
-        u_n[j] = x_n[j];
-      }
-
-    // jiggle in coupling
-    for (int j=0; j<n_c; j++)
-      {
-        std::fill(up_n.begin(),up_n.end(),0.0);
-        std::fill(up_c.begin(),up_c.end(),0.0);
-
-        R delta = epsilon*(1.0+std::abs(u_c[j]));
-        u_c[j] += delta;
-        asImp().alpha_enriched_coupling_second(ig,
-                                               lfsu_n,u_n,lfsv_n,
-                                               lfsu_c,u_c,lfsv_c,
-                                               up_n,up_c);
-        for (int i=0; i<m_n; i++)
-          mat_nc(i,j) += (up_n[i]-down_n[i])/delta;
-        for (int i=0; i<m_c; i++)
-          mat_cc(i,j) += (up_c[i]-down_c[i])/delta;
-        u_c[j] = x_c[j];
+                                              upview_s,upview_c);
+        for (int i=0; i<m_s; ++i)
+          mat_sc.accumulate(lfsv_s,i,lfsu_c,j,(up_s(lfsv_s,i)-down_s(lfsv_s,i))/delta);
+        for (int i=0; i<m_c; ++i)
+          mat_cc.accumulate(lfsv_c,i,lfsu_c,j,(up_c(lfsv_c,i)-down_c(lfsv_c,i))/delta);
+        u_c(lfsu_c,j) = x_c(lfsu_c,j);
       }
   }
 
@@ -450,13 +384,170 @@ private:
 };
 
 
-//! Implement jacobian_apply_skeleton() based on alpha_skeleton()
-/**
- * Derive from this class to add numerical jacobian application for
- * skeleton.  The derived class needs to implement alpha_skeleton().
- *
- * \tparam Imp Type of the derived class (CRTP-trick).
- */
+//! Implement jacobian_enriched_coupling_second() based on numerical differentiation of the residuals.
+template<typename Imp>
+class NumericalJacobianEnrichedCouplingToSecondSubProblem
+{
+public:
+  NumericalJacobianEnrichedCouplingToSecondSubProblem ()
+    : epsilon(1e-8)
+  {}
+
+  NumericalJacobianEnrichedCouplingToSecondSubProblem (double epsilon_)
+    : epsilon(epsilon_)
+  {}
+
+  //! compute local jacobian of the coupling term between the mortar space and the second subproblem
+  template<typename IG, typename X,
+           typename LFSU_N, typename LFSV_N,
+           typename LFSU_C, typename LFSV_C,
+           typename Jacobian>
+  void jacobian_enriched_coupling_second
+  ( const IG& ig,
+    const LFSU_N& lfsu_n, const X& x_n, const LFSV_N& lfsv_n,
+    const LFSU_C& lfsu_c, const X& x_c, const LFSV_C& lfsv_c,
+    Jacobian& mat_nn, Jacobian& mat_nc,
+    Jacobian& mat_cn, Jacobian& mat_cc) const
+  {
+    typedef typename X::value_type D;
+    typedef typename Jacobian::value_type R;
+    typedef LocalVector<R,TestSpaceTag,typename Jacobian::weight_type> ResidualVector;
+    typedef typename ResidualVector::WeightedAccumulationView ResidualView;
+
+    const int m_n=lfsv_n.size();
+    const int m_c=lfsv_c.size();
+    const int n_n=lfsu_n.size();
+    const int n_c=lfsu_c.size();
+
+    X u_n(x_n);
+    X u_c(x_c);
+
+    ResidualVector down_n(mat_nn.nrows()),up_n(mat_nn.nrows());
+    ResidualView downview_n = down_n.weightedAccumulationView(1.0);
+    ResidualView upview_n = up_n.weightedAccumulationView(1.0);
+
+    ResidualVector down_c(mat_cc.nrows()),up_c(mat_cc.nrows());
+    ResidualView downview_c = down_c.weightedAccumulationView(1.0);
+    ResidualView upview_c = up_c.weightedAccumulationView(1.0);
+
+    // base line
+    asImp().alpha_enriched_coupling_second(ig,
+                                           lfsu_n,u_n,lfsv_n,
+                                           lfsu_c,u_c,lfsv_c,
+                                           downview_n,downview_c);
+
+    // jiggle in neighbor
+    for (int j=0; j<n_n; ++j)
+      {
+        up_n = 0.0;
+        up_c = 0.0;
+
+        D delta = epsilon*(1.0+std::abs(u_n(lfsu_n,j)));
+        u_n(lfsu_n,j) += delta;
+        asImp().alpha_enriched_coupling_second(ig,
+                                               lfsu_n,u_n,lfsv_n,
+                                               lfsu_c,u_c,lfsv_c,
+                                               upview_n,upview_c);
+        for (int i=0; i<m_n; ++i)
+          mat_nn.accumulate(lfsv_n,i,lfsu_n,j,(up_n(lfsv_n,i)-down_n(lfsv_n,i))/delta);
+        for (int i=0; i<m_c; ++i)
+          mat_cn.accumulate(lfsv_c,i,lfsu_n,j,(up_c(lfsv_c,i)-down_c(lfsv_c,i))/delta);
+        u_n(lfsu_n,j) = x_n(lfsu_n,j);
+      }
+
+    // jiggle in coupling
+    for (int j=0; j<n_c; j++)
+      {
+        up_n = 0.0;
+        up_c = 0.0;
+
+        D delta = epsilon*(1.0+std::abs(u_c(lfsu_c,j)));
+        u_c(lfsu_c,j) += delta;
+        asImp().alpha_enriched_coupling_second(ig,
+                                               lfsu_n,u_n,lfsv_n,
+                                               lfsu_c,u_c,lfsv_c,
+                                               upview_n,upview_c);
+        for (int i=0; i<m_n; ++i)
+          mat_nc.accumulate(lfsv_n,i,lfsu_c,j,(up_n(lfsv_n,i)-down_n(lfsv_n,i))/delta);
+        for (int i=0; i<m_c; ++i)
+          mat_cc.accumulate(lfsv_c,i,lfsu_c,j,(up_c(lfsv_c,i)-down_c(lfsv_c,i))/delta);
+        u_c(lfsu_c,j) = x_c(lfsu_c,j);
+      }
+  }
+
+private:
+  const double epsilon; // problem: this depends on data type R!
+  Imp& asImp () { return static_cast<Imp &> (*this); }
+  const Imp& asImp () const { return static_cast<const Imp &>(*this); }
+};
+
+
+
+template<typename Imp>
+class NumericalJacobianEnrichedCoupling
+{
+public:
+  NumericalJacobianEnrichedCoupling ()
+    : epsilon(1e-8)
+  {}
+
+  NumericalJacobianEnrichedCoupling (double epsilon_)
+    : epsilon(epsilon_)
+  {}
+
+  //! compute local jacobian of the enriched coupling term
+  template<typename IG, typename X,
+           typename LFSU_C, typename LFSV_C,
+           typename Jacobian>
+  void jacobian_enriched_coupling
+  ( const IG& ig,
+    const LFSU_C& lfsu_c, const X& x_c, const LFSV_C& lfsv_c,
+    Jacobian& mat_cc) const
+  {
+    typedef typename X::value_type D;
+    typedef typename Jacobian::value_type R;
+    typedef LocalVector<R,TestSpaceTag,typename Jacobian::weight_type> ResidualVector;
+    typedef typename ResidualVector::WeightedAccumulationView ResidualView;
+
+    const int m_c=lfsv_c.size();
+    const int n_c=lfsu_c.size();
+
+    X u_c(x_c);
+
+    ResidualVector down_c(mat_cc.nrows()),up_c(mat_cc.nrows());
+    ResidualView downview_c = down_c.weightedAccumulationView(1.0);
+    ResidualView upview_c = up_c.weightedAccumulationView(1.0);
+
+    // base line
+    asImp().alpha_enriched_coupling(ig,
+                                    lfsu_c,u_c,lfsv_c,
+                                    downview_c);
+
+    // jiggle in coupling
+    for (int j=0; j<n_c; j++)
+      {
+        up_c = 0.0;
+
+        D delta = epsilon*(1.0+std::abs(u_c(lfsu_c,j)));
+        u_c(lfsu_c,j) += delta;
+        asImp().alpha_enriched_coupling(ig,
+                                        lfsu_c,u_c,lfsv_c,
+                                        upview_c);
+        for (int i=0; i<m_c; ++i)
+          mat_cc.accumulate(lfsv_c,i,lfsu_c,j,(up_c(lfsv_c,i)-down_c(lfsv_c,i))/delta);
+        u_c(lfsu_c,j) = x_c(lfsu_c,j);
+      }
+  }
+
+private:
+  const double epsilon; // problem: this depends on data type R!
+  Imp& asImp () { return static_cast<Imp &> (*this); }
+  const Imp& asImp () const { return static_cast<const Imp &>(*this); }
+
+};
+
+
+//! FIXME: This still needs to be ported!!!
 template<typename Imp>
 class NumericalJacobianApplyEnrichedCoupling
 {

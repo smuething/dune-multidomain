@@ -189,6 +189,8 @@ public:
 
     const Dune::GeometryType gt = ig.geometry().type();
 
+    const double gamma = gamma_0 / ig.geometry().volume(); // TODO: replace with cell diameter
+
     const size_type qorder = 2 * std::max(lfsu.finiteElement().localBasis().order(),
                                           lfsu_c.finiteElement().localBasis().order()
                                           );
@@ -201,6 +203,7 @@ public:
     for (RuleIterator qit = rule.begin(); qit != qend; ++qit)
       {
         const GC element_pos = (sign > 0 ? ig.geometryInInside() : ig.geometryInOutside()).global(qit->position());
+        GC normal = ig.centerUnitOuterNormal();
 
         std::vector<R> v(lfsu_size);
         LFSU_FESwitch::basis(lfsu.finiteElement()).evaluateFunction(element_pos,v);
@@ -208,27 +211,44 @@ public:
         std::vector<R> mu(lfsu_c_size);
         LFSU_C_FESwitch::basis(lfsu_c.finiteElement()).evaluateFunction(qit->position(),mu);
 
+        std::vector<Dune::FieldMatrix<RF,1,dimWorld> > gradv(lfsu_size);
+        LFSU_BasisSwitch::gradient(LFSU_FESwitch::basis(lfsu.finiteElement()),
+                                   (sign > 0 ? ig.insideElement().geometry() : ig.outsideElement().geometry()),
+                                   element_pos,
+                                   gradv
+                                   );
+
         R u(0.0);
-        std::accumulate(v.begin(),v.end(),u);
+        GC gradu(0.0);
+        for (size_type i = 0; i < lfsu_size; ++i)
+          {
+            u += x(lfsu,i) * v[i];
+            gradu.axpy(x(lfsu,i),gradv[i][0]);
+          }
 
         R lambda(0.0);
-        std::accumulate(mu.begin(),mu.end(),lambda);
+        for (size_type i = 0; i < lfsu_c_size; ++i)
+          lambda += x_c(lfsu_c,i) * mu[i];
 
         const double factor = qit->weight() * ig.geometry().integrationElement(qit->position());
 
         for(size_t i = 0; i < lfsu_size; ++i)
-          r.accumulate(lfsv,i,sign*lambda*factor);
+          {
+            r.accumulate(lfsv,i,(-(normal*gradu)*v[i]-(u-lambda)*(normal*gradv[i][0])+2*gamma*(u-lambda)*v[i])*factor);
+          }
 
         for(size_t i = 0; i < lfsu_c_size; ++i)
-          r_c.accumulate(lfsv_c,i,sign*(u-gamma*lambda)*factor);
+          {
+            r_c.accumulate(lfsv_c,i,((normal*gradu)-2*gamma*(u-lambda))*mu[i]*factor);
+          }
       }
   }
 
-  MortarPoissonCoupling(double gamma_)
-    : gamma(gamma_)
+  MortarPoissonCoupling(double gamma_0_)
+    : gamma_0(gamma_0_)
   {}
 
-  const double gamma;
+  const double gamma_0;
 
 };
 

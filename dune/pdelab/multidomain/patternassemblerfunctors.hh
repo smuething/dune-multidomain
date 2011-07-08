@@ -126,16 +126,21 @@ namespace functors {
       const RemoteSubProblem& remoteSubProblem = coupling.remoteSubProblem();
       typename LFS::LFSU_C<Data,Coupling>::type lfsu_c = LFS::lfsu_c(data(),coupling);
       typename LFS::LFSV_C<Data,Coupling>::type lfsv_c = LFS::lfsv_c(data(),coupling);
-      Data::Operator::extract(coupling).pattern_enriched_coupling_first(LFS::lfsu_s(data(),localSubProblem),
-                                                                        LFS::lfsv_s(data(),localSubProblem),
-                                                                        lfsu_c,lfsv_c,
-                                                                        data().pattern_ss(),data().pattern_sc(),
-                                                                        data().pattern_cs(),data().pattern_cc());
-      Data::Operator::extract(coupling).pattern_enriched_coupling_second(LFS::lfsu_n(data(),remoteSubProblem),
-                                                                         LFS::lfsv_n(data(),remoteSubProblem),
-                                                                         lfsu_c,lfsv_c,
-                                                                         data().pattern_nn(),data().pattern_nc(),
-                                                                         data().pattern_cn(),data().pattern_cc());
+      guarded_call::pattern_enriched_coupling_first(Data::Operator::extract(coupling),
+                                                    LFS::lfsu_s(data(),localSubProblem),
+                                                    LFS::lfsv_s(data(),localSubProblem),
+                                                    lfsu_c,lfsv_c,
+                                                    data().pattern_ss(),data().pattern_sc(),
+                                                    data().pattern_cs(),data().pattern_cc());
+      guarded_call::pattern_enriched_coupling_second(Data::Operator::extract(coupling),
+                                                     LFS::lfsu_n(data(),remoteSubProblem),
+                                                     LFS::lfsv_n(data(),remoteSubProblem),
+                                                     lfsu_c,lfsv_c,
+                                                     data().pattern_nn(),data().pattern_nc(),
+                                                     data().pattern_cn(),data().pattern_cc());
+      guarded_call::pattern_enriched_coupling(Data::Operator::extract(coupling),
+                                              lfsu_c,lfsv_c,
+                                              data().pattern_cc());
     }
 
   };

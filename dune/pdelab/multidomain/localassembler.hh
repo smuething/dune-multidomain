@@ -6,7 +6,6 @@
 #include <dune/pdelab/common/typetree/filteredcompositenode.hh>
 #include <dune/pdelab/gridoperator/common/assemblerutilities.hh>
 
-#include <dune/pdelab/multidomain/multidomaingridoperatorspaceutilities.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/multidomain/subproblem.hh>
 #include <dune/pdelab/multidomain/coupling.hh>

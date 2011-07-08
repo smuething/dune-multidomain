@@ -5,7 +5,6 @@
 #include <dune/pdelab/gridoperator/common/gridoperatorutilities.hh>
 #include <dune/pdelab/gridfunctionspace/genericdatahandle.hh>
 
-#include <dune/pdelab/multidomain/multidomaingridoperatorspaceutilities.hh>
 #include <dune/pdelab/multidomain/localassembler.hh>
 #include <dune/pdelab/multidomain/globalassembler.hh>
 #include <dune/pdelab/multidomain/interpolate.hh>

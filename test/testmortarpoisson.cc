@@ -113,16 +113,18 @@ END_SIMPLE_ANALYTIC_FUNCTION
 
 class MortarPoissonCoupling :
   public Dune::PDELab::MultiDomain::CouplingOperatorDefaultFlags,
-  public Dune::PDELab::MultiDomain::NumericalJacobianEnrichedCoupling<MortarPoissonCoupling>,
-  public Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<MortarPoissonCoupling>,
-  public Dune::PDELab::MultiDomain::FullEnrichedCouplingFirstPattern,
-  public Dune::PDELab::MultiDomain::FullEnrichedCouplingSecondPattern,
+  public Dune::PDELab::MultiDomain::NumericalJacobianEnrichedCouplingToFirstSubProblem<MortarPoissonCoupling>,
+  public Dune::PDELab::MultiDomain::NumericalJacobianEnrichedCouplingToSecondSubProblem<MortarPoissonCoupling>,
+  public Dune::PDELab::MultiDomain::FullEnrichedCouplingFirstSubProblemPattern,
+  public Dune::PDELab::MultiDomain::FullEnrichedCouplingSecondSubProblemPattern,
+  public Dune::PDELab::MultiDomain::FullEnrichedCouplingPattern,
   public Dune::PDELab::InstationaryLocalOperatorDefaultMethods<double>
 {
 
 public:
 
-  static const bool doAlphaEnrichedCoupling = true;
+  static const bool doAlphaEnrichedCouplingToSubProblems = true;
+  static const bool doPatternEnrichedCouplingToSubProblems = true;
   static const bool doPatternEnrichedCoupling = true;
 
   template<typename IG, typename LFSU, typename X, typename LFSV,

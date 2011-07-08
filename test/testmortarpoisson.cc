@@ -159,7 +159,6 @@ public:
     const LFSU_C& lfsu_c, const X& x_c, const LFSV_C& lfsv_c,
     R& r, R& r_c) const
   {
-    const int dim = IG::dimension;
     const int dimWorld = IG::dimensionworld;
     const int dimIF = IG::dimension - 1;
 

@@ -258,160 +258,166 @@ int main(int argc, char** argv) {
 
   try {
 
-  Dune::MPIHelper::instance(argc,argv);
+    Dune::MPIHelper::instance(argc,argv);
 
-  const int dim = 2;
+    const int dim = 2;
 
-  typedef Dune::YaspGrid<dim> BaseGrid;
-  const Dune::FieldVector<int,dim> s(1);
-  const Dune::FieldVector<double,dim> h(1.0);
-  const Dune::FieldVector<bool,dim> p(false);
-  BaseGrid baseGrid(h,s,p,0);
-  baseGrid.globalRefine(2);
+    typedef Dune::YaspGrid<dim> BaseGrid;
+    const Dune::FieldVector<int,dim> s(1);
+    const Dune::FieldVector<double,dim> h(1.0);
+    const Dune::FieldVector<bool,dim> p(false);
+    BaseGrid baseGrid(h,s,p,0);
+    baseGrid.globalRefine(atoi(argv[1]));
 
 #ifdef UGGRID
-  typedef Dune::UGGrid<dim> BaseGrid;
-  BaseGrid baseGrid(500);
-  std::vector<int> boundaryIndexToPhysicalGroup, elementIndexToPhysicalGroup;
-  Dune::GmshReader<BaseGrid> gmshreader;
-  gmshreader.read(baseGrid,"gmshtest.msh",boundaryIndexToPhysicalGroup,elementIndexToPhysicalGroup,true,false);
+    typedef Dune::UGGrid<dim> BaseGrid;
+    BaseGrid baseGrid(500);
+    std::vector<int> boundaryIndexToPhysicalGroup, elementIndexToPhysicalGroup;
+    Dune::GmshReader<BaseGrid> gmshreader;
+    gmshreader.read(baseGrid,"gmshtest.msh",boundaryIndexToPhysicalGroup,elementIndexToPhysicalGroup,true,false);
 #endif
 
-  typedef BaseGrid::LeafGridView GV;
+    typedef BaseGrid::LeafGridView GV;
 
-  GV gv = baseGrid.leafView();
-  const GV::IndexSet& is = gv.indexSet();
+    GV gv = baseGrid.leafView();
+    const GV::IndexSet& is = gv.indexSet();
 
-  typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;
-  Grid grid(baseGrid,false);
-  typedef Grid::SubDomainGrid SubDomainGrid;
-  SubDomainGrid& sdg0 = grid.subDomain(0);
-  SubDomainGrid& sdg1 = grid.subDomain(1);
+    typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;
+    Grid grid(baseGrid,false);
+    typedef Grid::SubDomainGrid SubDomainGrid;
+    SubDomainGrid& sdg0 = grid.subDomain(0);
+    SubDomainGrid& sdg1 = grid.subDomain(1);
 
-  typedef Grid::ctype ctype;
-  typedef Grid::LeafGridView MDGV;
-  typedef SubDomainGrid::LeafGridView SDGV;
-  MDGV mdgv = grid.leafView();
-  SDGV sdgv0 = sdg0.leafView();
-  SDGV sdgv1 = sdg1.leafView();
-  grid.startSubDomainMarking();
-  for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
-    {
+    typedef Grid::ctype ctype;
+    typedef Grid::LeafGridView MDGV;
+    typedef SubDomainGrid::LeafGridView SDGV;
+    MDGV mdgv = grid.leafView();
+    SDGV sdgv0 = sdg0.leafView();
+    SDGV sdgv1 = sdg1.leafView();
+    grid.startSubDomainMarking();
+    for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
+      {
 #ifdef UGGRID
-      grid.addToSubDomain(elementIndexToPhysicalGroup[mdgv.indexSet().index(*it)],*it);
+        grid.addToSubDomain(elementIndexToPhysicalGroup[mdgv.indexSet().index(*it)],*it);
 #else
-      Dune::FieldVector<ctype,dim> center = it->geometry().center();
-      if (center[0] > 0.5)
-        grid.addToSubDomain(1,*it);
-      if (center[0] < 0.5)
-        grid.addToSubDomain(0,*it);
+        Dune::FieldVector<ctype,dim> center = it->geometry().center();
+        if (center[0] > 0.5)
+          grid.addToSubDomain(1,*it);
+        if (center[0] < 0.5)
+          grid.addToSubDomain(0,*it);
 #endif
-    }
-  grid.preUpdateSubDomains();
-  grid.updateSubDomains();
-  grid.postUpdateSubDomains();
+      }
+    grid.preUpdateSubDomains();
+    grid.updateSubDomains();
+    grid.postUpdateSubDomains();
 
-  typedef MDGV::Grid::ctype DF;
+    typedef MDGV::Grid::ctype DF;
 
-  typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM;
-  typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim-1> COUPLINGFEM;
+    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM;
+    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim-1> COUPLINGFEM;
 
-  typedef FEM::Traits::FiniteElementType::Traits::
-    LocalBasisType::Traits::RangeFieldType R;
+    typedef FEM::Traits::FiniteElementType::Traits::
+      LocalBasisType::Traits::RangeFieldType R;
 
-  FEM fem;
-  COUPLINGFEM couplingfem;
+    FEM fem;
+    COUPLINGFEM couplingfem;
 
-  typedef Dune::PDELab::NoConstraints NOCON;
-  typedef Dune::PDELab::ConformingDirichletConstraints CON;
+    typedef Dune::PDELab::NoConstraints NOCON;
+    typedef Dune::PDELab::ConformingDirichletConstraints CON;
 
-  typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
+    typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
 
-  NOCON nocon;
-  CON con;
+    NOCON nocon;
+    CON con;
 
-  typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM,CON,VBE> GFS0;
-  typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM,CON,VBE> GFS1;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM,CON,VBE> GFS0;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM,CON,VBE> GFS1;
 
-  GFS0 gfs0(sdgv0,fem,con);
-  GFS1 gfs1(sdgv1,fem,con);
+    GFS0 gfs0(sdgv0,fem,con);
+    GFS1 gfs1(sdgv1,fem,con);
 
-  typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> EC;
-  EC c0(0);
-  EC c1(1);
+    typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> EC;
+    EC c0(0);
+    EC c1(1);
 
-  typedef Dune::PDELab::MultiDomain::SubProblemSubProblemInterface<MDGV,EC,EC> Pred;
-  Pred pred(mdgv,c0,c1);
+    typedef Dune::PDELab::MultiDomain::SubProblemSubProblemInterface<MDGV,EC,EC> Pred;
+    Pred pred(mdgv,c0,c1);
 
-  typedef Dune::PDELab::MultiDomain::CouplingGridFunctionSpace<MDGV,COUPLINGFEM,Pred,NOCON,VBE> CouplingGFS;
-  CouplingGFS couplinggfs(mdgv,couplingfem,pred);
+    typedef Dune::PDELab::MultiDomain::CouplingGridFunctionSpace<MDGV,COUPLINGFEM,Pred,NOCON,VBE> CouplingGFS;
+    CouplingGFS couplinggfs(mdgv,couplingfem,pred);
 
-  typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS0,GFS1,CouplingGFS> MultiGFS;
-  MultiGFS multigfs(grid,gfs0,gfs1,couplinggfs);
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS0,GFS1,CouplingGFS> MultiGFS;
+    MultiGFS multigfs(grid,gfs0,gfs1,couplinggfs);
 
-  typedef DirichletBoundary BType;
-  BType b;
+    typedef DirichletBoundary BType;
+    BType b;
 
-  typedef F<MDGV,R> FType;
-  FType f(mdgv);
+    typedef F<MDGV,R> FType;
+    FType f(mdgv);
 
-  typedef G<MDGV,R> GType;
-  GType g(mdgv);
+    typedef G<MDGV,R> GType;
+    GType g(mdgv);
 
-  typedef J<MDGV,R> JType;
-  JType j(mdgv);
+    typedef J<MDGV,R> JType;
+    JType j(mdgv);
 
-  typedef Dune::PDELab::Poisson<FType,BType,JType,4> LOP;
-  LOP lop(f,b,j);
+    typedef Dune::PDELab::Poisson<FType,BType,JType,4> LOP;
+    LOP lop(f,b,j);
 
-  typedef MortarPoissonCoupling CouplingLOP;
-  CouplingLOP coupling_lop(1.0);
+    typedef MortarPoissonCoupling CouplingLOP;
+    CouplingLOP coupling_lop(atof(argv[2]));
 
-  typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,LOP,EC,0> SubProblem0;
-  typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,LOP,EC,1> SubProblem1;
-  SubProblem0 subproblem0(lop,c0);
-  SubProblem1 subproblem1(lop,c1);
+    typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,LOP,EC,0> SubProblem0;
+    typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,LOP,EC,1> SubProblem1;
+    SubProblem0 subproblem0(lop,c0);
+    SubProblem1 subproblem1(lop,c1);
 
-  typedef Dune::PDELab::MultiDomain::EnrichedCoupling<SubProblem0,SubProblem1,CouplingLOP,2> Coupling;
-  Coupling coupling(subproblem0,subproblem1,coupling_lop);
+    typedef Dune::PDELab::MultiDomain::EnrichedCoupling<SubProblem0,SubProblem1,CouplingLOP,2> Coupling;
+    Coupling coupling(subproblem0,subproblem1,coupling_lop);
 
-  typedef MultiGFS::ConstraintsContainer<R>::Type C;
-  C cg;
+    typedef MultiGFS::ConstraintsContainer<R>::Type C;
+    C cg;
 
-  typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
+    typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
 
-  typedef Dune::PDELab::MultiDomain::GridOperator<
-    MultiGFS,MultiGFS,
-    MBE,R,R,R,C,C,
-    SubProblem0,
-    SubProblem1,
-    Coupling> GridOperator;
+    typedef Dune::PDELab::MultiDomain::GridOperator<
+      MultiGFS,MultiGFS,
+      MBE,R,R,R,C,C,
+      SubProblem0,
+      SubProblem1,
+      Coupling> GridOperator;
 
-  typedef GridOperator::Traits::Domain V;
-  V u(multigfs,0.0);
+    typedef GridOperator::Traits::Domain V;
+    V u(multigfs,0.0);
 
-  Dune::PDELab::MultiDomain::interpolateOnTrialSpace(multigfs,u,g,subproblem0,g,subproblem1);
+    Dune::PDELab::MultiDomain::interpolateOnTrialSpace(multigfs,u,g,subproblem0,g,subproblem1);
 
-  Dune::PDELab::MultiDomain::constraints<R>(multigfs,
-                                            Dune::PDELab::MultiDomain::constrainSubProblem(subproblem0,b),
-                                            Dune::PDELab::MultiDomain::constrainSubProblem(subproblem1,b)
-                                            ).assemble(cg);
+    Dune::PDELab::MultiDomain::constraints<R>(multigfs,
+                                              Dune::PDELab::MultiDomain::constrainSubProblem(subproblem0,b),
+                                              Dune::PDELab::MultiDomain::constrainSubProblem(subproblem1,b)
+                                              ).assemble(cg);
 
-  GridOperator gridoperator(multigfs,multigfs,
-                            cg,cg,
-                            subproblem0,
-                            subproblem1,
-                            coupling);
+    GridOperator gridoperator(multigfs,multigfs,
+                              cg,cg,
+                              subproblem0,
+                              subproblem1,
+                              coupling);
 
-  // <<<5>>> Select a linear solver backend
-  typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
-  LS ls(5000,false);
+    GridOperator::Traits::Jacobian J(gridoperator);
 
-  // <<<6>>> Solver for linear problem per stage
-  typedef Dune::PDELab::StationaryLinearProblemSolver<GridOperator,LS,V> PDESOLVER;
-  PDESOLVER pdesolver(gridoperator,ls,1e-10);
+    gridoperator.jacobian(u,J);
 
-  pdesolver.apply(u);
+    Dune::writeMatrixToMatlab(J.base(),"jacobian.mat");
+
+    // <<<5>>> Select a linear solver backend
+    typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
+    LS ls(5000,false);
+
+    // <<<6>>> Solver for linear problem per stage
+    typedef Dune::PDELab::StationaryLinearProblemSolver<GridOperator,LS,V> PDESOLVER;
+    PDESOLVER pdesolver(gridoperator,ls,1e-10);
+
+    pdesolver.apply(u);
 
     typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,0> SGFS0;
     typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,1> SGFS1;
@@ -437,11 +443,11 @@ int main(int argc, char** argv) {
   }
   catch (Dune::Exception &e){
     std::cerr << "Dune reported error: " << e << std::endl;
-	return 1;
+    return 1;
   }
   catch (...){
     std::cerr << "Unknown exception thrown!" << std::endl;
-	return 1;
+    return 1;
   }
 
 }

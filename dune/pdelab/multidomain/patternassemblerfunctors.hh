@@ -1,6 +1,8 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_PATTERNASSEMBLERFUNCTORS_HH
 #define DUNE_PDELAB_MULTIDOMAIN_PATTERNASSEMBLERFUNCTORS_HH
 
+#include <dune/pdelab/multidomain/operatorcallguards.hh>
+
 namespace Dune {
 namespace PDELab {
 namespace MultiDomain {
@@ -44,18 +46,16 @@ namespace functors {
         {
           if (!(LOP::doSkeletonTwoSided || data().ig().oneSidedDirection()))
             return;
-          LocalAssemblerCallSwitch<LOP,LOP::doPatternSkeleton>::
-            pattern_skeleton(Data::Operator::extract(subProblem),
-                             LFS::lfsu_s(data(),subProblem),LFS::lfsv_s(data(),subProblem),
-                             LFS::lfsu_n(data(),subProblem),LFS::lfsv_n(data(),subProblem),
-                             data().pattern_sn(),data().pattern_ns());
+          guarded_call::pattern_skeleton(Data::Operator::extract(subProblem),
+                                         LFS::lfsu_s(data(),subProblem),LFS::lfsv_s(data(),subProblem),
+                                         LFS::lfsu_n(data(),subProblem),LFS::lfsv_n(data(),subProblem),
+                                         data().pattern_sn(),data().pattern_ns());
         }
       else
         {
-          LocalAssemblerCallSwitch<LOP,LOP::doPatternBoundary>::
-            pattern_boundary(Data::Operator::extract(subProblem),
-                             LFS::lfsu_s(data(),subProblem),LFS::lfsv_s(data(),subProblem),
-                             data().pattern_ss());
+          guarded_call::pattern_boundary(Data::Operator::extract(subProblem),
+                                         LFS::lfsu_s(data(),subProblem),LFS::lfsv_s(data(),subProblem),
+                                         data().pattern_ss());
         }
     }
 

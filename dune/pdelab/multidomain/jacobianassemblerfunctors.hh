@@ -1,6 +1,8 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_JACOBIANASSEMBLERFUNCTORS_HH
 #define DUNE_PDELAB_MULTIDOMAIN_JACOBIANASSEMBLERFUNCTORS_HH
 
+#include <dune/pdelab/multidomain/operatorcallguards.hh>
+
 namespace Dune {
 namespace PDELab {
 namespace MultiDomain {
@@ -46,18 +48,16 @@ namespace functors {
         {
           if (!(LOP::doSkeletonTwoSided || data().ig().oneSidedDirection()))
             return;
-          LocalAssemblerCallSwitch<LOP,LOP::doAlphaSkeleton>::
-            jacobian_skeleton(Data::Operator::extract(subProblem),data().ig(),
-                              LFS::lfsu_s(data(),subProblem),data().x_s(),LFS::lfsv_s(data(),subProblem),
-                              LFS::lfsu_n(data(),subProblem),data().x_n(),LFS::lfsv_n(data(),subProblem),
-                              data().a_ss(),data().a_sn(),data().a_ns(),data().a_nn());
+          guarded_call::jacobian_skeleton(Data::Operator::extract(subProblem),data().ig(),
+                                          LFS::lfsu_s(data(),subProblem),data().x_s(),LFS::lfsv_s(data(),subProblem),
+                                          LFS::lfsu_n(data(),subProblem),data().x_n(),LFS::lfsv_n(data(),subProblem),
+                                          data().a_ss(),data().a_sn(),data().a_ns(),data().a_nn());
         }
       else
         {
-          LocalAssemblerCallSwitch<LOP,LOP::doAlphaBoundary>::
-            jacobian_boundary(Data::Operator::extract(subProblem),data().ig(),
-                              LFS::lfsu_s(data(),subProblem),data().x_s(),LFS::lfsv_s(data(),subProblem),
-                              data().a_ss());
+          guarded_call::jacobian_boundary(Data::Operator::extract(subProblem),data().ig(),
+                                          LFS::lfsu_s(data(),subProblem),data().x_s(),LFS::lfsv_s(data(),subProblem),
+                                          data().a_ss());
         }
     }
 

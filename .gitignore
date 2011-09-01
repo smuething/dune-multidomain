@@ -33,3 +33,4 @@ stamp-vc
 *.dSYM
 *.pyc
 *.pyo
+.DS_Store

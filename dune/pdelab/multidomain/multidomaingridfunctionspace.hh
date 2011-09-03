@@ -201,12 +201,12 @@ struct gfs_flavor_tag<CouplingGridFunctionSpace<GV,LFEM,Predicate_,CE,B> >
 };
 
 
-template<typename G, typename... Children>
+template<typename G, typename Backend, typename... Children>
 class MultiDomainGridFunctionSpace
   : public TypeTree::VariadicCompositeNode<Children...>
-  , public PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Children...>,
+  , public PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,Children...>,
                                                typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
-                                               typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::BackendType,
+                                               Backend,
                                                GridFunctionSpaceLexicographicMapper,
                                                sizeof...(Children)
                                                >
@@ -215,16 +215,16 @@ class MultiDomainGridFunctionSpace
   typedef TypeTree::VariadicCompositeNode<Children...> BaseT;
 
   friend class
-  PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Children...>,
+  PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,Children...>,
                                       typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
-                                      typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::BackendType,
+                                      Backend,
                                       GridFunctionSpaceLexicographicMapper,
                                       sizeof...(Children)
                                       >;
 
-  typedef PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Children...>,
+  typedef PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,Children...>,
                                               typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
-                                              typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::BackendType,
+                                              Backend,
                                               GridFunctionSpaceLexicographicMapper,
                                               sizeof...(Children)
                                               > ImplementationBase;
@@ -281,7 +281,7 @@ public:
 
   //! export traits class
   typedef MultiDomainGridFunctionSpaceTraits<G,
-                                             typename BaseT::template Child<0>::Type::Traits::BackendType,
+                                             Backend,
                                              void,
                                              !ChildEntryMap::has_duplicate_entries, // duplicate entries would lead to ambiguous type lookups
                                              sizeof...(Children)>

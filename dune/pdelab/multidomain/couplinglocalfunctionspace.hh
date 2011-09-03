@@ -70,10 +70,10 @@ class CouplingLocalFunctionSpaceNode
 
   using BaseT::n;
   using BaseT::global_storage;
-  using BaseT::globalIndex;
 
 public:
   typedef CouplingLocalFunctionSpaceTraits<GFS> Traits;
+  using BaseT::globalIndex;
 
 private:
 

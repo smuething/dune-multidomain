@@ -11,9 +11,11 @@ namespace MultiDomain {
 template <typename GFS>
 class CouplingLocalFunctionSpaceNode;
 
+
 template<typename GFS>
 struct CouplingLocalFunctionSpaceTraits
 {
+
   //! \brief the grid view where grid function is defined upon
   typedef GFS GridFunctionSpaceType;
 
@@ -31,21 +33,85 @@ struct CouplingLocalFunctionSpaceTraits
   //! \brief Type of container to store indices
   typedef typename std::vector<SizeType> IndexContainer;
 
+  typedef CouplingLocalFunctionSpaceNode<GFS> NodeType;
+
+};
+
+
+template<typename GFS>
+struct LeafCouplingLocalFunctionSpaceTraits
+  : public CouplingLocalFunctionSpaceTraits<GFS>
+{
+
   //! \brief Type of local finite element
   typedef typename GFS::Traits::FiniteElementType FiniteElementType;
 
   //! \brief Type of constraints engine
   typedef typename GFS::Traits::ConstraintsType ConstraintsType;
 
-  typedef CouplingLocalFunctionSpaceNode<GFS> NodeType;
-
 };
 
 
 
+struct PowerCouplingLocalFunctionSpaceTag {};
+struct PowerCouplingGridFunctionSpaceTag {};
+
+// local function space for a power grid function space
+template<typename GFS, typename ChildLFS, std::size_t k>
+class PowerCouplingLocalFunctionSpaceNode :
+    public LocalFunctionSpaceBaseNode<GFS>,
+    public TypeTree::PowerNode<ChildLFS,k>
+{
+  typedef LocalFunctionSpaceBaseNode<GFS> BaseT;
+  typedef TypeTree::PowerNode<ChildLFS,k> TreeNode;
+
+  template<typename>
+  friend struct Dune::PDELab::PropagateGlobalStorageVisitor;
+
+  template<typename>
+  friend struct Dune::PDELab::ClearSizeVisitor;
+
+  template<typename>
+  friend struct Dune::PDELab::ComputeSizeVisitor;
+
+  template<typename>
+  friend struct Dune::PDELab::FillIndicesVisitor;
+
+public:
+  typedef CouplingLocalFunctionSpaceTraits<GFS> Traits;
+
+  typedef PowerCouplingLocalFunctionSpaceTag ImplementationTag;
+
+  //! \brief initialize with grid function space
+  template<typename Transformation>
+  PowerCouplingLocalFunctionSpaceNode (shared_ptr<const GFS> gfs,
+                                       const Transformation& t,
+                                       const array<shared_ptr<ChildLFS>,k>& children)
+    : BaseT(gfs)
+    , TreeNode(children)
+  {}
+
+  template<typename Transformation>
+  PowerCouplingLocalFunctionSpaceNode (const GFS& gfs,
+                                       const Transformation& t,
+                                       const array<shared_ptr<ChildLFS>,k>& children)
+    : BaseT(stackobject_to_shared_ptr(gfs))
+    , TreeNode(children)
+  {}
+
+};
+
+template<typename PowerCouplingGridFunctionSpace>
+Dune::PDELab::TypeTree::GenericPowerNodeTransformation<PowerCouplingGridFunctionSpace,gfs_to_coupling_lfs,PowerCouplingLocalFunctionSpaceNode>
+lookupNodeTransformation(PowerCouplingGridFunctionSpace* gfs, gfs_to_coupling_lfs* t, PowerCouplingGridFunctionSpaceTag tag);
+
+template<typename PowerCouplingGridFunctionSpace>
+Dune::PDELab::TypeTree::GenericPowerNodeTransformation<PowerCouplingGridFunctionSpace,gfs_to_lfs,PowerCouplingLocalFunctionSpaceNode>
+lookupNodeTransformation(PowerCouplingGridFunctionSpace* gfs, gfs_to_lfs* t, PowerCouplingGridFunctionSpaceTag tag);
+
+
 struct CouplingLocalFunctionSpaceTag {};
 struct CouplingGridFunctionSpaceTag {};
-
 
 template <typename GFS>
 class CouplingLocalFunctionSpaceNode
@@ -72,7 +138,7 @@ class CouplingLocalFunctionSpaceNode
   using BaseT::global_storage;
 
 public:
-  typedef CouplingLocalFunctionSpaceTraits<GFS> Traits;
+  typedef LeafCouplingLocalFunctionSpaceTraits<GFS> Traits;
   using BaseT::globalIndex;
 
 private:

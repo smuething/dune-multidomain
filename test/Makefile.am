@@ -67,3 +67,6 @@ testxfempattern_SOURCES = testxfempattern.cc
 
 check_PROGRAMS += testmortarpoisson
 testmortarpoisson_SOURCES = testmortarpoisson.cc
+
+check_PROGRAMS += testpowermortarpoisson
+testpowermortarpoisson_SOURCES = testpowermortarpoisson.cc

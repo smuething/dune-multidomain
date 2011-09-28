@@ -346,7 +346,7 @@ int main(int argc, char** argv) {
     typedef Dune::PDELab::MultiDomain::CouplingGridFunctionSpace<MDGV,COUPLINGFEM,Pred,NOCON,VBE> CouplingGFS;
     CouplingGFS couplinggfs(mdgv,couplingfem,pred);
 
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS0,GFS1,CouplingGFS> MultiGFS;
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,VBE,GFS0,GFS1,CouplingGFS> MultiGFS;
     MultiGFS multigfs(grid,gfs0,gfs1,couplinggfs);
 
     typedef DirichletBoundary BType;

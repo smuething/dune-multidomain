@@ -3,6 +3,8 @@
 
 #include <dune/pdelab/gridfunctionspace/localfunctionspace.hh>
 
+#include <dune/pdelab/multidomain/dofmapper.hh>
+
 namespace Dune {
 namespace PDELab {
 namespace MultiDomain {
@@ -160,6 +162,47 @@ public:
   CouplingLocalFunctionSpaceNode (const GFS& gfs, const Transformation& t)
     : BaseT(stackobject_to_shared_ptr(gfs))
   {}
+
+
+  //! Calculates the multiindices associated with the given entity.
+  template<typename Intersection, typename MultiIndexIterator>
+  void multiIndices(const Intersection& is, MultiIndexIterator it, MultiIndexIterator endit)
+  {
+    if (!this->pgfs->contains(is))
+      {
+        assert(it == endit && "Intersection not contained in CouplingGFS, but local size > 0");
+        return;
+      }
+
+    // get layout of entity
+    const typename FESwitch::Coefficients &coeffs =
+      FESwitch::coefficients(*pfe);
+
+    typedef typename GFS::Traits::GridViewType GV;
+    GV gv = this->gridFunctionSpace().gridview();
+
+    DOFMapper<GV> dm(is);
+
+    const Dune::GenericReferenceElement<typename GV::ctype,GV::Grid::dimension-1>& refEl =
+      Dune::GenericReferenceElements<typename GV::ctype,GV::Grid::dimension-1>::general(this->pfe->type());
+
+    for (std::size_t i = 0; i < std::size_t(coeffs.size()); ++i, ++it)
+      {
+        // get geometry type of subentity
+        Dune::GeometryType gt = refEl.type(coeffs.localKey(i).subEntity(),
+                                           coeffs.localKey(i).codim());
+
+        // evaluate consecutive index of subentity
+        typename GV::IndexSet::IndexType index = gv.indexSet().subIndex(dm.element(),
+                                                                        dm.mapSubIndex(coeffs.localKey(i).subEntity(),coeffs.localKey(i).codim()),
+                                                                        coeffs.localKey(i).codim() + 1);
+
+        it->set(gt,index,coeffs.localKey(i).index());
+
+        // make sure we don't write past the end of the iterator range
+        assert(it != endit);
+      }
+  }
 
   //! \brief bind local function space to entity
   /**

@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
     GFS0 gfs0(sdgv0,fem0,con);
     GFS1 gfs1(sdgv1,fem1,con);
 
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS0,GFS1> MultiGFS;
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,VBE,GFS0,GFS1> MultiGFS;
 
     MultiGFS multigfs(grid,gfs0,gfs1);
 

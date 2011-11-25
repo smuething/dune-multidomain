@@ -42,7 +42,7 @@ namespace {
   };
 
 
-  template<typename Container>
+  template<typename Container, typename MultiIndexContainer>
   struct FillIndices
     : public Dune::PDELab::TypeTree::DirectChildrenVisitor
     , public Dune::PDELab::TypeTree::DynamicTraversal
@@ -55,18 +55,21 @@ namespace {
         {
           global_container[offset] = childLFS.globalIndex(i);
           local_container[offset] = childLFS.localIndex(i);
+          multi_index_container[offset] = childLFS.multiIndex(i);
         }
     }
 
-    FillIndices(Container& global_container_, Container& local_container_)
+    FillIndices(Container& global_container_, Container& local_container_, MultiIndexContainer& multi_index_container_)
       : offset(0)
       , global_container(global_container_)
       , local_container(local_container_)
+      , multi_index_container(multi_index_container_)
     {}
 
     std::size_t offset;
     Container& global_container;
     Container& local_container;
+    MultiIndexContainer& multi_index_container;
 
   };
 
@@ -74,9 +77,8 @@ namespace {
 
 template<typename GFS, typename N, typename BaseLFS, typename SubProblem_>
 struct SubProblemLocalFunctionSpaceTraits
+  : public LocalFunctionSpaceBaseTraits<GFS,typename BaseLFS::Traits::MultiIndex>
 {
-  //! \brief the grid view where grid function is defined upon
-  typedef GFS GridFunctionSpaceType;
 
   //! type of local function space node
   typedef N NodeType;
@@ -84,14 +86,7 @@ struct SubProblemLocalFunctionSpaceTraits
   //! \brief Type to store indices from Backend
   typedef typename GFS::Traits::GridType GridType;
 
-  //! \brief Type of codim 0 entity in the grid
-  typedef typename GridType::Traits::template Codim<0>::Entity Element;
-
-  //! \brief Type to store indices from Backend
-  typedef typename GFS::Traits::SizeType SizeType;
-
-  //! \brief Type of container to store indices
-  typedef typename std::vector<SizeType> IndexContainer;
+  typedef typename GFS::Traits::GridType Grid;
 
   typedef SubProblem_ SubProblem;
 
@@ -104,33 +99,11 @@ struct SubProblemLocalFunctionSpaceTraits
 
 template<typename GFS, typename N, typename BaseLFS, typename SubProblem_>
 struct SubProblemLeafLocalFunctionSpaceTraits
+  : public SubProblemLocalFunctionSpaceTraits<GFS,N,BaseLFS,SubProblem_>
 {
-  //! \brief the grid view where grid function is defined upon
-  typedef GFS GridFunctionSpaceType;
-
-  //! type of local function space node
-  typedef N NodeType;
-
-  //! \brief Type to store indices from Backend
-  typedef typename GFS::Traits::GridType GridType;
-
-  //! \brief Type of codim 0 entity in the grid
-  typedef typename GridType::Traits::template Codim<0>::Entity Element;
-
-  //! \brief Type to store indices from Backend
-  typedef typename GFS::Traits::SizeType SizeType;
-
-  //! \brief Type of container to store indices
-  typedef typename std::vector<SizeType> IndexContainer;
 
   //! \brief finite element
   typedef typename BaseLFS::Traits::FiniteElementType FiniteElementType;
-
-  typedef SubProblem_ SubProblem;
-
-  typedef typename SubProblem::Traits::Condition Condition;
-
-  typedef BaseLFS BaseLocalFunctionSpace;
 
   typedef typename BaseLFS::Traits::ConstraintsType ConstraintsType;
 
@@ -174,7 +147,7 @@ namespace {
 template<typename MDLFS, typename SubProblem, std::size_t... ChildIndices>
 class SubProblemLocalFunctionSpace
   : public Dune::PDELab::TypeTree::FilteredCompositeNode<const MDLFS,Dune::PDELab::TypeTree::IndexFilter<ChildIndices...> >
-  , public Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType>
+  , public Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType,typename MDLFS::Traits::MultiIndex>
 {
 
   dune_static_assert((sizeof...(ChildIndices) <= MDLFS::CHILDREN),
@@ -184,7 +157,7 @@ class SubProblemLocalFunctionSpace
                      "All child indices have to be distinct");
 
   typedef Dune::PDELab::TypeTree::FilteredCompositeNode<const MDLFS,Dune::PDELab::TypeTree::IndexFilter<ChildIndices...> > NodeT;
-  typedef Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType> BaseT;
+  typedef Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType, typename MDLFS::Traits::MultiIndex> BaseT;
 
   typedef typename MDLFS::Traits::GridFunctionSpaceType GFS;
 
@@ -242,7 +215,7 @@ public:
     n = accumulateSize.size;
     global_storage.resize(n);
     local_storage.resize(n);
-    Dune::PDELab::TypeTree::applyToTree(*this,FillIndices<typename Traits::IndexContainer>(global_storage,local_storage));
+    Dune::PDELab::TypeTree::applyToTree(*this,FillIndices<typename Traits::IndexContainer, typename Traits::MultiIndexContainer>(global_storage,local_storage,_multi_index_storage));
   }
 
   const SubProblem& subProblem() const {
@@ -259,6 +232,7 @@ private:
   using BaseT::offset;
   using BaseT::global;
   using BaseT::global_storage;
+  using BaseT::_multi_index_storage;
   using BaseT::n;
   using NodeT::unfiltered;
 

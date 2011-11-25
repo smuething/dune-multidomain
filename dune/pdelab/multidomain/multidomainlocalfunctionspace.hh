@@ -170,7 +170,10 @@ struct FillIndicesVisitorBase
   {
     impl().fill_indices(child,typename gfs_flavor_tag<typename Child::Traits::GridFunctionSpaceType>::type());
     for (std::size_t i = 0; i<child.size(); ++i)
-      (*lfs.global)[child.localIndex(i)] = lfs.pgfs->subMap(childIndex,(*lfs.global)[child.localIndex(i)]);
+      {
+        (*lfs.global)[child.localIndex(i)] = lfs.pgfs->subMap(childIndex,(*lfs.global)[child.localIndex(i)]);
+        (*lfs._multi_indices)[child.localIndex(i)].push_back(childIndex);
+      }
   }
 
   Impl& impl()
@@ -292,48 +295,39 @@ struct FillIndicesVisitor<Intersection,GFS,Container,CouplingLFSTag>
 
 
 
-template<typename GFS, typename N>
+template<typename GFS, typename MI, typename N>
 struct MultiDomainLocalFunctionSpaceTraits
+  : public LocalFunctionSpaceBaseTraits<GFS,MI>
 {
-  //! \brief the grid view where grid function is defined upon
-  typedef GFS GridFunctionSpaceType;
 
   //! type of local function space node
   typedef N NodeType;
 
-  //! \brief Type to store indices from Backend
   typedef typename GFS::Traits::GridType GridType;
 
-  typedef typename GFS::Traits::GridViewType GridViewType;
-
-  //! \brief Type of codim 0 entity in the grid
-  typedef typename GridType::Traits::template Codim<0>::Entity Element;
+  typedef typename GFS::Traits::GridType Grid;
 
   //! \brief Type of intersection in the grid
-  typedef typename GridViewType::Intersection Intersection;
+  typedef typename GFS::Traits::GridViewType::Intersection Intersection;
 
-  //! \brief Type to store indices from Backend
-  typedef typename GFS::Traits::SizeType SizeType;
-
-  //! \brief Type of container to store indices
-  typedef typename std::vector<SizeType> IndexContainer;
 };
 
 // local function space for a MultiDomainGridFunctionSpace
 template<typename GFS,
          typename LFSTag,
+         typename MultiIndex,
          typename... Children>
 class MultiDomainLocalFunctionSpaceNode
-  : public LocalFunctionSpaceBaseNode<GFS>
+  : public LocalFunctionSpaceBaseNode<GFS,MultiIndex>
   , public TypeTree::VariadicCompositeNode<Children...>
 {
 
   typedef typename GFS::Traits::BackendType B;
 
-  typedef LocalFunctionSpaceBaseNode<GFS> BaseT;
+  typedef LocalFunctionSpaceBaseNode<GFS,MultiIndex> BaseT;
 
 public:
-  typedef MultiDomainLocalFunctionSpaceTraits<GFS,MultiDomainLocalFunctionSpaceNode> Traits;
+  typedef MultiDomainLocalFunctionSpaceTraits<GFS,MultiIndex,MultiDomainLocalFunctionSpaceNode> Traits;
 
 public:
 
@@ -357,6 +351,7 @@ public:
   using BaseT::n;
   using BaseT::offset;
   using BaseT::global;
+  using BaseT::_multi_indices;
   using BaseT::pgfs;
 
   shared_ptr<const GFS> gridFunctionSpaceStorage() const
@@ -385,55 +380,93 @@ public:
 
 struct MultiDomainGridFunctionSpaceTag {};
 
-template<typename MultiDomainGFS, typename LFSTag>
+template<typename MultiDomainGFS, typename LFSTag, typename Transformation>
 struct MultiDomainLocalFunctionSpaceTransformationTemplate
 {
   template<typename... TC>
   struct result
   {
-    typedef MultiDomainLocalFunctionSpaceNode<MultiDomainGFS,LFSTag,TC...> type;
+    typedef MultiDomainLocalFunctionSpaceNode<MultiDomainGFS,
+                                              LFSTag,
+                                              typename Transformation::MultiIndex,
+                                              TC...> type;
   };
 };
 
-template<typename MultiDomainGFS>
+template<typename MultiDomainGFS, typename data>
 Dune::PDELab::TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
   MultiDomainGFS,
-  Dune::PDELab::gfs_to_lfs,
-  MultiDomainLocalFunctionSpaceTransformationTemplate<MultiDomainGFS,StandardLFSTag>::template result
+  Dune::PDELab::gfs_to_lfs<data>,
+  MultiDomainLocalFunctionSpaceTransformationTemplate<
+    MultiDomainGFS,
+    StandardLFSTag,
+    gfs_to_lfs<data>
+    >::template result
   >
-lookupNodeTransformation(MultiDomainGFS*, Dune::PDELab::gfs_to_lfs*, MultiDomainGridFunctionSpaceTag);
+lookupNodeTransformation(MultiDomainGFS*, Dune::PDELab::gfs_to_lfs<data>*, MultiDomainGridFunctionSpaceTag);
 
 
-struct gfs_to_coupling_lfs {};
+template<typename GFS>
+struct gfs_to_coupling_lfs {
+
+  //! The MultiIndex type that will be used in the resulting LocalFunctionSpace tree.
+  typedef Dune::PDELab::MultiIndex<std::size_t,TypeTree::TreeInfo<GFS>::depth> MultiIndex;
+
+};
 
 
-template<typename MultiDomainGFS>
+template<typename MultiDomainGFS,typename data>
 Dune::PDELab::TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
   MultiDomainGFS,
-  gfs_to_coupling_lfs,
-  MultiDomainLocalFunctionSpaceTransformationTemplate<MultiDomainGFS,CouplingLFSTag>::template result
+  gfs_to_coupling_lfs<data>,
+  MultiDomainLocalFunctionSpaceTransformationTemplate<
+    MultiDomainGFS,
+    CouplingLFSTag,
+    gfs_to_coupling_lfs<data>
+    >::template result
   >
-lookupNodeTransformation(MultiDomainGFS*, gfs_to_coupling_lfs*, MultiDomainGridFunctionSpaceTag);
+    lookupNodeTransformation(MultiDomainGFS*, gfs_to_coupling_lfs<data>*, MultiDomainGridFunctionSpaceTag);
 
 
 
-template<typename PowerGridFunctionSpace>
-Dune::PDELab::TypeTree::GenericPowerNodeTransformation<PowerGridFunctionSpace,gfs_to_coupling_lfs,PowerLocalFunctionSpaceNode>
-lookupNodeTransformation(PowerGridFunctionSpace* pgfs, gfs_to_coupling_lfs* t, PowerGridFunctionSpaceTag tag);
+template<typename PowerGridFunctionSpace, typename data>
+Dune::PDELab::TypeTree::TemplatizedGenericPowerNodeTransformation<
+  PowerGridFunctionSpace,
+  gfs_to_coupling_lfs<data>,
+  power_gfs_to_lfs_template<
+    PowerGridFunctionSpace,
+    gfs_to_coupling_lfs<data>
+    >::template result
+  >
+lookupNodeTransformation(PowerGridFunctionSpace* pgfs, gfs_to_coupling_lfs<data>* t, PowerGridFunctionSpaceTag tag);
 
 #if HAVE_VARIADIC_TEMPLATES
-template<typename CompositeGridFunctionSpace>
-Dune::PDELab::TypeTree::GenericVariadicCompositeNodeTransformation<CompositeGridFunctionSpace,gfs_to_coupling_lfs,CompositeLocalFunctionSpaceNode>
-lookupNodeTransformation(CompositeGridFunctionSpace* cgfs, gfs_to_coupling_lfs* t, CompositeGridFunctionSpaceTag tag);
+
+template<typename CompositeGridFunctionSpace, typename data>
+Dune::PDELab::TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
+  CompositeGridFunctionSpace,
+  gfs_to_coupling_lfs<data>,
+  variadic_composite_gfs_to_lfs_template<
+    CompositeGridFunctionSpace,
+    gfs_to_coupling_lfs<data>
+    >::template result
+  >
+lookupNodeTransformation(CompositeGridFunctionSpace* cgfs, gfs_to_coupling_lfs<data>* t, CompositeGridFunctionSpaceTag tag);
+
 #else
-template<typename CompositeGridFunctionSpace>
-Dune::PDELab::TypeTree::GenericCompositeNodeTransformation<CompositeGridFunctionSpace,gfs_to_coupling_lfs,CompositeLocalFunctionSpaceNode>
-lookupNodeTransformation(CompositeGridFunctionSpace* cgfs, gfs_to_coupling_lfs* t, CompositeGridFunctionSpaceTag tag);
+#error "require variadic templates"
 #endif
 
-template<typename GridFunctionSpace>
-Dune::PDELab::TypeTree::GenericLeafNodeTransformation<GridFunctionSpace,gfs_to_coupling_lfs,LeafLocalFunctionSpaceNode<GridFunctionSpace> >
-lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs* t, LeafGridFunctionSpaceTag tag);
+template<typename GridFunctionSpace, typename data>
+Dune::PDELab::TypeTree::GenericLeafNodeTransformation<
+  GridFunctionSpace,
+  gfs_to_coupling_lfs<data>,
+  LeafLocalFunctionSpaceNode<
+    GridFunctionSpace,
+    typename gfs_to_coupling_lfs<data>::MultiIndex
+    >
+  >
+lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, LeafGridFunctionSpaceTag tag);
 
 
 
@@ -441,12 +474,12 @@ lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs* t, LeafGri
 // TODO: Add support for tags
 template<typename GFS, typename Tag=AnySpaceTag>
 class CouplingLocalFunctionSpace
-  : public Dune::PDELab::TypeTree::TransformTree<GFS,gfs_to_coupling_lfs>::Type
+  : public Dune::PDELab::TypeTree::TransformTree<GFS,gfs_to_coupling_lfs<GFS> >::Type
 {
-  typedef typename Dune::PDELab::TypeTree::TransformTree<GFS,gfs_to_coupling_lfs>::Type BaseT;
+  typedef typename Dune::PDELab::TypeTree::TransformTree<GFS,gfs_to_coupling_lfs<GFS> >::Type BaseT;
 
 public:
-  CouplingLocalFunctionSpace(const GFS & gfs) : BaseT(TypeTree::TransformTree<GFS,gfs_to_coupling_lfs>::transform(gfs)) { this->setup(*this); }
+  CouplingLocalFunctionSpace(const GFS & gfs) : BaseT(TypeTree::TransformTree<GFS,gfs_to_coupling_lfs<GFS> >::transform(gfs)) { this->setup(*this); }
 };
 
     //! \} group GridFunctionSpace

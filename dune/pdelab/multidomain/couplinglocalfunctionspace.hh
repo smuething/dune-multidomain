@@ -2,6 +2,7 @@
 #define DUNE_MULTIDOMAIN_COUPLINGLOCALFUNCTIONSPACE_HH
 
 #include <dune/pdelab/gridfunctionspace/localfunctionspace.hh>
+#include <dune/pdelab/common/typetree.hh>
 
 #include <dune/pdelab/multidomain/dofmapper.hh>
 
@@ -10,39 +11,23 @@ namespace PDELab {
 namespace MultiDomain {
 
 
-template <typename GFS>
+template <typename GFS, typename MI>
 class CouplingLocalFunctionSpaceNode;
 
 
-template<typename GFS>
+template<typename GFS, typename MI>
 struct CouplingLocalFunctionSpaceTraits
+  : public LocalFunctionSpaceBaseTraits<GFS,MI>
 {
 
-  //! \brief the grid view where grid function is defined upon
-  typedef GFS GridFunctionSpaceType;
-
-  //! \brief Type to store indices from Backend
-  typedef typename GFS::Traits::GridViewType GridViewType;
-
-  //! \brief Type of codim 0 entity in the grid
-  typedef typename GridViewType::Traits::template Codim<0>::Entity Element;
-
-  typedef typename GridViewType::Traits::Intersection Intersection;
-
-  //! \brief Type to store indices from Backend
-  typedef typename GFS::Traits::SizeType SizeType;
-
-  //! \brief Type of container to store indices
-  typedef typename std::vector<SizeType> IndexContainer;
-
-  typedef CouplingLocalFunctionSpaceNode<GFS> NodeType;
+  typedef typename GFS::Traits::GridViewType::Intersection Intersection;
 
 };
 
 
-template<typename GFS>
+template<typename GFS, typename MI>
 struct LeafCouplingLocalFunctionSpaceTraits
-  : public CouplingLocalFunctionSpaceTraits<GFS>
+  : public CouplingLocalFunctionSpaceTraits<GFS,MI>
 {
 
   //! \brief Type of local finite element
@@ -50,6 +35,8 @@ struct LeafCouplingLocalFunctionSpaceTraits
 
   //! \brief Type of constraints engine
   typedef typename GFS::Traits::ConstraintsType ConstraintsType;
+
+  typedef CouplingLocalFunctionSpaceNode<GFS,MI> NodeType;
 
 };
 
@@ -59,12 +46,12 @@ struct PowerCouplingLocalFunctionSpaceTag {};
 struct PowerCouplingGridFunctionSpaceTag {};
 
 // local function space for a power grid function space
-template<typename GFS, typename ChildLFS, std::size_t k>
-class PowerCouplingLocalFunctionSpaceNode :
-    public LocalFunctionSpaceBaseNode<GFS>,
-    public TypeTree::PowerNode<ChildLFS,k>
+template<typename GFS, typename MI, typename ChildLFS, std::size_t k>
+class PowerCouplingLocalFunctionSpaceNode
+  : public LocalFunctionSpaceBaseNode<GFS,MI>
+  , public TypeTree::PowerNode<ChildLFS,k>
 {
-  typedef LocalFunctionSpaceBaseNode<GFS> BaseT;
+  typedef LocalFunctionSpaceBaseNode<GFS,MI> BaseT;
   typedef TypeTree::PowerNode<ChildLFS,k> TreeNode;
 
   template<typename>
@@ -80,7 +67,7 @@ class PowerCouplingLocalFunctionSpaceNode :
   friend struct Dune::PDELab::FillIndicesVisitor;
 
 public:
-  typedef CouplingLocalFunctionSpaceTraits<GFS> Traits;
+  typedef CouplingLocalFunctionSpaceTraits<GFS,MI> Traits;
 
   typedef PowerCouplingLocalFunctionSpaceTag ImplementationTag;
 
@@ -103,26 +90,62 @@ public:
 
 };
 
-template<typename PowerCouplingGridFunctionSpace>
-Dune::PDELab::TypeTree::GenericPowerNodeTransformation<PowerCouplingGridFunctionSpace,gfs_to_coupling_lfs,PowerCouplingLocalFunctionSpaceNode>
-lookupNodeTransformation(PowerCouplingGridFunctionSpace* gfs, gfs_to_coupling_lfs* t, PowerCouplingGridFunctionSpaceTag tag);
 
-template<typename PowerCouplingGridFunctionSpace>
-Dune::PDELab::TypeTree::GenericPowerNodeTransformation<PowerCouplingGridFunctionSpace,gfs_to_lfs,PowerCouplingLocalFunctionSpaceNode>
-lookupNodeTransformation(PowerCouplingGridFunctionSpace* gfs, gfs_to_lfs* t, PowerCouplingGridFunctionSpaceTag tag);
+template<typename SourceNode, typename Transformation>
+struct power_coupling_gfs_to_coupling_lfs_template
+{
+  template<typename TC>
+  struct result
+  {
+    typedef PowerCouplingLocalFunctionSpaceNode<SourceNode,typename Transformation::MultiIndex,TC,SourceNode::CHILDREN> type;
+  };
+};
+
+template<typename PowerCouplingGridFunctionSpace, typename data>
+Dune::PDELab::TypeTree::TemplatizedGenericPowerNodeTransformation<
+  PowerCouplingGridFunctionSpace,
+  gfs_to_coupling_lfs<data>,
+  power_coupling_gfs_to_coupling_lfs_template<
+    PowerCouplingGridFunctionSpace,
+    gfs_to_coupling_lfs<data>
+    >::template result
+  >
+lookupNodeTransformation(PowerCouplingGridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, PowerCouplingGridFunctionSpaceTag tag);
+
+
+template<typename SourceNode, typename Transformation>
+struct power_coupling_gfs_to_lfs_template
+{
+  template<typename TC>
+  struct result
+  {
+    typedef PowerCouplingLocalFunctionSpaceNode<SourceNode,typename Transformation::MultiIndex,TC,SourceNode::CHILDREN> type;
+  };
+};
+
+template<typename PowerCouplingGridFunctionSpace, typename data>
+Dune::PDELab::TypeTree::TemplatizedGenericPowerNodeTransformation<
+  PowerCouplingGridFunctionSpace,
+  gfs_to_lfs<data>,
+  power_coupling_gfs_to_lfs_template<
+    PowerCouplingGridFunctionSpace,
+    gfs_to_lfs<data>
+    >::template result
+  >
+lookupNodeTransformation(PowerCouplingGridFunctionSpace* gfs, gfs_to_lfs<data>* t, PowerCouplingGridFunctionSpaceTag tag);
 
 
 struct CouplingLocalFunctionSpaceTag {};
 struct CouplingGridFunctionSpaceTag {};
 
-template <typename GFS>
+template <typename GFS, typename MI>
 class CouplingLocalFunctionSpaceNode
-  : public LocalFunctionSpaceBaseNode<GFS>
+  : public LocalFunctionSpaceBaseNode<GFS,MI>
   , public TypeTree::LeafNode
 {
   typedef typename GFS::Traits::BackendType B;
 
-  typedef LocalFunctionSpaceBaseNode<GFS> BaseT;
+  typedef LocalFunctionSpaceBaseNode<GFS,MI> BaseT;
 
   template<typename>
   friend struct Dune::PDELab::PropagateGlobalStorageVisitor;
@@ -140,7 +163,7 @@ class CouplingLocalFunctionSpaceNode
   using BaseT::global_storage;
 
 public:
-  typedef LeafCouplingLocalFunctionSpaceTraits<GFS> Traits;
+  typedef LeafCouplingLocalFunctionSpaceTraits<GFS,MI> Traits;
   using BaseT::globalIndex;
 
 private:
@@ -286,13 +309,27 @@ private:
   typename FESwitch::Store pfe;
 };
 
-template<typename GridFunctionSpace>
-Dune::PDELab::TypeTree::GenericLeafNodeTransformation<GridFunctionSpace,gfs_to_coupling_lfs,CouplingLocalFunctionSpaceNode<GridFunctionSpace> >
-lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs* t, CouplingGridFunctionSpaceTag tag);
+template<typename GridFunctionSpace, typename data>
+Dune::PDELab::TypeTree::GenericLeafNodeTransformation<
+  GridFunctionSpace,
+  gfs_to_coupling_lfs<data>,
+  CouplingLocalFunctionSpaceNode<
+    GridFunctionSpace,
+    typename gfs_to_coupling_lfs<data>::MultiIndex
+    >
+  >
+lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, CouplingGridFunctionSpaceTag tag);
 
-template<typename GridFunctionSpace>
-Dune::PDELab::TypeTree::GenericLeafNodeTransformation<GridFunctionSpace,gfs_to_lfs,CouplingLocalFunctionSpaceNode<GridFunctionSpace> >
-lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_lfs* t, CouplingGridFunctionSpaceTag tag);
+template<typename GridFunctionSpace, typename data>
+Dune::PDELab::TypeTree::GenericLeafNodeTransformation<
+  GridFunctionSpace,
+  gfs_to_lfs<data>,
+  CouplingLocalFunctionSpaceNode<
+    GridFunctionSpace,
+    typename gfs_to_lfs<data>::MultiIndex
+    >
+  >
+lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_lfs<data>* t, CouplingGridFunctionSpaceTag tag);
 
 } // namespace MultiDomain
 } // namespace PDELab

@@ -4,7 +4,6 @@ include $(top_srcdir)/am/global-rules
 AM_CPPFLAGS += $(ALL_PKG_CPPFLAGS) $(BOOST_CPPFLAGS)
 AM_LDFLAGS += $(ALL_PKG_LDFLAGS)
 AM_LIBS = $(ALL_PKG_LIBS)
-CXXFLAGS += -g3
 
 check_PROGRAMS = testmultidomaingridfunctionspace \
 	poisson \

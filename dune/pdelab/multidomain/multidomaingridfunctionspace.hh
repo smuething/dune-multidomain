@@ -325,10 +325,6 @@ public:
 
   typename G::LeafGridView gridview() const { return grid().leafView(); }
 
-  // define local function space parametrized by self
-  typedef typename Dune::PDELab::TypeTree::TransformTree<MultiDomainGridFunctionSpace,Dune::PDELab::gfs_to_lfs>::Type LocalFunctionSpace;
-  //typedef MultiDomainCouplingLocalFunctionSpace<MultiDomainGridFunctionSpace,Children...> CouplingLocalFunctionSpace;
-
 
   MultiDomainGridFunctionSpace (G& g, Children&... children)
     : BaseT(children...)

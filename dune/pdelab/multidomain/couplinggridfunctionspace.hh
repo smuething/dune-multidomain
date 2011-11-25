@@ -79,9 +79,6 @@ public:
     ConstraintsContainer () {}
   };
 
-  //! define local function space parametrized by self
-  typedef CouplingLocalFunctionSpaceNode<CouplingGridFunctionSpace> LocalFunctionSpace;
-
   //! constructor
   CouplingGridFunctionSpace (const GV& gridview, const LFEM& lfem, const Predicate& predicate, const CE& ce_)
     : defaultce(ce_)

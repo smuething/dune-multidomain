@@ -75,9 +75,9 @@ namespace {
 
 } // anonymous namespace
 
-template<typename GFS, typename N, typename BaseLFS, typename SubProblem_>
+template<typename GFS, typename N, typename BaseLFS, typename MI, typename SubProblem_>
 struct SubProblemLocalFunctionSpaceTraits
-  : public LocalFunctionSpaceBaseTraits<GFS,typename BaseLFS::Traits::MultiIndex>
+  : public LocalFunctionSpaceBaseTraits<GFS,MI>
 {
 
   //! type of local function space node
@@ -99,7 +99,7 @@ struct SubProblemLocalFunctionSpaceTraits
 
 template<typename GFS, typename N, typename BaseLFS, typename SubProblem_>
 struct SubProblemLeafLocalFunctionSpaceTraits
-  : public SubProblemLocalFunctionSpaceTraits<GFS,N,BaseLFS,SubProblem_>
+  : public SubProblemLocalFunctionSpaceTraits<GFS,N,BaseLFS,typename BaseLFS::Traits::MultiIndex,SubProblem_>
 {
 
   //! \brief finite element
@@ -172,6 +172,7 @@ public:
   typedef SubProblemLocalFunctionSpaceTraits<GFS,
                                              SubProblemLocalFunctionSpace,
                                              void, // we are not directly based on a node in the original tree
+                                             typename MDLFS::Traits::MultiIndex,
                                              SubProblem> Traits;
 
 public:
@@ -359,6 +360,7 @@ class SubProblemLocalFunctionSpaceBase
                                                typename MDLFS::Traits::GridFunctionSpaceType,
                                                LFS,
                                                BaseLFS,
+                                               typename BaseLFS::Traits::MultiIndex,
                                                SubProblem
                                                >
                                              >
@@ -368,6 +370,7 @@ class SubProblemLocalFunctionSpaceBase
                                               typename MDLFS::Traits::GridFunctionSpaceType,
                                               LFS,
                                               BaseLFS,
+                                              typename BaseLFS::Traits::MultiIndex,
                                               SubProblem
                                               >
                                             > BaseT;

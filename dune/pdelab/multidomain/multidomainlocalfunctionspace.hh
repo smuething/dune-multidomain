@@ -104,8 +104,8 @@ struct ComputeSizeVisitor<Entity,StandardLFSTag>
   {
     typedef typename Child::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
     typedef typename SDEP::Entity SDE;
-    const SDEP ep = child.gridFunctionSpace().gridview().grid().subDomainEntityPointer(e);
-    if (child.gridFunctionSpace().gridview().indexSet().contains(*ep))
+    const SDEP ep = child.gridFunctionSpace().gridView().grid().subDomainEntityPointer(e);
+    if (child.gridFunctionSpace().gridView().indexSet().contains(*ep))
       {
         Dune::PDELab::ComputeSizeVisitor<SDE> child_visitor(*ep,offset);
         Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
@@ -237,8 +237,8 @@ struct FillIndicesVisitor<Entity,GFS,Container,StandardLFSTag>
   {
     typedef typename Child::Traits::GridViewType::template Codim<0>::EntityPointer SDEP;
     typedef typename SDEP::Entity SDE;
-    const SDEP ep = child.gridFunctionSpace().gridview().grid().subDomainEntityPointer(e);
-    if (child.gridFunctionSpace().gridview().indexSet().contains(*ep))
+    const SDEP ep = child.gridFunctionSpace().gridView().grid().subDomainEntityPointer(e);
+    if (child.gridFunctionSpace().gridView().indexSet().contains(*ep))
       {
         Dune::PDELab::FillIndicesVisitor<SDE> child_visitor(*ep);
         Dune::PDELab::TypeTree::applyToTree(child,child_visitor);

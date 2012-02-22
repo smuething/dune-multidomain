@@ -85,7 +85,7 @@ public:
       require_v_enriched_coupling;
 
 
-    GV gv = gfsu.gridview();
+    GV gv = gfsu.gridView();
     const IndexSet& is = gv.indexSet();
 
     engine.preAssembly();

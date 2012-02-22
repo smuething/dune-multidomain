@@ -135,7 +135,7 @@ public:
 
     // Make solution consistent
     CopyDataHandle<typename Traits::TrialGridFunctionSpace,typename Traits::Range> cdh(trialGridFunctionSpace(),xnew);
-    trialGridFunctionSpace().gridview().communicate(cdh,Dune::InteriorBorder_All_Interface,Dune::ForwardCommunication);
+    trialGridFunctionSpace().gridView().communicate(cdh,Dune::InteriorBorder_All_Interface,Dune::ForwardCommunication);
   }
 
   GridOperator(const GFSU& gfsu,

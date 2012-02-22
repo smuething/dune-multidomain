@@ -438,7 +438,7 @@ public:
   //! get a reference to the GridView
   inline const typename Traits::GridViewType& getGridView () const
   {
-    return pgfs->gridview();
+    return pgfs->gridView();
   }
 
 private:
@@ -533,7 +533,7 @@ public:
   //! get a reference to the GridView
   inline const typename Traits::GridViewType& getGridView () const
   {
-    return pgfs->gridview();
+    return pgfs->gridView();
   }
 
 private:

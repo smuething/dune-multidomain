@@ -40,11 +40,11 @@ void do_interpolate(const GFS& gfs, LFS& lfs, XG& xg, SubProblems&&... subProble
   typedef typename GV::Traits::template Codim<0>::Iterator ElementIterator;
 
   // get index set
-  const typename GV::IndexSet& is=gfs.gridview().indexSet();
+  const typename GV::IndexSet& is=gfs.gridView().indexSet();
 
   // loop once over the grid
-  for (ElementIterator it = gfs.gridview().template begin<0>();
-       it!=gfs.gridview().template end<0>(); ++it)
+  for (ElementIterator it = gfs.gridView().template begin<0>();
+       it!=gfs.gridView().template end<0>(); ++it)
     {
       // bind local function space to element
       lfs.bind(*it);

@@ -202,7 +202,7 @@ public:
       FESwitch::coefficients(*pfe);
 
     typedef typename GFS::Traits::GridViewType GV;
-    GV gv = this->gridFunctionSpace().gridview();
+    GV gv = this->gridFunctionSpace().gridView();
 
     DOFMapper<GV> dm(is);
 

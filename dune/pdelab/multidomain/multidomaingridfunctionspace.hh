@@ -51,8 +51,8 @@ namespace {
     {
       typedef typename Child::Traits::GridViewType::template Codim<Entity::codimension>::EntityPointer SDEP;
       typedef typename SDEP::Entity SDE;
-      const SDEP ep = child.gridview().grid().subDomainEntityPointer(e);
-      if (child.gridview().indexSet().contains(*ep))
+      const SDEP ep = child.gridView().grid().subDomainEntityPointer(e);
+      if (child.gridView().indexSet().contains(*ep))
         return child.dataHandleSize(*ep);
       else
         return 0;
@@ -102,8 +102,8 @@ namespace {
     {
       typedef typename Child::Traits::GridViewType::template Codim<Entity::codimension>::EntityPointer SDEP;
       typedef typename SDEP::Entity SDE;
-      const SDEP ep = child.gridview().grid().subDomainEntityPointer(e);
-      if (child.gridview().indexSet().contains(*ep))
+      const SDEP ep = child.gridView().grid().subDomainEntityPointer(e);
+      if (child.gridView().indexSet().contains(*ep))
         pos += child.dataHandleGlobalIndices(*ep,g,pos,false);
     }
 
@@ -157,7 +157,7 @@ struct VerifyChildren
     typedef typename Child::Traits::GridViewType::Grid ChildGrid;
     dune_static_assert((is_same<MultiDomainGrid,ChildGrid>::value || is_same<SubDomainGrid,ChildGrid>::value),
                        "MultiDomainGridFunctionSpace only works with a MultiDomainGrid and its associated SubDomainGrids.");
-    doVerify<T>(t.grid(),child.gridview().grid());
+    doVerify<T>(t.grid(),child.gridView().grid());
   }
 
   template<typename T>

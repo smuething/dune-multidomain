@@ -109,7 +109,7 @@ private:
 
 
 ConstrainMultiDomainGridFunctionSpace<NoConstraintsParameters>
-constrainMultiDomainGridFunctionSpace()
+inline constrainMultiDomainGridFunctionSpace() // FIXME: better use a librar
 {
   return ConstrainMultiDomainGridFunctionSpace<NoConstraintsParameters>();
 }

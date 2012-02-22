@@ -103,7 +103,14 @@ public:
   }
 
   //! get grid view
-  const GV& gridview () const
+  const GV& gridview () const DUNE_DEPRECATED_MSG("Use gridView() instead of gridview()")
+  {
+    return gv;
+  }
+
+
+  //! get grid view
+  const GV& gridView () const
   {
     return gv;
   }

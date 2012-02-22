@@ -323,7 +323,16 @@ public:
     return this->template getChild<get_map_entry<T,ChildEntryMap>::type::index>();
   }
 
-  typename G::LeafGridView gridview() const { return grid().leafView(); }
+
+  typename G::LeafGridView gridView() const
+  {
+    return grid().leafView();
+  }
+
+  typename G::LeafGridView gridview() const DUNE_DEPRECATED_MSG("Use gridView() instead of gridview()")
+  {
+    return grid().leafView();
+  }
 
 
   MultiDomainGridFunctionSpace (G& g, Children&... children)

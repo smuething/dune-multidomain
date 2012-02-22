@@ -3,7 +3,7 @@
 #define DUNE_PDELAB_MULTIDOMAIN_GLOBALASSEMBLER_HH
 
 #include<dune/common/exceptions.hh>
-#include<dune/common/geometrytype.hh>
+#include<dune/geometry/type.hh>
 
 #include <dune/pdelab/gridoperator/common/assemblerutilities.hh>
 #include <dune/pdelab/multidomain/entitywrappers.hh>

@@ -115,29 +115,30 @@ namespace {
   // Test whether the argument pack values... contains t
   template<typename T, T t, T... values>
   struct arg_pack_contains_value
-  {
-    static const bool value = false;
-  };
+    : public std::false_type
+  {};
 
   template<typename T, T t, T v, T... values>
   struct arg_pack_contains_value<T,t,v,values...>
-  {
-    static const bool value = (t == v) || arg_pack_contains_value<T,t,values...>::value;
-  };
+    : public std::conditional<t == v,
+                              std::true_type,
+                              arg_pack_contains_value<T,t,values...>
+                              >::type
+  {};
 
   // Test whether the argument pack values... contains duplicates
   template<typename T, T... values>
   struct arg_pack_contains_duplicate_values
-  {
-    static const bool value = false;
-  };
+    : public std::false_type
+  {};
 
   template<typename T, T v, T... values>
   struct arg_pack_contains_duplicate_values<T,v,values...>
-  {
-    static const bool value = arg_pack_contains_value<T,v,values...>::value ||
-      arg_pack_contains_duplicate_values<T,values...>::value;
-  };
+    : public std::conditional<arg_pack_contains_value<T,v,values...>::value,
+                              std::true_type,
+                              arg_pack_contains_duplicate_values<T,values...>
+                              >::type
+  {};
 
 } // anonymous namespace
 

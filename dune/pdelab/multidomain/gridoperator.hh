@@ -137,6 +137,7 @@ public:
                const GFSV& gfsv,
                const CU& cu,
                const CV& cv,
+               const MB& mb,
                AssemblyParticipants&... participants)
     : _assembler(gfsu,gfsv)
     , _localAssembler(cu,cv,participants...)

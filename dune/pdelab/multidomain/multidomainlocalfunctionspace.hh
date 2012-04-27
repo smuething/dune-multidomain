@@ -159,7 +159,7 @@ struct ComputeSizeVisitor<Intersection,CouplingLFSTag>
 };
 
 
-template<typename Impl, typename GFS, typename Container>
+template<typename Impl>
 struct FillIndicesVisitorBase
   : public Dune::PDELab::TypeTree::DirectChildrenVisitor
   , public Dune::PDELab::TypeTree::DynamicTraversal
@@ -171,8 +171,7 @@ struct FillIndicesVisitorBase
     impl().fill_indices(child,typename gfs_flavor_tag<typename Child::Traits::GridFunctionSpaceType>::type());
     for (std::size_t i = 0; i<child.size(); ++i)
       {
-        (*lfs.global)[child.localIndex(i)] = lfs.pgfs->subMap(childIndex,(*lfs.global)[child.localIndex(i)]);
-        (*lfs._multi_indices)[child.localIndex(i)].push_back(childIndex);
+        (*lfs._dof_indices)[child.localIndex(i)].treeIndex().push_back(childIndex);
       }
   }
 
@@ -181,42 +180,30 @@ struct FillIndicesVisitorBase
     return static_cast<Impl&>(*this);
   }
 
-  FillIndicesVisitorBase(const GFS& gfs_, Container& container_)
-    : gfs(gfs_)
-    , container(container_)
-  {}
-
-  const GFS& gfs;
-  Container& container;
-
 };
 
 
-template<typename Entity, typename GFS, typename Container, typename LFSTag>
+template<typename Entity, typename LFSTag>
 struct FillIndicesVisitor;
 
-template<typename Entity, typename GFS, typename Container>
-struct FillIndicesVisitor<Entity,GFS,Container,StandardLFSTag>
+template<typename Entity>
+struct FillIndicesVisitor<Entity,StandardLFSTag>
   : public FillIndicesVisitorBase<FillIndicesVisitor<
                                     Entity,
-                                    GFS,
-                                    Container,
-                                    StandardLFSTag>,
-                                  GFS,
-                                  Container>
+                                    StandardLFSTag
+                                    >
+                                  >
 {
 
-  typedef FillIndicesVisitorBase<FillIndicesVisitor<
-                                   Entity,
-                                   GFS,
-                                   Container,
-                                   StandardLFSTag>,
-                                 GFS,
-                                 Container> BaseT;
+  typedef FillIndicesVisitorBase<
+    FillIndicesVisitor<
+      Entity,
+      StandardLFSTag
+      >
+    > BaseT;
 
-  FillIndicesVisitor(const Entity& entity, const GFS& gfs, Container& container)
-    : BaseT(gfs,container)
-    , e(entity)
+  FillIndicesVisitor(const Entity& entity)
+    : e(entity)
   {}
 
   const Entity& e;
@@ -248,28 +235,24 @@ struct FillIndicesVisitor<Entity,GFS,Container,StandardLFSTag>
 };
 
 
-template<typename Intersection, typename GFS, typename Container>
-struct FillIndicesVisitor<Intersection,GFS,Container,CouplingLFSTag>
+template<typename Intersection>
+struct FillIndicesVisitor<Intersection,CouplingLFSTag>
   : public FillIndicesVisitorBase<FillIndicesVisitor<
                                     Intersection,
-                                    GFS,
-                                    Container,
-                                    CouplingLFSTag>,
-                                  GFS,
-                                  Container>
+                                    CouplingLFSTag
+                                    >
+                                  >
 {
 
-  typedef FillIndicesVisitorBase<FillIndicesVisitor<
-                                   Intersection,
-                                   GFS,
-                                   Container,
-                                   CouplingLFSTag>,
-                                 GFS,
-                                 Container> BaseT;
+  typedef FillIndicesVisitorBase<
+    FillIndicesVisitor<
+      Intersection,
+      CouplingLFSTag
+      >
+    > BaseT;
 
-  FillIndicesVisitor(const Intersection& is_, const GFS& gfs, Container& container)
-    : BaseT(gfs,container)
-    , is(is_)
+  FillIndicesVisitor(const Intersection& is_)
+    : is(is_)
   {}
 
   const Intersection& is;
@@ -295,9 +278,9 @@ struct FillIndicesVisitor<Intersection,GFS,Container,CouplingLFSTag>
 
 
 
-template<typename GFS, typename MI, typename N>
+template<typename GFS, typename DI, typename N>
 struct MultiDomainLocalFunctionSpaceTraits
-  : public LocalFunctionSpaceBaseTraits<GFS,MI>
+  : public LocalFunctionSpaceBaseTraits<GFS,DI>
 {
 
   //! type of local function space node
@@ -315,19 +298,19 @@ struct MultiDomainLocalFunctionSpaceTraits
 // local function space for a MultiDomainGridFunctionSpace
 template<typename GFS,
          typename LFSTag,
-         typename MultiIndex,
+         typename DOFIndex,
          typename... Children>
 class MultiDomainLocalFunctionSpaceNode
-  : public LocalFunctionSpaceBaseNode<GFS,MultiIndex>
+  : public LocalFunctionSpaceBaseNode<GFS,DOFIndex>
   , public TypeTree::VariadicCompositeNode<Children...>
 {
 
   typedef typename GFS::Traits::BackendType B;
 
-  typedef LocalFunctionSpaceBaseNode<GFS,MultiIndex> BaseT;
+  typedef LocalFunctionSpaceBaseNode<GFS,DOFIndex> BaseT;
 
 public:
-  typedef MultiDomainLocalFunctionSpaceTraits<GFS,MultiIndex,MultiDomainLocalFunctionSpaceNode> Traits;
+  typedef MultiDomainLocalFunctionSpaceTraits<GFS,DOFIndex,MultiDomainLocalFunctionSpaceNode> Traits;
 
 public:
 
@@ -347,11 +330,9 @@ public:
     , TypeTree::VariadicCompositeNode<Children...>(children...)
   {}
 
-  using BaseT::global_storage;
   using BaseT::n;
   using BaseT::offset;
-  using BaseT::global;
-  using BaseT::_multi_indices;
+  using BaseT::_dof_index_storage;
   using BaseT::pgfs;
 
   shared_ptr<const GFS> gridFunctionSpaceStorage() const
@@ -365,15 +346,12 @@ public:
     ComputeSizeVisitor<Element,LFSTag> csv(e);
     Dune::PDELab::TypeTree::applyToTree(*this,csv);
 
-    global_storage.resize(n);
+    _dof_index_storage.resize(n);
 
     // initialize iterators and fill indices
-    FillIndicesVisitor<Element,GFS,typename BaseT::Traits::IndexContainer,LFSTag> fiv(e,*pgfs,global_storage);
+    FillIndicesVisitor<Element,LFSTag> fiv(e);
     Dune::PDELab::TypeTree::applyToTree(*this,fiv);
 
-    // apply upMap
-    for (typename Traits::IndexContainer::size_type i=0; i<offset; ++i)
-      global_storage[i] = pgfs->upMap(global_storage[i]);
   }
 
 };
@@ -425,7 +403,7 @@ Dune::PDELab::TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
     gfs_to_coupling_lfs<data>
     >::template result
   >
-    lookupNodeTransformation(MultiDomainGFS*, gfs_to_coupling_lfs<data>*, MultiDomainGridFunctionSpaceTag);
+lookupNodeTransformation(MultiDomainGFS*, gfs_to_coupling_lfs<data>*, MultiDomainGridFunctionSpaceTag);
 
 
 

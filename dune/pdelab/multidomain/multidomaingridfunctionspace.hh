@@ -11,7 +11,7 @@
 #include <dune/grid/multidomaingrid.hh>
 #include <dune/pdelab/multidomain/utility.hh>
 #include <dune/pdelab/multidomain/couplinggridfunctionspace.hh>
-#include <dune/pdelab/multidomain/powercouplinggridfunctionspace.hh>
+//#include <dune/pdelab/multidomain/powercouplinggridfunctionspace.hh>
 #include <utility>
 
 namespace Dune {
@@ -132,7 +132,7 @@ struct MultiDomainGridFunctionSpaceTraits
   typedef typename G::LeafGridView GridViewType;
 
   //! \brief vector backend
-  typedef B BackendType;
+  typedef B Backend;
 
   //! \brief mapper
   typedef M MapperType;
@@ -201,12 +201,13 @@ struct gfs_flavor_tag<CouplingGridFunctionSpace<GV,LFEM,Predicate_,CE,B> >
   typedef CouplingGFSTag type;
 };
 
+  /*
 template<typename T, std::size_t k, typename Ordering>
 struct gfs_flavor_tag<PowerCouplingGridFunctionSpace<T,k,Ordering> >
 {
   typedef CouplingGFSTag type;
 };
-
+  */
 
 template<typename G, typename Backend, typename... Children>
 class MultiDomainGridFunctionSpace
@@ -214,7 +215,7 @@ class MultiDomainGridFunctionSpace
   , public PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,Children...>,
                                                typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
                                                Backend,
-                                               GridFunctionSpaceLexicographicMapper,
+                                               LexicographicOrderingTag,
                                                sizeof...(Children)
                                                >
 {
@@ -225,16 +226,18 @@ class MultiDomainGridFunctionSpace
   PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,Children...>,
                                       typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
                                       Backend,
-                                      GridFunctionSpaceLexicographicMapper,
+                                      LexicographicOrderingTag,
                                       sizeof...(Children)
                                       >;
 
   typedef PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,Children...>,
                                               typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
                                               Backend,
-                                              GridFunctionSpaceLexicographicMapper,
+                                              LexicographicOrderingTag,
                                               sizeof...(Children)
                                               > ImplementationBase;
+
+  typedef TypeTree::TransformTree<MultiDomainGridFunctionSpace,gfs_to_ordering<MultiDomainGridFunctionSpace> > ordering_transformation;
 
 public:
 
@@ -294,7 +297,7 @@ public:
                                              sizeof...(Children)>
   Traits;
 
-  typedef CompositeLexicographicOrdering<typename Traits::SizeType,const typename Children::Ordering...> Ordering;
+  typedef typename ordering_transformation::Type Ordering;
 
   template<typename T>
   struct IndexForChild
@@ -335,10 +338,10 @@ public:
   }
 
 
-  MultiDomainGridFunctionSpace (G& g, Children&... children)
+  MultiDomainGridFunctionSpace (G& g, const Backend& backend, Children&... children)
     : BaseT(children...)
+    , ImplementationBase(backend)
     , _g(g)
-    , _ordering(make_shared<Ordering>(*this,children.orderingPtr()...))
   {
     dune_static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
                        "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
@@ -374,20 +377,45 @@ public:
   }
 
   //! Direct access to the DOF ordering.
-  const Ordering &ordering() const { return *_ordering; }
+  const Ordering &ordering() const
+  {
+    return *orderingStorage();
+  }
+
+  //! Direct access to the DOF ordering.
+  Ordering &ordering()
+  {
+    return *orderingStorage();
+  }
 
   //! Direct access to the storage of the DOF ordering.
-  shared_ptr<const Ordering> orderingPtr() const { return _ordering; }
+  shared_ptr<const Ordering> orderingStorage() const
+  {
+    if (!_ordering)
+      {
+        _ordering = make_shared<Ordering>(ordering_transformation::transform(*this));
+        _ordering->update();
+      }
+    return _ordering;
+  }
 
-
+  //! Direct access to the storage of the DOF ordering.
+  shared_ptr<Ordering> orderingStorage()
+  {
+    if (!_ordering)
+      {
+        _ordering = make_shared<Ordering>(ordering_transformation::transform(*this));
+        _ordering->update();
+      }
+    return _ordering;
+  }
 
 private:
 
   const G& _g;
-  shared_ptr<Ordering> _ordering;
+  mutable shared_ptr<Ordering> _ordering;
 
 };
-
 
 template<typename MultiGFS, typename ChildGFS>
 struct get_subproblem_index
@@ -396,6 +424,20 @@ struct get_subproblem_index
 };
 
 
+// ********************************************************************************
+// register GFS -> Ordering transformation
+// ********************************************************************************
+
+template<typename GridFunctionSpace, typename Params>
+composite_gfs_to_ordering_descriptor<
+  GridFunctionSpace,
+  gfs_to_ordering<Params>,
+  LexicographicOrderingTag
+  >
+lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_ordering<Params>* t, MultiDomainGridFunctionSpaceTag tag);
+
+
+  /*
 template<typename MultiGFS, typename ChildGFS>
 class TypeBasedGridFunctionSubSpace
   : public GridFunctionSubSpace<MultiGFS,get_subproblem_index<MultiGFS,ChildGFS>::value>
@@ -408,7 +450,7 @@ public:
     : BaseT(gfs)
   {}
 };
-
+  */
 
 } // namespace MultiDomain
 

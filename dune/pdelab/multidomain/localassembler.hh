@@ -176,7 +176,7 @@ public:
   typedef typename Traits::Solution Domain;
   typedef typename Traits::Residual Range;
   typedef typename Traits::Jacobian Jacobian;
-  typedef typename Traits::MatrixBackend::Pattern Pattern;
+  typedef typename Traits::MatrixPattern Pattern;
 
   typedef Dune::PDELab::MultiDomain::JacobianAssemblerEngine<LocalAssembler> LocalJacobianAssemblerEngine;
   typedef Dune::PDELab::MultiDomain::ResidualAssemblerEngine<LocalAssembler> LocalResidualAssemblerEngine;

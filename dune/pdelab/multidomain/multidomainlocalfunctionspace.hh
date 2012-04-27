@@ -305,7 +305,7 @@ class MultiDomainLocalFunctionSpaceNode
   , public TypeTree::VariadicCompositeNode<Children...>
 {
 
-  typedef typename GFS::Traits::BackendType B;
+  typedef typename GFS::Traits::Backend B;
 
   typedef LocalFunctionSpaceBaseNode<GFS,DOFIndex> BaseT;
 

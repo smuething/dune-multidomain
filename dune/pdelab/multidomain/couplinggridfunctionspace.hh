@@ -2,6 +2,7 @@
 #define DUNE_MULTIDOMAIN_COUPLINGGRIDFUNCTIONSPACE_HH
 
 #include <dune/pdelab/multidomain/couplinglocalfunctionspace.hh>
+#include <dune/pdelab/multidomain/couplinggfsordering.hh>
 #include <dune/pdelab/multidomain/dofmapper.hh>
 #include <dune/pdelab/common/typetree.hh>
 
@@ -40,14 +41,18 @@ private:
 };
 
 
-template<typename GV, typename LFEM, typename Predicate_, typename CE=NoConstraints,
+template<typename GV, typename FEM, typename Predicate_, typename CE=NoConstraints,
          typename B=StdVectorBackend>
 class CouplingGridFunctionSpace
   : public Dune::PDELab::TypeTree::LeafNode
 {
+
+  typedef TypeTree::TransformTree<CouplingGridFunctionSpace,gfs_to_ordering<CouplingGridFunctionSpace> > ordering_transformation;
+
+
 public:
   //! export Traits class
-  typedef GridFunctionSpaceTraits<GV,LFEM,CE,B> Traits;
+  typedef GridFunctionSpaceTraits<GV,FEM,CE,B> Traits;
   typedef typename GV::Traits::template Codim<0>::Entity Element;
   typedef typename GV::Traits::template Codim<0>::Iterator ElementIterator;
   typedef typename GV::Traits::Intersection Intersection;
@@ -57,7 +62,9 @@ public:
 
   typedef CouplingGridFunctionSpaceTag ImplementationTag;
 
-  typedef LeafOrdering<CouplingGridFunctionSpace> Ordering;
+  typedef GridFunctionGeneralMapper OrderingTag;
+
+  typedef typename ordering_transformation::Type Ordering;
 
   //! extract type of container storing Ts
   template<typename T>
@@ -80,26 +87,24 @@ public:
   };
 
   //! constructor
-  CouplingGridFunctionSpace (const GV& gridview, const LFEM& lfem, const Predicate& predicate, const CE& ce_)
+  CouplingGridFunctionSpace (const GV& gridview, const FEM& fem, const Predicate& predicate, const CE& ce_, const typename Traits::Backend& backend = typename Traits::Backend())
     : defaultce(ce_)
     , gv(gridview)
-    , plfem(stackobject_to_shared_ptr(lfem))
+    , pfem(stackobject_to_shared_ptr(fem))
     , predicate_(predicate)
-    , ordering_(make_shared<Ordering>(*this))
     , ce(ce_)
+    , backend_(backend)
   {
-    update();
   }
 
   //! constructor
-  CouplingGridFunctionSpace (const GV& gridview, const LFEM& lfem, const Predicate& predicate)
+  CouplingGridFunctionSpace (const GV& gridview, const FEM& fem, const Predicate& predicate, const typename Traits::Backend& backend = typename Traits::Backend())
     : gv(gridview)
-    , plfem(stackobject_to_shared_ptr(lfem))
+    , pfem(stackobject_to_shared_ptr(fem))
     , ce(defaultce)
     , predicate_(predicate)
-    , ordering_(make_shared<Ordering>(*this))
+    , backend_(backend)
   {
-    update();
   }
 
   //! get grid view
@@ -116,9 +121,9 @@ public:
   }
 
   // get finite element map, I think we dont need it
-  const LFEM& finiteElementMap () const
+  const FEM& finiteElementMap () const
   {
-    return *plfem;
+    return *pfem;
   }
 
   //! get dimension of root finite element space
@@ -237,6 +242,7 @@ public:
   //------------------------------
 
 
+  /*
   // update information, e.g. when grid has changed
   void update ()
   {
@@ -258,12 +264,12 @@ public:
             //EntityWrapper ew = buildWrapper(*iit);
 
             // check geometry type
-            if ((plfem->find(*iit)).type()!=iit->type())
+            if ((pfem->find(*iit)).type()!=iit->type())
               DUNE_THROW(Exception, "geometry type mismatch in GridFunctionSpace");
 
             // get local coefficients for this entity
             const typename Traits::FiniteElementType::Traits::LocalCoefficientsType&
-              lc = (plfem->find(*iit)).localCoefficients();
+              lc = (pfem->find(*iit)).localCoefficients();
 
             // insert geometry type of all subentities into set
             for (std::size_t i=0; i<lc.size(); ++i)
@@ -311,7 +317,7 @@ public:
 
             // get local coefficients for this entity
             const typename Traits::FiniteElementType::Traits::LocalCoefficientsType&
-              lc = (plfem->find(*iit)).localCoefficients();
+              lc = (pfem->find(*iit)).localCoefficients();
 
             // compute maximum number of degrees of freedom per element
             nlocal = std::max(nlocal,static_cast<typename Traits::SizeType>(lc.size()));
@@ -343,25 +349,64 @@ public:
         nglobal += size;
       }
     Dune::dinfo << "total number of dofs is " << nglobal << std::endl;
-    ordering_->update();
+  }
+  */
+
+  const typename Traits::Backend& backend() const
+  {
+    return backend_;
+  }
+
+  //! get finite element map
+  shared_ptr<const FEM> finiteElementMapStorage () const
+  {
+    return pfem;
   }
 
   //! Direct access to the DOF ordering.
-  const Ordering &ordering() const { return *ordering_; }
+  const Ordering &ordering() const
+  {
+    return *orderingStorage();
+  }
+
+  //! Direct access to the DOF ordering.
+  Ordering &ordering()
+  {
+    return *orderingStorage();
+  }
 
   //! Direct access to the storage of the DOF ordering.
-  shared_ptr<const Ordering> orderingPtr() const { return ordering_; }
+  shared_ptr<const Ordering> orderingStorage() const
+  {
+    if (!_ordering)
+      {
+        _ordering = make_shared<Ordering>(ordering_transformation::transform(*this));
+        _ordering->update();
+      }
+    return _ordering;
+  }
 
+  //! Direct access to the storage of the DOF ordering.
+  shared_ptr<Ordering> orderingStorage()
+  {
+    if (!_ordering)
+      {
+        _ordering = make_shared<Ordering>(ordering_transformation::transform(*this));
+        _ordering->update();
+      }
+    return _ordering;
+  }
 
 private:
   CE defaultce;
   const GV& gv;
-  shared_ptr<LFEM const> plfem;
+  shared_ptr<FEM const> pfem;
   typename Traits::SizeType nlocal;
   typename Traits::SizeType nglobal;
   const CE& ce;
   const Predicate_& predicate_;
-  shared_ptr<Ordering> ordering_;
+  shared_ptr<Ordering> _ordering;
+  B backend_;
 
   std::map<Dune::GeometryType,typename Traits::SizeType> gtoffset; // offset in vector for given geometry type
   std::vector<typename Traits::SizeType> offset; // offset into big vector for each entity;

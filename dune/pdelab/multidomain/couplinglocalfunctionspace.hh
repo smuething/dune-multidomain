@@ -11,13 +11,13 @@ namespace PDELab {
 namespace MultiDomain {
 
 
-template <typename GFS, typename MI>
+template <typename GFS, typename DI>
 class CouplingLocalFunctionSpaceNode;
 
 
-template<typename GFS, typename MI>
+template<typename GFS, typename DI>
 struct CouplingLocalFunctionSpaceTraits
-  : public LocalFunctionSpaceBaseTraits<GFS,MI>
+  : public LocalFunctionSpaceBaseTraits<GFS,DI>
 {
 
   typedef typename GFS::Traits::GridViewType::Intersection Intersection;
@@ -25,9 +25,9 @@ struct CouplingLocalFunctionSpaceTraits
 };
 
 
-template<typename GFS, typename MI>
+template<typename GFS, typename DI>
 struct LeafCouplingLocalFunctionSpaceTraits
-  : public CouplingLocalFunctionSpaceTraits<GFS,MI>
+  : public CouplingLocalFunctionSpaceTraits<GFS,DI>
 {
 
   //! \brief Type of local finite element
@@ -36,7 +36,7 @@ struct LeafCouplingLocalFunctionSpaceTraits
   //! \brief Type of constraints engine
   typedef typename GFS::Traits::ConstraintsType ConstraintsType;
 
-  typedef CouplingLocalFunctionSpaceNode<GFS,MI> NodeType;
+  typedef CouplingLocalFunctionSpaceNode<GFS,DI> NodeType;
 
 };
 
@@ -46,12 +46,12 @@ struct PowerCouplingLocalFunctionSpaceTag {};
 struct PowerCouplingGridFunctionSpaceTag {};
 
 // local function space for a power grid function space
-template<typename GFS, typename MI, typename ChildLFS, std::size_t k>
+template<typename GFS, typename DI, typename ChildLFS, std::size_t k>
 class PowerCouplingLocalFunctionSpaceNode
-  : public LocalFunctionSpaceBaseNode<GFS,MI>
+  : public LocalFunctionSpaceBaseNode<GFS,DI>
   , public TypeTree::PowerNode<ChildLFS,k>
 {
-  typedef LocalFunctionSpaceBaseNode<GFS,MI> BaseT;
+  typedef LocalFunctionSpaceBaseNode<GFS,DI> BaseT;
   typedef TypeTree::PowerNode<ChildLFS,k> TreeNode;
 
   template<typename>
@@ -67,7 +67,7 @@ class PowerCouplingLocalFunctionSpaceNode
   friend struct Dune::PDELab::FillIndicesVisitor;
 
 public:
-  typedef CouplingLocalFunctionSpaceTraits<GFS,MI> Traits;
+  typedef CouplingLocalFunctionSpaceTraits<GFS,DI> Traits;
 
   typedef PowerCouplingLocalFunctionSpaceTag ImplementationTag;
 
@@ -97,7 +97,7 @@ struct power_coupling_gfs_to_coupling_lfs_template
   template<typename TC>
   struct result
   {
-    typedef PowerCouplingLocalFunctionSpaceNode<SourceNode,typename Transformation::MultiIndex,TC,SourceNode::CHILDREN> type;
+    typedef PowerCouplingLocalFunctionSpaceNode<SourceNode,typename Transformation::DOFIndex,TC,SourceNode::CHILDREN> type;
   };
 };
 
@@ -119,7 +119,7 @@ struct power_coupling_gfs_to_lfs_template
   template<typename TC>
   struct result
   {
-    typedef PowerCouplingLocalFunctionSpaceNode<SourceNode,typename Transformation::MultiIndex,TC,SourceNode::CHILDREN> type;
+    typedef PowerCouplingLocalFunctionSpaceNode<SourceNode,typename Transformation::DOFIndex,TC,SourceNode::CHILDREN> type;
   };
 };
 
@@ -138,14 +138,14 @@ lookupNodeTransformation(PowerCouplingGridFunctionSpace* gfs, gfs_to_lfs<data>* 
 struct CouplingLocalFunctionSpaceTag {};
 struct CouplingGridFunctionSpaceTag {};
 
-template <typename GFS, typename MI>
+template <typename GFS, typename DI>
 class CouplingLocalFunctionSpaceNode
-  : public LocalFunctionSpaceBaseNode<GFS,MI>
+  : public LocalFunctionSpaceBaseNode<GFS,DI>
   , public TypeTree::LeafNode
 {
   typedef typename GFS::Traits::BackendType B;
 
-  typedef LocalFunctionSpaceBaseNode<GFS,MI> BaseT;
+  typedef LocalFunctionSpaceBaseNode<GFS,DI> BaseT;
 
   template<typename>
   friend struct Dune::PDELab::PropagateGlobalStorageVisitor;
@@ -163,8 +163,8 @@ class CouplingLocalFunctionSpaceNode
   using BaseT::global_storage;
 
 public:
-  typedef LeafCouplingLocalFunctionSpaceTraits<GFS,MI> Traits;
-  using BaseT::globalIndex;
+  typedef LeafCouplingLocalFunctionSpaceTraits<GFS,DI> Traits;
+  using BaseT::dofIndex;
 
 private:
 
@@ -187,6 +187,7 @@ public:
   {}
 
 
+  /*
   //! Calculates the multiindices associated with the given entity.
   template<typename Intersection, typename MultiIndexIterator>
   void multiIndices(const Intersection& is, MultiIndexIterator it, MultiIndexIterator endit)
@@ -220,7 +221,50 @@ public:
                                                                         dm.mapSubIndex(coeffs.localKey(i).subEntity(),coeffs.localKey(i).codim()),
                                                                         coeffs.localKey(i).codim() + 1);
 
-        it->set(gt,index,coeffs.localKey(i).index());
+        GFS::Ordering::Traits::DOFIndexAccessor::store(*it,gt,index,coeffs.localKey(i).index());
+
+        // make sure we don't write past the end of the iterator range
+        assert(it != endit);
+      }
+  }
+  */
+
+  //! Calculates the multiindices associated with the given entity.
+  template<typename Intersection, typename DOFIndexIterator>
+  void dofIndices(const Intersection& is, DOFIndexIterator it, DOFIndexIterator endit)
+  {
+
+    if (!this->pgfs->contains(is))
+      {
+        assert(it == endit && "Intersection not contained in CouplingGFS, but local size > 0");
+        return;
+      }
+
+    // get layout of entity
+    const typename FESwitch::Coefficients &coeffs =
+      FESwitch::coefficients(*pfe);
+
+    typedef typename GFS::Traits::GridViewType GV;
+    GV gv = this->gridFunctionSpace().gridView();
+
+    DOFMapper<GV> dm(is);
+
+    const Dune::GenericReferenceElement<typename GV::ctype,GV::Grid::dimension-1>& refEl =
+      Dune::GenericReferenceElements<typename GV::ctype,GV::Grid::dimension-1>::general(this->pfe->type());
+
+    for (std::size_t i = 0; i < std::size_t(coeffs.size()); ++i, ++it)
+      {
+        // get geometry type of subentity
+        Dune::GeometryType gt = refEl.type(coeffs.localKey(i).subEntity(),
+                                           coeffs.localKey(i).codim());
+
+        // evaluate consecutive index of subentity
+        typename GV::IndexSet::IndexType index = gv.indexSet().subIndex(dm.element(),
+                                                                        dm.mapSubIndex(coeffs.localKey(i).subEntity(),coeffs.localKey(i).codim()),
+                                                                        coeffs.localKey(i).codim() + 1);
+
+        // store data
+        GFS::Ordering::Traits::DOFIndexAccessor::store(*it,gt,index,coeffs.localKey(i).index());
 
         // make sure we don't write past the end of the iterator range
         assert(it != endit);
@@ -260,8 +304,8 @@ public:
     TypeTree::applyToTree(*this,fiv);
 
     // apply upMap
-    for (typename Traits::IndexContainer::size_type i=0; i<n; ++i)
-      global_storage[i] = this->gridFunctionSpace().upMap(global_storage[i]);
+    //for (typename Traits::IndexContainer::size_type i=0; i<n; ++i)
+    //  global_storage[i] = this->gridFunctionSpace().upMap(global_storage[i]);
 
     return true;
   }

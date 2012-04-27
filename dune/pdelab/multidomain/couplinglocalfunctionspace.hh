@@ -359,7 +359,7 @@ Dune::PDELab::TypeTree::GenericLeafNodeTransformation<
   gfs_to_coupling_lfs<data>,
   CouplingLocalFunctionSpaceNode<
     GridFunctionSpace,
-    typename gfs_to_coupling_lfs<data>::MultiIndex
+    typename gfs_to_coupling_lfs<data>::DOFIndex
     >
   >
 lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, CouplingGridFunctionSpaceTag tag);
@@ -370,7 +370,7 @@ Dune::PDELab::TypeTree::GenericLeafNodeTransformation<
   gfs_to_lfs<data>,
   CouplingLocalFunctionSpaceNode<
     GridFunctionSpace,
-    typename gfs_to_lfs<data>::MultiIndex
+    typename gfs_to_lfs<data>::DOFIndex
     >
   >
 lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_lfs<data>* t, CouplingGridFunctionSpaceTag tag);

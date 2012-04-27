@@ -366,7 +366,7 @@ struct MultiDomainLocalFunctionSpaceTransformationTemplate
   {
     typedef MultiDomainLocalFunctionSpaceNode<MultiDomainGFS,
                                               LFSTag,
-                                              typename Transformation::MultiIndex,
+                                              typename Transformation::DOFIndex,
                                               TC...> type;
   };
 };
@@ -388,7 +388,7 @@ template<typename GFS>
 struct gfs_to_coupling_lfs {
 
   //! The MultiIndex type that will be used in the resulting LocalFunctionSpace tree.
-  typedef Dune::PDELab::MultiIndex<std::size_t,TypeTree::TreeInfo<GFS>::depth> MultiIndex;
+  typedef typename build_dof_index_type<GFS>::type DOFIndex;
 
 };
 
@@ -441,7 +441,7 @@ Dune::PDELab::TypeTree::GenericLeafNodeTransformation<
   gfs_to_coupling_lfs<data>,
   LeafLocalFunctionSpaceNode<
     GridFunctionSpace,
-    typename gfs_to_coupling_lfs<data>::MultiIndex
+    typename gfs_to_coupling_lfs<data>::DOFIndex
     >
   >
 lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, LeafGridFunctionSpaceTag tag);

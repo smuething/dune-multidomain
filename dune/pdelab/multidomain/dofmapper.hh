@@ -2,8 +2,9 @@
 #define DUNE_MULTIDOMAIN_DOFMAPPER_HH
 
 #include <vector>
-#include <map>
 #include <utility>
+
+#include <dune/geometry/typeindex.hh>
 
 namespace Dune {
 namespace PDELab {
@@ -51,9 +52,9 @@ private:
   ElementPointer elementPointer_;
 
   typedef std::vector<Coordinate> VertexList;
-  typedef std::map<Dune::GeometryType,VertexList> VertexListMap;
+  typedef std::vector<VertexList> VertexListContainer;
 
-  static VertexListMap vertexListMap_;
+  static VertexListContainer _vertexListContainer;
 
   static bool DOFStorageOnInside(const Intersection& is)
   {
@@ -67,11 +68,11 @@ private:
 
   static const VertexList& vertexList(Dune::GeometryType gt)
   {
-    typename VertexListMap::iterator it = vertexListMap_.find(gt);
-    if (it != vertexListMap_.end())
-      return it->second;
-    vertexListMap_.insert({gt,buildVertexList(gt)});
-    return vertexListMap_[gt];
+    const std::size_t i = LocalGeometryTypeIndex::index(gt);
+    if (_vertexListContainer[i].empty())
+      _vertexListContainer[i] = buildVertexList(gt);
+
+    return _vertexListContainer[i];
   }
 
   static VertexList buildVertexList(Dune::GeometryType gt)
@@ -87,7 +88,7 @@ private:
 };
 
 template<typename GV>
-typename DOFMapper<GV>::VertexListMap DOFMapper<GV>::vertexListMap_;
+typename DOFMapper<GV>::VertexListContainer DOFMapper<GV>::_vertexListContainer(LocalGeometryTypeIndex::size(GV::dimension));
 
 } // namespace MultiDomain
 } // namespace PDELab

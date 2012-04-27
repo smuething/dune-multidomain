@@ -28,9 +28,8 @@ struct SubProblemFilter
 {
   template<typename T, std::size_t new_k, std::size_t old_k>
   struct apply
-  {
-    static const bool value = is_same<typename T::MultiDomainComponentTag,SubProblemTag>::value;
-  };
+    : public is_same<typename T::MultiDomainComponentTag,SubProblemTag>
+  {};
 };
 
 struct CouplingFilter
@@ -38,11 +37,11 @@ struct CouplingFilter
 {
   template<typename T, std::size_t new_k, std::size_t old_k>
   struct apply
-  {
-    static const bool value =
-      is_same<typename T::MultiDomainComponentTag,CouplingTag>::value ||
-      is_same<typename T::MultiDomainComponentTag,EnrichedCouplingTag>::value;
-  };
+    : public std::integral_constant<bool,
+                                    is_same<typename T::MultiDomainComponentTag,CouplingTag>::value ||
+                                    is_same<typename T::MultiDomainComponentTag,EnrichedCouplingTag>::value
+                                    >::type
+  {};
 };
 
 namespace functors {

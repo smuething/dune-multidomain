@@ -309,6 +309,9 @@ class MultiDomainLocalFunctionSpaceNode
 
   typedef LocalFunctionSpaceBaseNode<GFS,DOFIndex> BaseT;
 
+  template<typename>
+  friend struct FillIndicesVisitorBase;
+
 public:
   typedef MultiDomainLocalFunctionSpaceTraits<GFS,DOFIndex,MultiDomainLocalFunctionSpaceNode> Traits;
 

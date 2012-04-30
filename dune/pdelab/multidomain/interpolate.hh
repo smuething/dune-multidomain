@@ -71,24 +71,6 @@ void interpolateOnTestSpace(const GFS& gfs, XG& xg, SubProblems&&... subProblems
 }
 
 
-
-template <typename R>
-struct interpolation_descriptors_set_time {
-
-  template <class T>
-  void visit(T& elem) const
-  {
-    elem.setTime(time);
-  }
-
-  interpolation_descriptors_set_time(const R& t)
-    : time(t)
-  {}
-
-  const R time;
-};
-
-
 template<typename... T>
 struct interpolation_descriptors
   : public tuple<T&...>
@@ -103,14 +85,20 @@ struct interpolation_descriptors
   template<typename R>
   void setTime(const R& time)
   {
-    Dune::ForEachValue<BaseT> forEach(*this);
-    interpolation_descriptors_set_time<R> f(time);
-    forEach.apply(f);
+    _setTime(time,TypeTree::index_range<sizeof...(T)>());
   }
 
   const BaseT& base() const
   {
     return static_cast<const BaseT&>(*this);
+  }
+
+private:
+
+  template<typename R, std::size_t... i>
+  void _setTime(const R& time, TypeTree::index_pack<i...>)
+  {
+    TypeTree::discard((std::get<i>(*this).setTime(time),0)...);
   }
 
 };

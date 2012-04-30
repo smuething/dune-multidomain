@@ -10,13 +10,13 @@ namespace PDELab {
 namespace MultiDomain {
 
 // end of recursion
-template<typename IB, typename XG, typename Element>
-void interpolate_subproblems(const IB& ib, XG& xg, const Element& element)
+template<typename IB, typename XView, typename Element>
+void interpolate_subproblems(const IB& ib, XView& x_view, const Element& element)
 {}
 
-template<typename IB, typename XG, typename Element, typename Function, typename SubProblemLFS, typename... SubProblems>
+template<typename IB, typename XView, typename Element, typename Function, typename SubProblemLFS, typename... SubProblems>
 void interpolate_subproblems(const IB& ib,
-                             XG& xg,
+                             XView& x_view,
                              const Element& element,
                              const Function& f,
                              SubProblemLFS& subProblemLFS,
@@ -25,9 +25,9 @@ void interpolate_subproblems(const IB& ib,
   if (subProblemLFS.appliesTo(element))
     {
       subProblemLFS.bind();
-      Dune::PDELab::TypeTree::applyToTreePair(f,subProblemLFS,InterpolateVisitor<IB,typename Element::Entity,XG>(ib,element.entity(),xg));
+      TypeTree::applyToTreePair(f,subProblemLFS,InterpolateVisitor<IB,typename Element::Entity,XView>(ib,element.entity(),x_view));
     }
-  interpolate_subproblems(ib,xg,element,subProblems...);
+  interpolate_subproblems(ib,x_view,element,subProblems...);
 }
 
 // interpolation from a given grid function
@@ -38,21 +38,38 @@ void do_interpolate(const GFS& gfs, LFS& lfs, XG& xg, SubProblems&&... subProble
   // get some types
   typedef typename GFS::Traits::GridType::LeafGridView GV;
   typedef typename GV::Traits::template Codim<0>::Iterator ElementIterator;
+  typedef typename GV::Traits::template Codim<0>::Entity Element;
 
   // get index set
   const typename GV::IndexSet& is=gfs.gridView().indexSet();
 
+  // caching
+  typedef LFSContainerIndexCache<LFS> LFSCache;
+  LFSCache lfs_cache(lfs);
+  typedef typename XG::template LocalView<LFSCache> XView;
+
+  XView x_view(xg);
+
   // loop once over the grid
-  for (ElementIterator it = gfs.gridView().template begin<0>();
-       it!=gfs.gridView().template end<0>(); ++it)
+  for (ElementIterator it = gfs.gridView().template begin<0>(),
+         endit = gfs.gridView().template end<0>();
+       it != endit;
+       ++it)
     {
       // bind local function space to element
       lfs.bind(*it);
+      lfs_cache.update();
+      x_view.bind(lfs_cache);
+
       // call interpolate
-      interpolate_subproblems(InterpolateBackendStandard(),xg,
+      interpolate_subproblems(InterpolateBackendStandard(),x_view,
                               ElementWrapper<GV>(*it,is.subDomains(*it)),
                               subProblems...);
+
+      x_view.unbind();
     }
+
+  x_view.detach();
 }
 
 

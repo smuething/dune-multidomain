@@ -160,7 +160,6 @@ class CouplingLocalFunctionSpaceNode
   friend struct Dune::PDELab::FillIndicesVisitor;
 
   using BaseT::n;
-  using BaseT::global_storage;
 
 public:
   typedef LeafCouplingLocalFunctionSpaceTraits<GFS,DI> Traits;
@@ -297,8 +296,6 @@ public:
 
     Dune::PDELab::ComputeSizeVisitor<Intersection> csv(is);
     TypeTree::applyToTree(*this,csv);
-
-    global_storage.resize(n);
 
     Dune::PDELab::FillIndicesVisitor<Intersection> fiv(is);
     TypeTree::applyToTree(*this,fiv);

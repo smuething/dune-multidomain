@@ -99,7 +99,7 @@ struct SubProblemLocalFunctionSpaceTraits
 
 template<typename GFS, typename N, typename BaseLFS, typename SubProblem_>
 struct SubProblemLeafLocalFunctionSpaceTraits
-  : public SubProblemLocalFunctionSpaceTraits<GFS,N,BaseLFS,typename BaseLFS::Traits::MultiIndex,SubProblem_>
+  : public SubProblemLocalFunctionSpaceTraits<GFS,N,BaseLFS,typename BaseLFS::Traits::DOFIndex,SubProblem_>
 {
 
   //! \brief finite element

@@ -193,7 +193,7 @@ public:
                               }
 
                             engine.assembleUVEnrichedCoupling(skeletonIntersectionWrapper,_lfsu_s,_lfsv_s,_lfsu_n,_lfsv_n,_lfsu_c,_lfsv_c);
-                            engine.assembleVEnrichedCoupling(skeletonIntersectionWrapper,_lfsv_c,_lfsv_n,_lfsv_c);
+                            engine.assembleVEnrichedCoupling(skeletonIntersectionWrapper,_lfsv_s,_lfsv_n,_lfsv_c);
 
                             engine.onUnbindLFSUVCoupling(skeletonIntersectionWrapper,
                                                          _lfsu_s,_lfsv_s,

@@ -61,6 +61,30 @@ public:
   typedef typename LA::Jacobian Jacobian;
   typedef typename LA::Pattern GlobalPattern;
 
+  struct Traits
+  {
+
+    typedef typename LA::Traits::TrialGridFunctionSpaceConstraints TrialGridFunctionSpaceConstraints;
+    typedef typename LA::Traits::TestGridFunctionSpaceConstraints TestGridFunctionSpaceConstraints;
+
+    typedef NoConstraintsCachingPolicy CachePolicy;
+    typedef typename LA::Traits::template Spaces<CachePolicy> Spaces;
+
+  };
+
+  typedef typename Traits::Spaces::GFSU GFSU;
+  typedef typename Traits::Spaces::GFSV GFSV;
+
+  typedef typename Traits::Spaces::LFSU LFSU;
+  typedef typename Traits::Spaces::LFSV LFSV;
+  typedef typename Traits::Spaces::LFSU_C LFSU_C;
+  typedef typename Traits::Spaces::LFSV_C LFSV_C;
+
+  typedef typename Traits::Spaces::LFSU_Cache LFSU_Cache;
+  typedef typename Traits::Spaces::LFSV_Cache LFSV_Cache;
+  typedef typename Traits::Spaces::LFSU_C_Cache LFSU_C_Cache;
+  typedef typename Traits::Spaces::LFSV_C_Cache LFSV_C_Cache;
+
   typedef PatternAssemblerEngineData<GlobalPattern> EngineData;
 
   bool requireSkeleton() const
@@ -109,132 +133,155 @@ public:
   }
 
 
-  template<typename EG, typename LFSU_S, typename LFSV_S>
-  void onUnbindLFSUV(const EG& eg, const LFSU_S & lfsu_s, const LFSV_S & lfsv_s)
+  template<typename EG>
+  void onUnbindLFSUV(const EG& eg, const LFSU_Cache & lfsu_s_cache, const LFSV_Cache & lfsv_s_cache)
   {
     if (localAssembler().writeData())
       {
-        addToGlobalPattern(data().pattern_ss,lfsv_s,lfsu_s);
+        addToGlobalPattern(data().pattern_ss,lfsv_s_cache,lfsu_s_cache);
         data().pattern_ss.clear();
       }
   }
 
-  template<typename IG,
-           typename LFSU_S, typename LFSV_S,
-           typename LFSU_N, typename LFSV_N>
+  template<typename IG>
   void onUnbindLFSUVOutside(const IG& ig,
-                            const LFSU_S & lfsu_s, const LFSV_S & lfsv_s,
-                            const LFSU_N & lfsu_n, const LFSV_N & lfsv_n)
+                            const LFSU_Cache & lfsu_s_cache, const LFSV_Cache & lfsv_s_cache,
+                            const LFSU_Cache & lfsu_n_cache, const LFSV_Cache & lfsv_n_cache)
   {
     if (localAssembler().writeData())
       {
-        addToGlobalPattern(data().pattern_nn,lfsv_n,lfsu_n);
+        addToGlobalPattern(data().pattern_nn,lfsv_n_cache,lfsu_n_cache);
         data().pattern_nn.clear();
-        addToGlobalPattern(data().pattern_sn,lfsv_s,lfsu_n);
+        addToGlobalPattern(data().pattern_sn,lfsv_s_cache,lfsu_n_cache);
         data().pattern_sn.clear();
-        addToGlobalPattern(data().pattern_ns,lfsv_n,lfsu_s);
+        addToGlobalPattern(data().pattern_ns,lfsv_n_cache,lfsu_s_cache);
         data().pattern_ns.clear();
       }
   }
 
-  template<typename IG,
-           typename LFSU_S, typename LFSV_S,
-           typename LFSU_N, typename LFSV_N,
-           typename LFSU_C, typename LFSV_C>
+  template<typename IG>
   void onUnbindLFSUVCoupling(const IG& ig,
-                             const LFSU_S & lfsu_s, const LFSV_S & lfsv_s,
-                             const LFSU_N & lfsu_n, const LFSV_N & lfsv_n,
-                             const LFSU_C & lfsu_c, const LFSV_C & lfsv_c)
+                             const LFSU_Cache & lfsu_s_cache, const LFSV_Cache & lfsv_s_cache,
+                             const LFSU_Cache & lfsu_n_cache, const LFSV_Cache & lfsv_n_cache,
+                             const LFSU_C_Cache & lfsu_c_cache, const LFSV_C_Cache & lfsv_c_cache)
   {
     if (localAssembler().writeData())
       {
-        addToGlobalPattern(data().pattern_cc,lfsv_c,lfsu_c);
+        addToGlobalPattern(data().pattern_cc,lfsv_c_cache,lfsu_c_cache);
         data().pattern_cc.clear();
-        addToGlobalPattern(data().pattern_sc,lfsv_s,lfsu_c);
+        addToGlobalPattern(data().pattern_sc,lfsv_s_cache,lfsu_c_cache);
         data().pattern_sc.clear();
-        addToGlobalPattern(data().pattern_cs,lfsv_c,lfsu_s);
+        addToGlobalPattern(data().pattern_cs,lfsv_c_cache,lfsu_s_cache);
         data().pattern_cs.clear();
-        addToGlobalPattern(data().pattern_nc,lfsv_n,lfsu_c);
+        addToGlobalPattern(data().pattern_nc,lfsv_n_cache,lfsu_c_cache);
         data().pattern_nc.clear();
-        addToGlobalPattern(data().pattern_cn,lfsv_c,lfsu_n);
+        addToGlobalPattern(data().pattern_cn,lfsv_c_cache,lfsu_n_cache);
         data().pattern_cn.clear();
       }
   }
 
 
-  template<typename EG, typename LFSU, typename LFSV>
-  void assembleUVVolume(const EG& eg, const LFSU& lfsu, const LFSV& lfsv)
+  template<typename EG>
+  void assembleUVVolume(const EG& eg, const LFSU_Cache& lfsu_s_cache, const LFSV_Cache& lfsv_s_cache)
   {
     typedef visitor<functors::invoke_pattern_volume,do_pattern_volume<> > Visitor;
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_eg(eg),
-                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),
-                                                          wrap_pattern_ss(data().pattern_ss)));
+    localAssembler().applyToSubProblems(
+      Visitor::add_data(
+        wrap_operator_type(DefaultOperator()),
+        wrap_eg(eg),
+        wrap_lfsu_s_cache(lfsu_s_cache),wrap_lfsv_s_cache(lfsv_s_cache),
+        wrap_pattern_ss(data().pattern_ss)
+      )
+    );
   }
 
-  template<typename IG, typename LFSU_S, typename LFSV_S, typename LFSU_N, typename LFSV_N>
+  template<typename IG>
   void assembleUVSkeleton(const IG& ig,
-                          const LFSU_S& lfsu_s, const LFSV_S& lfsv_s,
-                          const LFSU_N& lfsu_n, const LFSV_N& lfsv_n)
+                          const LFSU_Cache& lfsu_s_cache, const LFSV_Cache& lfsv_s_cache,
+                          const LFSU_Cache& lfsu_n_cache, const LFSV_Cache& lfsv_n_cache)
   {
     typedef visitor<functors::invoke_pattern_skeleton_or_boundary,do_pattern_skeleton_or_boundary<> > SubProblemVisitor;
 
-    localAssembler().applyToSubProblems(SubProblemVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
-                                                                    wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
-                                                                    wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
-                                                                    wrap_pattern_ss(data().pattern_ss),
-                                                                    wrap_pattern_sn(data().pattern_sn),
-                                                                    wrap_pattern_nn(data().pattern_nn),
-                                                                    wrap_pattern_ns(data().pattern_ns)));
+    localAssembler().applyToSubProblems(
+      SubProblemVisitor::add_data(
+        wrap_operator_type(DefaultOperator()),
+        wrap_ig(ig),
+        wrap_lfsu_s_cache(lfsu_s_cache),wrap_lfsv_s_cache(lfsv_s_cache),
+        wrap_lfsu_n_cache(lfsu_n_cache),wrap_lfsv_n_cache(lfsv_n_cache),
+        wrap_pattern_ss(data().pattern_ss),
+        wrap_pattern_sn(data().pattern_sn),
+        wrap_pattern_nn(data().pattern_nn),
+        wrap_pattern_ns(data().pattern_ns)
+      )
+    );
 
     typedef visitor<functors::invoke_pattern_coupling,do_pattern_coupling<> > CouplingVisitor;
-    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
-                                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
-                                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
-                                                                wrap_pattern_ss(data().pattern_ss),
-                                                                wrap_pattern_sn(data().pattern_sn),
-                                                                wrap_pattern_nn(data().pattern_nn),
-                                                                wrap_pattern_ns(data().pattern_ns)));
+    localAssembler().applyToCouplings(
+      CouplingVisitor::add_data(
+        wrap_operator_type(DefaultOperator()),
+        wrap_ig(ig),
+        wrap_lfsu_s_cache(lfsu_s_cache),wrap_lfsv_s_cache(lfsv_s_cache),
+        wrap_lfsu_n_cache(lfsu_n_cache),wrap_lfsv_n_cache(lfsv_n_cache),
+        wrap_pattern_ss(data().pattern_ss),
+        wrap_pattern_sn(data().pattern_sn),
+        wrap_pattern_nn(data().pattern_nn),
+        wrap_pattern_ns(data().pattern_ns)
+      )
+    );
   }
 
-  template<typename IG, typename LFSU, typename LFSV>
-  void assembleUVBoundary(const IG& ig, const LFSU& lfsu, const LFSV& lfsv)
+  template<typename IG>
+  void assembleUVBoundary(const IG& ig, const LFSU_Cache& lfsu_s_cache, const LFSV_Cache& lfsv_s_cache)
   {
     typedef visitor<functors::invoke_pattern_boundary,do_pattern_boundary<> > Visitor;
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
-                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),wrap_pattern_ss(data().pattern_ss)));
+    localAssembler().applyToSubProblems(
+      Visitor::add_data(
+        wrap_operator_type(DefaultOperator()),
+        wrap_ig(ig),
+        wrap_lfsu_s_cache(lfsu_s_cache),wrap_lfsv_s_cache(lfsv_s_cache),
+        wrap_pattern_ss(data().pattern_ss)
+      )
+    );
   }
 
-  template<typename IG,
-           typename LFSU_S, typename LFSV_S,
-           typename LFSU_N, typename LFSV_N,
-           typename LFSU_C, typename LFSV_C>
+  template<typename IG>
   void assembleUVEnrichedCoupling(const IG& ig,
-                                  const LFSU_S& lfsu_s, const LFSV_S& lfsv_s,
-                                  const LFSU_N& lfsu_n, const LFSV_N& lfsv_n,
-                                  const LFSU_C& lfsu_c, const LFSV_C& lfsv_c)
+                                  const LFSU_Cache& lfsu_s_cache, const LFSV_Cache& lfsv_s_cache,
+                                  const LFSU_Cache& lfsu_n_cache, const LFSV_Cache& lfsv_n_cache,
+                                  const LFSU_C_Cache& lfsu_c_cache, const LFSV_C_Cache& lfsv_c_cache)
   {
     typedef visitor<functors::invoke_pattern_enriched_coupling,do_pattern_enriched_coupling<> > CouplingVisitor;
 
-    localAssembler().applyToCouplings(CouplingVisitor::add_data(wrap_operator_type(DefaultOperator()),wrap_ig(ig),
-                                                                wrap_lfsu_s(lfsu_s),wrap_lfsv_s(lfsv_s),
-                                                                wrap_lfsu_n(lfsu_n),wrap_lfsv_n(lfsv_n),
-                                                                wrap_lfsu_c(lfsu_c),wrap_lfsv_c(lfsv_c),
-                                                                wrap_pattern_ss(data().pattern_ss),
-                                                                wrap_pattern_sc(data().pattern_sc),
-                                                                wrap_pattern_nn(data().pattern_nn),
-                                                                wrap_pattern_nc(data().pattern_nc),
-                                                                wrap_pattern_cc(data().pattern_cc),
-                                                                wrap_pattern_cs(data().pattern_cs),
-                                                                wrap_pattern_cn(data().pattern_cn)));
+    localAssembler().applyToCouplings(
+      CouplingVisitor::add_data(
+        wrap_operator_type(DefaultOperator()),
+        wrap_ig(ig),
+        wrap_lfsu_s_cache(lfsu_s_cache),wrap_lfsv_s_cache(lfsv_s_cache),
+        wrap_lfsu_n_cache(lfsu_n_cache),wrap_lfsv_n_cache(lfsv_n_cache),
+        wrap_lfsu_c_cache(lfsu_c_cache),wrap_lfsv_c_cache(lfsv_c_cache),
+        wrap_pattern_ss(data().pattern_ss),
+        wrap_pattern_sc(data().pattern_sc),
+        wrap_pattern_nn(data().pattern_nn),
+        wrap_pattern_nc(data().pattern_nc),
+        wrap_pattern_cc(data().pattern_cc),
+        wrap_pattern_cs(data().pattern_cs),
+        wrap_pattern_cn(data().pattern_cn)
+      )
+    );
   }
 
-  template<typename EG, typename LFSU, typename LFSV>
-  void assembleUVVolumePostSkeleton(const EG& eg, const LFSV& lfsv, const LFSU& lfsu)
+  template<typename EG>
+  void assembleUVVolumePostSkeleton(const EG& eg, const LFSU_Cache& lfsu_s_cache, const LFSV_Cache& lfsv_s_cache)
   {
     typedef visitor<functors::invoke_pattern_volume_post_skeleton,do_pattern_volume_post_skeleton<> > Visitor;
-    localAssembler().applyToSubProblems(Visitor::add_data(wrap_operator_type(DefaultOperator()),wrap_eg(eg),
-                                                          wrap_lfsu(lfsu),wrap_lfsv(lfsv),
-                                                          wrap_pattern_ss(data().pattern_ss)));
+    localAssembler().applyToSubProblems(
+      Visitor::add_data(
+        wrap_operator_type(DefaultOperator()),
+        wrap_eg(eg),
+        wrap_lfsu_s_cache(lfsu_s_cache),wrap_lfsv_s_cache(lfsv_s_cache),
+        wrap_pattern_ss(data().pattern_ss)
+      )
+    );
   }
 
 
@@ -247,6 +294,16 @@ public:
   const LocalAssembler& localAssembler() const
   {
     return _localAssembler;
+  }
+
+  const typename Traits::TrialGridFunctionSpaceConstraints& trialGridFunctionSpaceConstraints() const
+  {
+    return localAssembler().trialConstraints();
+  }
+
+  const typename Traits::TestGridFunctionSpaceConstraints& testGridFunctionSpaceConstraints() const
+  {
+    return localAssembler().testConstraints();
   }
 
   PatternAssemblerEngine(const LocalAssembler& localAssembler)
@@ -262,11 +319,15 @@ public:
 
 private:
 
-  template<typename LFSU, typename LFSV>
-  void addToGlobalPattern(const LocalSparsityPattern& pattern, const LFSV& lfsv, const LFSU& lfsu)
+  template<typename LFSV_Cache_, typename LFSU_Cache_>
+  void addToGlobalPattern(const LocalSparsityPattern& pattern, const LFSV_Cache_& lfsv_cache, const LFSU_Cache_& lfsu_cache)
   {
-    for(auto it = pattern.begin(); it != pattern.end(); ++it)
-      localAssembler().add_entry(*data()._globalPattern,lfsv.globalIndex(it->i()),lfsu.globalIndex(it->j()));
+    for(size_t k = 0; k < pattern.size(); ++k)
+      localAssembler().add_entry(
+        *data()._globalPattern,
+        lfsv_cache,pattern[k].i(),
+        lfsu_cache,pattern[k].j()
+      );
   }
 
   EngineData& data()

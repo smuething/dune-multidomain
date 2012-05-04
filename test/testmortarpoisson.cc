@@ -5,6 +5,7 @@
 #include <dune/pdelab/finiteelementmap/q1fem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/backend/istlmatrixbackend.hh>
+#include <dune/pdelab/multidomain/istlhelpers.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/couplinggridfunctionspace.hh>
 #include <dune/pdelab/multidomain/couplinglocalfunctionspace.hh>
@@ -20,6 +21,8 @@
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/pdelab/stationary/linearproblem.hh>
 #include <dune/pdelab/backend/istlsolverbackend.hh>
+
+#include <dune/pdelab/multidomain/vtk.hh>
 
 
 #include "functionmacros.hh"
@@ -254,6 +257,25 @@ public:
 };
 
 
+template<typename SubDomain>
+struct subdomain_predicate
+{
+
+  template<typename LFS>
+  bool operator()(const LFS& lfs) const
+  {
+    return lfs.gridFunctionSpace().gridView().grid().domain() == _subDomain;
+  }
+
+  subdomain_predicate(const SubDomain& subDomain)
+    : _subDomain(subDomain)
+  {}
+
+private:
+  SubDomain _subDomain;
+
+};
+
 int main(int argc, char** argv) {
 
   try {
@@ -325,7 +347,7 @@ int main(int argc, char** argv) {
     typedef Dune::PDELab::NoConstraints NOCON;
     typedef Dune::PDELab::ConformingDirichletConstraints CON;
 
-    typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
+    typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
     NOCON nocon;
     CON con;
@@ -335,6 +357,8 @@ int main(int argc, char** argv) {
 
     GFS0 gfs0(sdgv0,fem,con);
     GFS1 gfs1(sdgv1,fem,con);
+    gfs0.name("u");
+    gfs1.name("u");
 
     typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> EC;
     EC c0(0);
@@ -347,7 +371,9 @@ int main(int argc, char** argv) {
     CouplingGFS couplinggfs(mdgv,couplingfem,pred);
 
     typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,VBE,GFS0,GFS1,CouplingGFS> MultiGFS;
-    MultiGFS multigfs(grid,gfs0,gfs1,couplinggfs);
+    MultiGFS multigfs(grid,VBE(),gfs0,gfs1,couplinggfs);
+
+    std::cout << multigfs.ordering().size() << std::endl;
 
     typedef DirichletBoundary BType;
     BType b;
@@ -378,7 +404,7 @@ int main(int argc, char** argv) {
     typedef MultiGFS::ConstraintsContainer<R>::Type C;
     C cg;
 
-    typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
+    typedef Dune::PDELab::ISTLMatrixBackend MBE;
 
     typedef Dune::PDELab::MultiDomain::GridOperator<
       MultiGFS,MultiGFS,
@@ -392,16 +418,22 @@ int main(int argc, char** argv) {
 
     Dune::PDELab::MultiDomain::interpolateOnTrialSpace(multigfs,u,g,subproblem0,g,subproblem1);
 
-    Dune::PDELab::MultiDomain::constraints<R>(multigfs,
-                                              Dune::PDELab::MultiDomain::constrainSubProblem(subproblem0,b),
-                                              Dune::PDELab::MultiDomain::constrainSubProblem(subproblem1,b)
-                                              ).assemble(cg);
+    Dune::PDELab::MultiDomain::constraints<R>(
+      multigfs,
+      Dune::PDELab::MultiDomain::constrainSubProblem(subproblem0,b),
+      Dune::PDELab::MultiDomain::constrainSubProblem(subproblem1,b)
+    ).assemble(cg);
 
     GridOperator gridoperator(multigfs,multigfs,
                               cg,cg,
+                              MBE(),
                               subproblem0,
                               subproblem1,
                               coupling);
+
+    GridOperator::Traits::Range r(multigfs,0.0);
+
+    gridoperator.residual(u,r);
 
     GridOperator::Traits::Jacobian J(gridoperator);
 
@@ -419,24 +451,57 @@ int main(int argc, char** argv) {
 
     pdesolver.apply(u);
 
+    /*
     typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,0> SGFS0;
     typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,1> SGFS1;
     SGFS0 sgfs0(multigfs);
     SGFS1 sgfs1(multigfs);
+    */
+
+    /*
+    V u2(u);
+
+    std::copy(u.begin()+gfs0.size(),u.begin()+(gfs0.size()+gfs1.size()),
+              u2.begin());
 
     {
-      typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> DGF0;
-      DGF0 dgf0(sgfs0,u);
+      typedef Dune::PDELab::DiscreteGridFunction<GFS0,V> DGF0;
+      DGF0 dgf0(gfs0,u);
       Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTKOptions::conforming);
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF0>(dgf0,"u"));
       vtkwriter.write("testmortarpoisson-left",Dune::VTKOptions::ascii);
     }
 
     {
-      typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> DGF1;
-      DGF1 dgf1(sgfs1,u);
+      typedef Dune::PDELab::DiscreteGridFunction<GFS1,V> DGF1;
+      DGF1 dgf1(gfs1,u2);
       Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF1>(dgf1,"u"));
+      vtkwriter.write("testmortarpoisson-right",Dune::VTKOptions::ascii);
+    }
+    */
+
+    {
+      Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTKOptions::conforming);
+      Dune::PDELab::MultiDomain::add_solution_to_vtk_writer(
+        vtkwriter,
+        multigfs,
+        u,
+        "",
+        subdomain_predicate<Grid::SubDomainIndexType>(0)
+      );
+      vtkwriter.write("testmortarpoisson-left",Dune::VTKOptions::ascii);
+    }
+
+    {
+      Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
+      Dune::PDELab::MultiDomain::add_solution_to_vtk_writer(
+        vtkwriter,
+        multigfs,
+        u,
+        "",
+        subdomain_predicate<Grid::SubDomainIndexType>(1)
+      );
       vtkwriter.write("testmortarpoisson-right",Dune::VTKOptions::ascii);
     }
 

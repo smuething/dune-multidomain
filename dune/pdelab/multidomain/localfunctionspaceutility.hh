@@ -18,7 +18,7 @@ namespace LFS {
   lfsu(const Data& data, const SubProblem& subProblem)
   {
     typedef typename LFSU<Data,SubProblem>::type LFS;
-    return LFS(data.lfsu(),subProblem);
+    return LFS(data.lfsu_s_cache().localFunctionSpace(),subProblem);
   }
 
   template<typename Data, typename SubProblem>
@@ -32,7 +32,7 @@ namespace LFS {
   lfsv(const Data& data, const SubProblem& subProblem)
   {
     typedef typename LFSV<Data,SubProblem>::type LFS;
-    return LFS(data.lfsv(),subProblem);
+    return LFS(data.lfsv_s_cache().localFunctionSpace(),subProblem);
   }
 
   template<typename Data, typename SubProblem>
@@ -46,7 +46,7 @@ namespace LFS {
   lfsu_s(const Data& data, const SubProblem& subProblem)
   {
     typedef typename LFSU_S<Data,SubProblem>::type LFS;
-    return LFS(data.lfsu_s(),subProblem);
+    return LFS(data.lfsu_s_cache().localFunctionSpace(),subProblem);
   }
 
   template<typename Data, typename SubProblem>
@@ -60,7 +60,7 @@ namespace LFS {
   lfsv_s(const Data& data, const SubProblem& subProblem)
   {
     typedef typename LFSV_S<Data,SubProblem>::type LFS;
-    return LFS(data.lfsv_s(),subProblem);
+    return LFS(data.lfsv_s_cache().localFunctionSpace(),subProblem);
   }
 
   template<typename Data, typename SubProblem>
@@ -74,7 +74,7 @@ namespace LFS {
   lfsu_n(const Data& data, const SubProblem& subProblem)
   {
     typedef typename LFSU_N<Data,SubProblem>::type LFS;
-    return LFS(data.lfsu_n(),subProblem);
+    return LFS(data.lfsu_n_cache().localFunctionSpace(),subProblem);
   }
 
   template<typename Data, typename SubProblem>
@@ -88,33 +88,33 @@ namespace LFS {
   lfsv_n(const Data& data, const SubProblem& subProblem)
   {
     typedef typename LFSV_N<Data,SubProblem>::type LFS;
-    return LFS(data.lfsv_n(),subProblem);
+    return LFS(data.lfsv_n_cache().localFunctionSpace(),subProblem);
   }
 
   template<typename Data, typename Coupling>
   struct LFSU_C
   {
-    typedef const typename Coupling::template CouplingLocalFunctionSpace<typename Data::LFSU_C>::Type& type;
+    typedef const typename Coupling::template CouplingLocalFunctionSpace<typename Data::LFSU_C_Cache::LocalFunctionSpace>::Type& type;
   };
 
   template<typename Data, typename Coupling>
   inline typename LFSU_C<Data,Coupling>::type
   lfsu_c(const Data& data, const Coupling& coupling)
   {
-    return coupling.couplingLocalFunctionSpace(data.lfsu_c());
+    return coupling.couplingLocalFunctionSpace(data.lfsu_c_cache().localFunctionSpace());
   }
 
   template<typename Data, typename Coupling>
   struct LFSV_C
   {
-    typedef const typename Coupling::template CouplingLocalFunctionSpace<typename Data::LFSV_C>::Type& type;
+    typedef const typename Coupling::template CouplingLocalFunctionSpace<typename Data::LFSV_C_Cache::LocalFunctionSpace>::Type& type;
   };
 
   template<typename Data, typename Coupling>
   inline typename LFSV_C<Data,Coupling>::type
   lfsv_c(const Data& data, const Coupling& coupling)
   {
-    return coupling.couplingLocalFunctionSpace(data.lfsv_c());
+    return coupling.couplingLocalFunctionSpace(data.lfsv_c_cache().localFunctionSpace());
   }
 
 } // namespace LFS

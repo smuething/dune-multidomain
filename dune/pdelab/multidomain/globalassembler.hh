@@ -5,6 +5,7 @@
 #include<dune/common/exceptions.hh>
 #include<dune/geometry/type.hh>
 
+#include <dune/pdelab/common/elementmapper.hh>
 #include <dune/pdelab/gridoperator/common/assemblerutilities.hh>
 #include <dune/pdelab/multidomain/entitywrappers.hh>
 
@@ -41,6 +42,27 @@ public:
   template<typename LocalAssemblerEngine>
   void assemble(LocalAssemblerEngine& engine)
   {
+
+    typedef typename LocalAssemblerEngine::Traits::Spaces Spaces;
+
+    typedef typename LocalAssemblerEngine::Traits::TrialGridFunctionSpaceConstraints CU;
+    typedef typename LocalAssemblerEngine::Traits::TestGridFunctionSpaceConstraints CV;
+
+    const CU& cu = engine.trialGridFunctionSpaceConstraints();
+    const CV& cv = engine.testGridFunctionSpaceConstraints();
+
+    typedef typename Spaces::LFSU_Cache LFSUCache;
+    typedef typename Spaces::LFSV_Cache LFSVCache;
+
+    typedef typename Spaces::LFSU_C_Cache CouplingLFSUCache;
+    typedef typename Spaces::LFSU_C_Cache CouplingLFSVCache;
+
+    LFSUCache lfsu_s_cache(_lfsu_s,cu);
+    LFSVCache lfsv_s_cache(_lfsv_s,cv);
+    LFSUCache lfsu_n_cache(_lfsu_n,cu);
+    LFSVCache lfsv_n_cache(_lfsv_n,cv);
+    CouplingLFSUCache lfsu_c_cache(_lfsu_c,cu);
+    CouplingLFSVCache lfsv_c_cache(_lfsv_c,cv);
 
     // extract relevant requirements
     const bool require_intersections = engine.requireSkeleton();
@@ -90,7 +112,7 @@ public:
 
     engine.preAssembly();
 
-    MultiGeomUniqueIDMapper<GV> cell_mapper(gv);
+    ElementMapper<GV> cell_mapper(gv);
 
     const ElementIterator endit = gv.template end<0>();
 
@@ -112,26 +134,30 @@ public:
 
         // bind lfsv_s
         _lfsv_s.bind(*it);
-        engine.onBindLFSV(elementWrapper,_lfsv_s);
+        lfsv_s_cache.update();
+
+        engine.onBindLFSV(elementWrapper,lfsv_s_cache);
 
         if (require_lfsu_s)
           {
             // bind lfsu_s
             _lfsu_s.bind(*it);
-            engine.onBindLFSUV(elementWrapper,_lfsu_s,_lfsv_s);
-            engine.loadCoefficientsLFSUInside(_lfsu_s);
+            lfsu_s_cache.update();
+
+            engine.onBindLFSUV(elementWrapper,lfsu_s_cache,lfsv_s_cache);
+            engine.loadCoefficientsLFSUInside(lfsu_s_cache);
           }
 
         // volume assembly
-        engine.assembleUVVolume(elementWrapper,_lfsu_s,_lfsv_s);
-        engine.assembleVVolume(elementWrapper,_lfsv_s);
+        engine.assembleUVVolume(elementWrapper,lfsu_s_cache,lfsv_s_cache);
+        engine.assembleVVolume(elementWrapper,lfsv_s_cache);
 
         // skip if intersections are not needed
         if (require_intersections)
           {
             // traverse intersections
             unsigned int intersection_index = 0;
-            IntersectionIterator endiit = gv.iend(*it);
+            const IntersectionIterator endiit = gv.iend(*it);
             for (IntersectionIterator iit = gv.ibegin(*it);
                  iit!=endiit; ++iit, ++intersection_index)
               {
@@ -155,62 +181,79 @@ public:
 
                         // bind lfsv_n
                         _lfsv_n.bind(*(iit->outside()));
+                        lfsv_n_cache.update();
+
                         engine.onBindLFSVOutside(skeletonIntersectionWrapper,
-                                                 _lfsv_s,
-                                                 _lfsv_n);
+                                                 lfsv_s_cache,
+                                                 lfsv_n_cache);
 
                         if (require_lfsu_n)
                           {
                             // bind lfsu_n
                             _lfsu_n.bind(*(iit->outside()));
+                            lfsu_n_cache.update();
+
                             engine.onBindLFSUVOutside(skeletonIntersectionWrapper,
-                                                      _lfsu_s,_lfsv_s,
-                                                      _lfsu_n,_lfsv_n);
-                            engine.loadCoefficientsLFSUOutside(_lfsu_n);
+                                                      lfsu_s_cache,lfsv_s_cache,
+                                                      lfsu_n_cache,lfsv_n_cache);
+                            engine.loadCoefficientsLFSUOutside(lfsu_n_cache);
                           }
 
-                        engine.assembleUVSkeleton(skeletonIntersectionWrapper,_lfsu_s,_lfsv_s,_lfsu_n,_lfsv_n);
-                        engine.assembleVSkeleton(skeletonIntersectionWrapper,_lfsv_s,_lfsv_n);
+                        engine.assembleUVSkeleton(skeletonIntersectionWrapper,
+                                                  lfsu_s_cache,lfsv_s_cache,
+                                                  lfsu_n_cache,lfsv_n_cache);
+                        engine.assembleVSkeleton(skeletonIntersectionWrapper,
+                                                 lfsv_s_cache,lfsv_n_cache);
 
                         if (require_lfsv_coupling)
                           {
                             // bind lfsv_c
                             _lfsv_c.bind(*iit);
+                            lfsv_c_cache.update();
+
                             engine.onBindLFSVCoupling(skeletonIntersectionWrapper,
-                                                      _lfsv_s,
-                                                      _lfsv_n,
-                                                      _lfsv_c);
+                                                      lfsv_s_cache,
+                                                      lfsv_n_cache,
+                                                      lfsv_c_cache);
 
                             if (require_uv_enriched_coupling)
                               {
                                 // bind_lfsu_c
                                 _lfsu_c.bind(*iit);
+                                lfsu_c_cache.update(),
+
                                 engine.onBindLFSUVCoupling(skeletonIntersectionWrapper,
-                                                           _lfsu_s,_lfsv_s,
-                                                           _lfsu_n,_lfsv_n,
-                                                           _lfsu_c,_lfsv_c);
-                                engine.loadCoefficientsLFSUCoupling(_lfsu_c);
+                                                           lfsu_s_cache,lfsv_s_cache,
+                                                           lfsu_n_cache,lfsv_n_cache,
+                                                           lfsu_c_cache,lfsv_c_cache);
+                                engine.loadCoefficientsLFSUCoupling(lfsu_c_cache);
                               }
 
-                            engine.assembleUVEnrichedCoupling(skeletonIntersectionWrapper,_lfsu_s,_lfsv_s,_lfsu_n,_lfsv_n,_lfsu_c,_lfsv_c);
-                            engine.assembleVEnrichedCoupling(skeletonIntersectionWrapper,_lfsv_s,_lfsv_n,_lfsv_c);
+                            engine.assembleUVEnrichedCoupling(skeletonIntersectionWrapper,
+                                                              lfsu_s_cache,lfsv_s_cache,
+                                                              lfsu_n_cache,lfsv_n_cache,
+                                                              lfsu_c_cache,lfsv_c_cache);
+                            engine.assembleVEnrichedCoupling(skeletonIntersectionWrapper,
+                                                             lfsv_s_cache,
+                                                             lfsv_n_cache,
+                                                             lfsv_c_cache);
 
                             engine.onUnbindLFSUVCoupling(skeletonIntersectionWrapper,
-                                                         _lfsu_s,_lfsv_s,
-                                                         _lfsu_n,_lfsv_n,
-                                                         _lfsu_c,_lfsv_c);
+                                                         lfsu_s_cache,lfsv_s_cache,
+                                                         lfsu_n_cache,lfsv_n_cache,
+                                                         lfsu_c_cache,lfsv_c_cache);
                             engine.onUnbindLFSVCoupling(skeletonIntersectionWrapper,
-                                                        _lfsv_s,
-                                                        _lfsv_n,
-                                                        _lfsv_c);
+                                                        lfsv_s_cache,
+                                                        lfsv_n_cache,
+                                                        lfsv_c_cache);
                           }
 
                         engine.onUnbindLFSUVOutside(skeletonIntersectionWrapper,
-                                                    _lfsu_s,_lfsv_s,
-                                                    _lfsu_n,_lfsv_n);
+                                                    lfsu_s_cache,lfsv_s_cache,
+                                                    lfsu_n_cache,lfsv_n_cache);
                         engine.onUnbindLFSVOutside(skeletonIntersectionWrapper,
-                                                   _lfsv_s,
-                                                   _lfsv_n);
+                                                   lfsv_s_cache,
+                                                   lfsv_n_cache);
                       }
                     break;
 
@@ -220,8 +263,8 @@ public:
                     if (require_uv_boundary || require_v_boundary)
                       {
                         BoundaryIntersectionWrapper boundaryIntersectionWrapper(*iit,intersection_index,elementWrapper);
-                        engine.assembleUVBoundary(boundaryIntersectionWrapper,_lfsu_s,_lfsv_s);
-                        engine.assembleVBoundary(boundaryIntersectionWrapper,_lfsv_s);
+                        engine.assembleUVBoundary(boundaryIntersectionWrapper,lfsu_s_cache,lfsv_s_cache);
+                        engine.assembleVBoundary(boundaryIntersectionWrapper,lfsv_s_cache);
                       }
                     break;
 
@@ -231,8 +274,8 @@ public:
                     if (require_uv_processor || require_v_processor)
                       {
                         BoundaryIntersectionWrapper boundaryIntersectionWrapper(*iit,intersection_index,elementWrapper);
-                        engine.assembleUVProcessor(boundaryIntersectionWrapper,_lfsu_s,_lfsv_s);
-                        engine.assembleVProcessor(boundaryIntersectionWrapper,_lfsv_s);
+                        engine.assembleUVProcessor(boundaryIntersectionWrapper,lfsu_s_cache,lfsv_s_cache);
+                        engine.assembleVProcessor(boundaryIntersectionWrapper,lfsv_s_cache);
                       }
                     break;
 
@@ -240,15 +283,15 @@ public:
               } // loop
           }  // if
 
-        engine.assembleUVVolumePostSkeleton(elementWrapper,_lfsu_s,_lfsv_s);
-        engine.assembleVVolumePostSkeleton(elementWrapper,_lfsv_s);
+        engine.assembleUVVolumePostSkeleton(elementWrapper,lfsu_s_cache,lfsv_s_cache);
+        engine.assembleVVolumePostSkeleton(elementWrapper,lfsv_s_cache);
 
-        engine.onUnbindLFSUV(elementWrapper,_lfsu_s,_lfsv_s);
-        engine.onUnbindLFSV(elementWrapper,_lfsv_s);
+        engine.onUnbindLFSUV(elementWrapper,lfsu_s_cache,lfsv_s_cache);
+        engine.onUnbindLFSV(elementWrapper,lfsv_s_cache);
 
       }
 
-    engine.postAssembly();
+    engine.postAssembly(gfsu,gfsv);
   }
 
   GlobalAssembler(const GFSU& gfsu_, const GFSV& gfsv_)

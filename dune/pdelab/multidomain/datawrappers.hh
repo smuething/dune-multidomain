@@ -2,13 +2,110 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_DATAWRAPPERS_HH
 #define DUNE_PDELAB_MULTIDOMAIN_DATAWRAPPERS_HH
 
-#include <dune/pdelab/multidomain/visitor.hh>
-
 namespace Dune {
 
 namespace PDELab {
 
 namespace MultiDomain {
+
+#ifndef DOXYGEN // nothing in this file is public API
+
+#define DUNE_PDELAB_MULTIDOMAIN_CREATE_DATA_WRAPPER(TYPE_NAME,VARIABLE_NAME) \
+template<typename TYPE_NAME##_> \
+struct VARIABLE_NAME##_wrapper \
+{ \
+\
+  typedef TYPE_NAME##_ TYPE_NAME; \
+\
+  VARIABLE_NAME##_wrapper(TYPE_NAME & VARIABLE_NAME) \
+    : _##VARIABLE_NAME(VARIABLE_NAME) \
+  {} \
+\
+  TYPE_NAME & VARIABLE_NAME() \
+  { \
+    return _##VARIABLE_NAME; \
+  } \
+\
+  const TYPE_NAME & VARIABLE_NAME() const \
+  { \
+    return _##VARIABLE_NAME; \
+  } \
+\
+private: \
+\
+  TYPE_NAME & _##VARIABLE_NAME; \
+\
+}; \
+\
+template<typename TYPE_NAME> \
+VARIABLE_NAME##_wrapper<TYPE_NAME> wrap_##VARIABLE_NAME(TYPE_NAME & VARIABLE_NAME) \
+{ \
+  return VARIABLE_NAME##_wrapper<TYPE_NAME>(VARIABLE_NAME); \
+} \
+// end DATA_WRAPPER macro
+
+
+#define DUNE_PDELAB_MULTIDOMAIN_CREATE_CONST_DATA_WRAPPER(TYPE_NAME,VARIABLE_NAME) \
+template<typename TYPE_NAME##_> \
+struct VARIABLE_NAME##_wrapper \
+{ \
+\
+  typedef TYPE_NAME##_ TYPE_NAME; \
+\
+  VARIABLE_NAME##_wrapper(const TYPE_NAME & VARIABLE_NAME) \
+    : _##VARIABLE_NAME(VARIABLE_NAME) \
+  {} \
+\
+  const TYPE_NAME & VARIABLE_NAME() const \
+  { \
+    return _##VARIABLE_NAME; \
+  } \
+\
+private: \
+\
+  const TYPE_NAME & _##VARIABLE_NAME; \
+\
+}; \
+\
+template<typename TYPE_NAME> \
+VARIABLE_NAME##_wrapper<TYPE_NAME> wrap_##VARIABLE_NAME(const TYPE_NAME & VARIABLE_NAME) \
+{ \
+  return VARIABLE_NAME##_wrapper<TYPE_NAME>(VARIABLE_NAME); \
+} \
+// end CONST_DATA_WRAPPER macro
+
+
+#define DUNE_PDELAB_MULTIDOMAIN_CREATE_DATA_CONTAINER(VARIABLE_NAME) \
+template<typename T> \
+struct VARIABLE_NAME##_container \
+{ \
+\
+  VARIABLE_NAME##_container(const T & VARIABLE_NAME) \
+    : _##VARIABLE_NAME(VARIABLE_NAME) \
+  {} \
+\
+  T & VARIABLE_NAME() \
+  { \
+    return _##VARIABLE_NAME; \
+  } \
+\
+  const T & VARIABLE_NAME() const \
+  { \
+    return _##VARIABLE_NAME; \
+  } \
+\
+private: \
+\
+  T _##VARIABLE_NAME; \
+\
+}; \
+\
+template<typename T> \
+VARIABLE_NAME##_container<T> store_##VARIABLE_NAME(const T & VARIABLE_NAME) \
+{ \
+  return VARIABLE_NAME##_container<T>(VARIABLE_NAME); \
+} \
+// end DATA_CONTAINER macro
 
 DUNE_PDELAB_MULTIDOMAIN_CREATE_CONST_DATA_WRAPPER(Operator,operator_type)
 DUNE_PDELAB_MULTIDOMAIN_CREATE_CONST_DATA_WRAPPER(EG,eg)
@@ -54,6 +151,8 @@ DUNE_PDELAB_MULTIDOMAIN_CREATE_DATA_CONTAINER(weight)
 DUNE_PDELAB_MULTIDOMAIN_CREATE_DATA_CONTAINER(dt)
 DUNE_PDELAB_MULTIDOMAIN_CREATE_DATA_CONTAINER(stages)
 DUNE_PDELAB_MULTIDOMAIN_CREATE_DATA_CONTAINER(stage)
+
+#endif // DOXYGEN
 
 } // namespace MultiDomain
 } // namespace PDELab

@@ -93,7 +93,7 @@ public:
     , pfem(stackobject_to_shared_ptr(fem))
     , predicate_(predicate)
     , ce(ce_)
-    , backend_(backend)
+    , _backend(backend)
   {
   }
 
@@ -103,7 +103,7 @@ public:
     , pfem(stackobject_to_shared_ptr(fem))
     , ce(defaultce)
     , predicate_(predicate)
-    , backend_(backend)
+    , _backend(backend)
   {
   }
 
@@ -129,20 +129,20 @@ public:
   //! get dimension of root finite element space
   typename Traits::SizeType globalSize () const
   {
-    return nglobal;
+    return ordering().size();
   }
 
   //! get dimension of this finite element space
   typename Traits::SizeType size () const
   {
-    return nglobal;
+    return ordering().size();
   }
 
   //! get max dimension of shape function space
   //! \todo What are the exact semantics of maxLocalSize?
   typename Traits::SizeType maxLocalSize () const
   {
-    return nlocal;
+    return ordering().maxLocalSize();
   }
 
   //! map index from our index set [0,size()-1] to root index set
@@ -156,46 +156,15 @@ public:
     return predicate_(is);
   }
 
+  const Predicate& predicate() const
+  {
+    return predicate_;
+  }
+
   // return constraints engine
   const typename Traits::ConstraintsType& constraints () const
   {
     return ce;
-  }
-
-  //! compute global indices for one element
-  template<typename StorageIterator>
-  void globalIndices (const typename Traits::FiniteElementType& fe,
-                      const Intersection& is,
-                      StorageIterator it, StorageIterator endit) const
-  {
-    // get layout of entity
-    if (!predicate_(is))
-      {
-        return;
-      }
-
-    typedef FiniteElementInterfaceSwitch<
-      typename Traits::FiniteElementType
-      > FESwitch;
-    const typename FESwitch::Coefficients &lc =
-      FESwitch::coefficients(fe);
-
-    DOFMapper<GV> dm(is);
-
-    for (std::size_t i=0; i<lc.size(); ++i, ++it)
-      {
-        // get geometry type of subentity
-        Dune::GeometryType gt=Dune::GenericReferenceElements<double,GV::Grid::dimension - 1>
-          ::general(fe.type()).type(lc.localKey(i).subEntity(),lc.localKey(i).codim());
-
-        // evaluate consecutive index of subentity
-        int index = gv.indexSet().subIndex(dm.element(),
-                                           dm.mapSubIndex(lc.localKey(i).subEntity(),lc.localKey(i).codim()),
-                                           lc.localKey(i).codim() + 1);
-
-        // now compute
-        (*it) = offset[(gtoffset.find(gt)->second)+index]+lc.localKey(i).index();
-      }
   }
 
   //------------------------------
@@ -352,11 +321,6 @@ public:
   }
   */
 
-  const typename Traits::Backend& backend() const
-  {
-    return backend_;
-  }
-
   //! get finite element map
   shared_ptr<const FEM> finiteElementMapStorage () const
   {
@@ -397,6 +361,26 @@ public:
     return _ordering;
   }
 
+  const std::string& name() const
+  {
+    return _name;
+  }
+
+  void name(const std::string& name)
+  {
+    _name = name;
+  }
+
+  B& backend()
+  {
+    return _backend;
+  }
+
+  const B& backend() const
+  {
+    return _backend;
+  }
+
 private:
   CE defaultce;
   const GV& gv;
@@ -405,8 +389,9 @@ private:
   typename Traits::SizeType nglobal;
   const CE& ce;
   const Predicate_& predicate_;
-  shared_ptr<Ordering> _ordering;
-  B backend_;
+  mutable shared_ptr<Ordering> _ordering;
+  B _backend;
+  std::string _name;
 
   std::map<Dune::GeometryType,typename Traits::SizeType> gtoffset; // offset in vector for given geometry type
   std::vector<typename Traits::SizeType> offset; // offset into big vector for each entity;

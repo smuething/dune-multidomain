@@ -297,6 +297,8 @@ public:
     Dune::PDELab::ComputeSizeVisitor<Intersection> csv(is);
     TypeTree::applyToTree(*this,csv);
 
+    this->_dof_index_storage.resize(node.n);
+
     Dune::PDELab::FillIndicesVisitor<Intersection> fiv(is);
     TypeTree::applyToTree(*this,fiv);
 

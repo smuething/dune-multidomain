@@ -21,7 +21,7 @@ namespace Dune {
     //! \{
 
 
-    template<typename FEM, typename GV, typename DI, typename CI>
+    template<typename FEM, typename GV, typename Predicate, typename DI, typename CI>
     class DirectIntersectionLeafLocalOrdering
       : public TypeTree::LeafNode
     {
@@ -72,8 +72,9 @@ namespace Dune {
         return 0;
       }
 
-      explicit DirectIntersectionLeafLocalOrdering(const shared_ptr<const FEM>& fem, const GV& gv)
-        : _fem(fem)
+      DirectIntersectionLeafLocalOrdering(const shared_ptr<const FEM>& fem, const GV& gv, const Predicate& predicate)
+        : _predicate(predicate)
+        , _fem(fem)
         , _gv(gv)
         , _container_blocked(false)
       {}
@@ -109,6 +110,9 @@ namespace Dune {
 
       void collect_used_geometry_types_from_intersection(const Intersection& intersection)
       {
+        if (!_predicate(intersection))
+          return;
+
         FESwitch::setStore(_fe_store,_fem->find(intersection));
 
         const typename FESwitch::Coefficients& coeffs =
@@ -144,6 +148,9 @@ namespace Dune {
 
       void extract_per_entity_sizes_from_intersection(const Intersection& intersection)
       {
+        if (!_predicate(intersection))
+          return;
+
         FESwitch::setStore(_fe_store,_fem->find(intersection));
 
         const typename FESwitch::Coefficients& coeffs =
@@ -167,6 +174,8 @@ namespace Dune {
                                                                    key.codim() + 1
                                                                    );
             const size_type index = _gt_entity_offsets[geometry_type_index] + entity_index;
+
+            _entity_dof_offsets[index+1] = std::max(_entity_dof_offsets[index+1],static_cast<size_type>(key.index() + 1));
           }
 
       }
@@ -184,6 +193,9 @@ namespace Dune {
         return _max_local_size;
       }
 
+    private:
+
+      const Predicate& _predicate;
 
     protected:
 
@@ -386,6 +398,7 @@ namespace Dune {
       typedef DirectIntersectionLeafLocalOrdering<
         typename GFS::Traits::FiniteElementMap,
         typename GFS::Traits::GridView,
+        typename GFS::Predicate,
         typename Transformation::DOFIndex,
         typename Transformation::ContainerIndex
         > LocalOrdering;
@@ -397,12 +410,12 @@ namespace Dune {
 
       static transformed_type transform(const GFS& gfs, const Transformation& t)
       {
-        return transformed_type(make_tuple(make_shared<LocalOrdering>(gfs.finiteElementMapStorage(),gfs.gridView())),gfs.backend().blocked());
+        return transformed_type(make_tuple(make_shared<LocalOrdering>(gfs.finiteElementMapStorage(),gfs.gridView(),gfs.predicate())),gfs.backend().blocked());
       }
 
       static transformed_storage_type transform_storage(shared_ptr<const GFS> gfs, const Transformation& t)
       {
-        return make_shared<transformed_type>(make_tuple(make_shared<LocalOrdering>(gfs->finiteElementMapStorage(),gfs->gridView())),gfs->backend().blocked());
+        return make_shared<transformed_type>(make_tuple(make_shared<LocalOrdering>(gfs->finiteElementMapStorage(),gfs->gridView(),gfs->predicate())),gfs->backend().blocked());
       }
 
     };

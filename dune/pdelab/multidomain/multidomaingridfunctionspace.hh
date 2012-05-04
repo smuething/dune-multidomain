@@ -131,6 +131,9 @@ struct MultiDomainGridFunctionSpaceTraits
 
   typedef typename G::LeafGridView GridViewType;
 
+
+  typedef typename G::LeafGridView GridView;
+
   //! \brief vector backend
   typedef B Backend;
 

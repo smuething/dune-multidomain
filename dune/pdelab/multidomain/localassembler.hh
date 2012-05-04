@@ -135,6 +135,52 @@ namespace functors {
 }
 
 
+template<typename GO>
+struct LocalAssemblerTraits
+  : public Dune::PDELab::LocalAssemblerTraits<GO>
+{
+
+  template<typename Policy>
+  struct Spaces
+  {
+
+    typedef typename GO::Traits::TrialGridFunctionSpace GFSU;
+    typedef typename GO::Traits::TestGridFunctionSpace GFSV;
+
+    typedef LocalFunctionSpace<GFSU> LFSU;
+    typedef LocalFunctionSpace<GFSV> LFSV;
+
+    typedef CouplingLocalFunctionSpace<GFSU> LFSU_C;
+    typedef CouplingLocalFunctionSpace<GFSV> LFSV_C;
+
+    typedef typename std::conditional<
+      Policy::cache_trial_constraints,
+      LFSContainerIndexCache<LFSU,typename LocalAssemblerTraits::TrialGridFunctionSpaceConstraints>,
+      LFSContainerIndexCache<LFSU,EmptyTransformation>
+      >::type LFSU_Cache;
+
+    typedef typename std::conditional<
+      Policy::cache_test_constraints,
+      LFSContainerIndexCache<LFSV,typename LocalAssemblerTraits::TestGridFunctionSpaceConstraints>,
+      LFSContainerIndexCache<LFSV,EmptyTransformation>
+      >::type LFSV_Cache;
+
+    typedef typename std::conditional<
+      Policy::cache_coupling_trial_constraints,
+      LFSContainerIndexCache<LFSU_C,typename LocalAssemblerTraits::TrialGridFunctionSpaceConstraints>,
+      LFSContainerIndexCache<LFSU_C,EmptyTransformation>
+      >::type LFSU_C_Cache;
+
+    typedef typename std::conditional<
+      Policy::cache_coupling_test_constraints,
+      LFSContainerIndexCache<LFSV_C,typename LocalAssemblerTraits::TestGridFunctionSpaceConstraints>,
+      LFSContainerIndexCache<LFSV_C,EmptyTransformation>
+      >::type LFSV_C_Cache;
+
+  };
+};
+
+
 template<typename GO, typename... AssemblyParticipants>
 class LocalAssembler
   : public Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...>

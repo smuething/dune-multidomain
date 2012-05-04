@@ -1,6 +1,8 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTS_HH
 #define DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTS_HH
 
+#include <dune/pdelab/constraints/constraints.hh>
+
 #include <dune/pdelab/multidomain/globalassembler.hh>
 #include <dune/pdelab/gridoperator/common/localassemblerenginebase.hh>
 #include <dune/pdelab/multidomain/operatorflagtests.hh>
@@ -313,7 +315,43 @@ class ConstraintsAssemblerEngine
 {
 
   typedef Dune::PDELab::TypeTree::VariadicCompositeNode<ConstraintsDescriptors...> NodeT;
-  typedef typename CA::CG CG;
+  typedef typename CA::Traits::ConstraintsContainer CG;
+
+public:
+
+  struct Traits
+  {
+
+    typedef EmptyTransformation TrialGridFunctionSpaceConstraints;
+    typedef EmptyTransformation TestGridFunctionSpaceConstraints;
+    typedef NoConstraintsCachingPolicy CachePolicy;
+
+    struct Spaces
+    {
+
+      typedef typename CA::Traits::GridFunctionSpace GFS;
+
+      typedef LocalFunctionSpace<GFS> LFSV;
+      typedef LFSV LFSU;
+
+      typedef CouplingLocalFunctionSpace<GFS> LFSU_C;
+      typedef LFSU_C LFSV_C;
+
+      typedef LFSContainerIndexCache<LFSU,EmptyTransformation> LFSU_Cache;
+      typedef LFSU_Cache LFSV_Cache;
+      //typedef LFSContainerIndexCache<LFSV,CG> LFSV_Cache;
+
+      typedef LFSContainerIndexCache<LFSU_C,EmptyTransformation> LFSU_C_Cache;
+      typedef LFSU_C_Cache LFSV_C_Cache;
+      //typedef LFSContainerIndexCache<LFSV_C,CG> LFSV_C_Cache;
+
+    };
+
+  };
+
+private:
+
+  typedef typename Traits::Spaces::LFSV_Cache LFSV_Cache;
 
 public:
 
@@ -353,51 +391,49 @@ public:
   }
 
 
-  template<typename EG, typename LFSV>
-  void onBindLFSV(const EG& eg, const LFSV& lfsv)
+  template<typename EG>
+  void onBindLFSV(const EG& eg, const LFSV_Cache& lfsv_s_cache)
   {
     applyVisitor(visitor<functors::rebind_subproblem_lfs_s>::add_data());
   }
 
-  template<typename IG,
-           typename LFSV_S,
-           typename LFSV_N>
+  template<typename IG>
   void onBindLFSVOutside(const IG& ig,
-                         const LFSV_S& lfsv_s,
-                         const LFSV_N& lfsv_n)
+                         const LFSV_Cache& lfsv_s_cache,
+                         const LFSV_Cache& lfsv_n_cache)
   {
     applyVisitor(visitor<functors::rebind_subproblem_lfs_n>::add_data());
   }
 
 
-  template<typename EG, typename LFSV>
-  void assembleVVolume(const EG& eg, const LFSV& lfsv)
+  template<typename EG>
+  void assembleVVolume(const EG& eg, const LFSV_Cache& lfsv_s_cache)
   {
     typedef visitor<functors::volume_constraints,do_constraints_volume<> > Visitor;
-    applyVisitor(Visitor::add_data(wrap_eg(eg),wrap_lfsv_s(lfsv),wrap_cg(*cg)));
+    applyVisitor(Visitor::add_data(wrap_eg(eg),wrap_lfsv_s_cache(lfsv_s_cache),wrap_cg(*cg)));
   }
 
-  template<typename IG, typename LFSV_S, typename LFSV_N>
+  template<typename IG>
   void assembleVSkeleton(const IG& ig,
-                         const LFSV_S& lfsv_s,
-                         const LFSV_N& lfsv_n)
+                         const LFSV_Cache& lfsv_s_cache,
+                         const LFSV_Cache& lfsv_n_cache)
   {
     typedef visitor<functors::skeleton_or_boundary_constraints,do_constraints_skeleton_or_boundary<> > Visitor;
-    applyVisitor(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s(lfsv_s),wrap_lfsv_n(lfsv_n),wrap_cg(*cg)));
+    applyVisitor(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s_cache(lfsv_s_cache),wrap_lfsv_n_cache(lfsv_n_cache),wrap_cg(*cg)));
   }
 
-  template<typename IG, typename LFSV>
-  void assembleVBoundary(const IG& ig, const LFSV& lfsv)
+  template<typename IG>
+  void assembleVBoundary(const IG& ig, const LFSV_Cache& lfsv_s_cache)
   {
     typedef visitor<functors::boundary_constraints,do_constraints_boundary<> > Visitor;
-    applyVisitor(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s(lfsv),wrap_cg(*cg)));
+    applyVisitor(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s_cache(lfsv_s_cache),wrap_cg(*cg)));
   }
 
-  template<typename IG, typename LFSV>
-  void assembleVProcessor(const IG& ig, const LFSV& lfsv)
+  template<typename IG>
+  void assembleVProcessor(const IG& ig, const LFSV_Cache& lfsv_s_cache)
   {
     typedef visitor<functors::processor_constraints,do_constraints_processor<> > Visitor;
-    applyVisitor(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s(lfsv),wrap_cg(*cg)));
+    applyVisitor(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s_cache(lfsv_s_cache),wrap_cg(*cg)));
   }
 
 
@@ -410,6 +446,16 @@ public:
     : NodeT(constraintsSpecifications...)
   {}
 
+  const EmptyTransformation& trialGridFunctionSpaceConstraints() const
+  {
+    return _empty_constraints;
+  }
+
+  const EmptyTransformation& testGridFunctionSpaceConstraints() const
+  {
+    return _empty_constraints;
+  }
+
 private:
 
   template<typename Visitor>
@@ -419,6 +465,7 @@ private:
   }
 
   CG* cg;
+  EmptyTransformation _empty_constraints;
 
 };
 
@@ -436,13 +483,25 @@ public:
                                      > Engine;
   typedef typename GFS::template ConstraintsContainer<RF>::Type CG;
 
+  struct Traits
+  {
+
+    typedef GFS GridFunctionSpace;
+    typedef CG ConstraintsContainer;
+
+  };
+
 
   ConstraintsAssembler(const GFS& gfs,
                        const ConstraintsSpecifications&... specifications)
     : _assembler(gfs,gfs)
-    , _engine(buildConstraintsDescriptor(_assembler.lfsv_s(),
-                                         _assembler.lfsv_n(),
-                                         specifications)...)
+    , _engine(
+        buildConstraintsDescriptor(
+          _assembler.lfsv_s(),
+          _assembler.lfsv_n(),
+          specifications
+        )...
+      )
   {}
 
   void assemble(CG& cg)
@@ -463,7 +522,7 @@ template<typename RF, typename GFS, typename... ConstraintsSpecifications>
 ConstraintsAssembler<GFS,RF,ConstraintsSpecifications...>
 constraints(const GFS& gfs, const ConstraintsSpecifications&... specifications)
 {
-  return ConstraintsAssembler<GFS,RF,ConstraintsSpecifications...>(gfs,specifications...);
+  return {gfs,specifications...};
 }
 
 

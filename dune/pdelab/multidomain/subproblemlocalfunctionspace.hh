@@ -300,9 +300,9 @@ public:
   }
 
   // map index in this local function space to global index space
-  typename Traits::SizeType globalIndex (typename Traits::IndexContainer::size_type index) const
+  const typename Traits::DOFIndex& dofIndex (typename Traits::IndexContainer::size_type index) const
   {
-    return baseLFS().globalIndex(index);
+    return baseLFS().dofIndex(index);
   }
 
   /** \brief extract coefficients for one element from container */
@@ -416,6 +416,27 @@ public:
 
   const typename Traits::ConstraintsType& constraints() const {
     return this->baseLFS().constraints();
+  }
+
+  template<typename GC, typename LC>
+  void insert_constraints (const LC& lc, GC& gc) const
+  {
+    // LC and GC are maps of maps
+    typedef typename LC::const_iterator local_col_iterator;
+    typedef typename LC::value_type::second_type::const_iterator local_row_iterator;
+    typedef typename GC::iterator global_col_iterator;
+    typedef typename GC::value_type::second_type global_row_type;
+
+    for (local_col_iterator cit=lc.begin(); cit!=lc.end(); ++cit)
+      {
+
+        // look up entry in global map, if not found, insert an empty one.
+        global_col_iterator gcit = gc.insert(std::make_pair(std::ref(this->dofIndex(cit->first)),global_row_type())).first;
+
+        // copy row to global container with transformed indices
+        for (local_row_iterator rit=(cit->second).begin(); rit!=(cit->second).end(); ++rit)
+          gcit->second[this->dofIndex(rit->first)] = rit->second;
+      }
   }
 
 protected:

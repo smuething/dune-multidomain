@@ -1,6 +1,8 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_PATTERNASSEMBLERFUNCTORS_HH
 #define DUNE_PDELAB_MULTIDOMAIN_PATTERNASSEMBLERFUNCTORS_HH
 
+#include <dune/pdelab/multidomain/datawrappers.hh>
+#include <dune/pdelab/multidomain/visitor.hh>
 #include <dune/pdelab/multidomain/operatorcallguards.hh>
 
 namespace Dune {

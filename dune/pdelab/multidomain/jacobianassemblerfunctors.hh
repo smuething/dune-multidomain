@@ -2,6 +2,8 @@
 #define DUNE_PDELAB_MULTIDOMAIN_JACOBIANASSEMBLERFUNCTORS_HH
 
 #include <dune/pdelab/multidomain/operatorcallguards.hh>
+#include <dune/pdelab/multidomain/datawrappers.hh>
+#include <dune/pdelab/multidomain/visitor.hh>
 
 namespace Dune {
 namespace PDELab {

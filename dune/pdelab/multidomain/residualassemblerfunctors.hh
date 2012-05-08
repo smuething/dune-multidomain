@@ -2,6 +2,7 @@
 #define DUNE_PDELAB_MULTIDOMAIN_RESIDUALASSEMBLERFUNCTORS_HH
 
 #include <dune/pdelab/multidomain/datawrappers.hh>
+#include <dune/pdelab/multidomain/visitor.hh>
 #include <dune/pdelab/multidomain/operatorcallguards.hh>
 #include <dune/pdelab/multidomain/localfunctionspaceutility.hh>
 #include <dune/pdelab/gridoperatorspace/gridoperatorspaceutilities.hh>

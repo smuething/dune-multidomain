@@ -4,6 +4,7 @@
 #include <dune/pdelab/constraints/constraints.hh>
 #include <dune/pdelab/common/typetree.hh>
 #include <dune/pdelab/multidomain/datawrappers.hh>
+#include <dune/pdelab/multidomain/visitor.hh>
 
 namespace Dune {
 namespace PDELab {

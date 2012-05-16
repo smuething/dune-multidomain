@@ -9,6 +9,27 @@ namespace PDELab {
 
 namespace MultiDomain {
 
+
+  template<typename SubDomain>
+  struct subdomain_predicate
+  {
+
+    template<typename LFS>
+    bool operator()(const LFS& lfs) const
+    {
+      return lfs.gridFunctionSpace().gridView().grid().domain() == _subDomain;
+    }
+
+    subdomain_predicate(const SubDomain& subDomain)
+    : _subDomain(subDomain)
+    {}
+
+  private:
+    SubDomain _subDomain;
+
+  };
+
+
   //! Helper class for common data of a DGFTree.
   /**
    * This is a simple extension of the vanilla PDELab data

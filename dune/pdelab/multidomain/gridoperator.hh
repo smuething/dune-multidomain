@@ -143,6 +143,15 @@ public:
     , _localAssembler(cu,cv,participants...)
   {}
 
+  GridOperator(const GFSU& gfsu,
+               const GFSV& gfsv,
+               const CU& cu,
+               const CV& cv,
+               AssemblyParticipants&... participants)
+    : _assembler(gfsu,gfsv)
+    , _localAssembler(cu,cv,participants...)
+  {}
+
   template<typename Tuple, std::size_t k>
   static typename enable_if<(k == tuple_size<Tuple>::value - 1)>::type
   shareData(const Tuple& gridOperators)

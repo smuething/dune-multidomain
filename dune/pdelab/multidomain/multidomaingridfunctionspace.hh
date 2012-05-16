@@ -351,6 +351,17 @@ public:
     TypeTree::applyToTree(*this,VerifyChildren());
   }
 
+  MultiDomainGridFunctionSpace (G& g, Children&... children)
+    : BaseT(children...)
+    , ImplementationBase(Backend())
+    , _g(g)
+  {
+    dune_static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
+                       "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
+    TypeTree::applyToTree(*this,VerifyChildren());
+  }
+
+
   template<typename EntityType>
   size_t dataHandleSize (const EntityType& e) const
   {

@@ -358,20 +358,20 @@ private:
 template<typename MDLFS, typename LFS, typename BaseLFS, typename SubProblem, typename LFSTag>
 class SubProblemLocalFunctionSpaceBase
   : public SubProblemLocalFunctionSpaceProxy<SubProblemLocalFunctionSpaceTraits<
-                                               typename MDLFS::Traits::GridFunctionSpaceType,
+                                               typename MDLFS::Traits::GridFunctionSpace,
                                                LFS,
                                                BaseLFS,
-                                               typename BaseLFS::Traits::MultiIndex,
+                                               typename BaseLFS::Traits::DOFIndex,
                                                SubProblem
                                                >
                                              >
 {
 
   typedef SubProblemLocalFunctionSpaceProxy<SubProblemLocalFunctionSpaceTraits<
-                                              typename MDLFS::Traits::GridFunctionSpaceType,
+                                              typename MDLFS::Traits::GridFunctionSpace,
                                               LFS,
                                               BaseLFS,
-                                              typename BaseLFS::Traits::MultiIndex,
+                                              typename BaseLFS::Traits::DOFIndex,
                                               SubProblem
                                               >
                                             > BaseT;

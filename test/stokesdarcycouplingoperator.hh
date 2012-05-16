@@ -3,14 +3,25 @@
 
 #include <dune/pdelab/multidomain/couplingutilities.hh>
 #include <dune/common/parametertree.hh>
+#include <dune/pdelab/localoperator/stokesparameter.hh>
 
+template<typename GV, typename RF>
+struct StokesDarcyCouplingParameterTraits
+  : public Dune::PDELab::NavierStokesParameterTraits<GV,RF>
+{
+
+  typedef Dune::FieldMatrix<RF,GV::dimension,GV::dimension> PermeabilityTensor;
+
+};
+
+/*
 template<typename GV>
 class CouplingParameters
 {
 
 public:
 
-  typedef Dune::FieldMatrix<double,GV::dimension,GV::dimension> PermeabilityTensor;
+  typedef Stokes
 
   double viscosity() const
   {
@@ -42,7 +53,7 @@ public:
     return gamma_;
   }
 
-  PermeabilityTensor kabs() const
+  typename Traits::PermeabilityTensor kabs() const
   {
     return _kabs;
   }
@@ -77,7 +88,7 @@ private:
   const double epsilon_;
 
 };
-
+*/
 
 template<typename Parameters>
 class StokesDarcyCouplingOperator
@@ -93,9 +104,9 @@ public:
   static const bool doAlphaCoupling = true;
 
   StokesDarcyCouplingOperator(const Parameters& params)
-    : Dune::PDELab::MultiDomain::NumericalJacobianCoupling<StokesDarcyCouplingOperator<Parameters> >(params.epsilon())
-    , Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<StokesDarcyCouplingOperator<Parameters> >(params.epsilon())
-    , parameters(params)
+  //: Dune::PDELab::MultiDomain::NumericalJacobianCoupling<StokesDarcyCouplingOperator<Parameters> >(params.epsilon())
+  //, Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<StokesDarcyCouplingOperator<Parameters> >(params.epsilon())
+  : parameters(params)
   {}
 
   template<typename IG,
@@ -152,18 +163,6 @@ public:
 
     const typename IG::Element& darcyCell = ig.outsideElement();
 
-    const RF g = parameters.gravity();
-    const RF alpha = parameters.alpha();
-    const RF nu = parameters.viscosity();
-    const RF porosity = parameters.porosity();
-    const RF gamma = parameters.gamma();
-    const RF rho = parameters.density();
-    const typename Parameters::PermeabilityTensor kabs = parameters.kabs();
-    RF tracePi = 0.0;
-    for (int i = 0; i < dim; ++i)
-      tracePi += kabs[i][i];
-    tracePi *= nu/g/rho;
-
     // loop over quadrature points
     for (typename Dune::QuadratureRule<DF,dim-1>::const_iterator it=rule.begin(); it!=rule.end(); ++it)
       {
@@ -171,6 +170,18 @@ public:
         const GC pos = ig.geometry().global(it->position());
         const GC stokesPos = ig.geometryInInside().global(it->position());
         const GC darcyPos = ig.geometryInOutside().global(it->position());
+
+        const RF g = 0; //parameters.gravity();
+        const RF alpha = parameters.alpha(ig,it->position());
+        const RF nu = parameters.viscosity(ig,it->position());
+        const RF porosity = parameters.porosity(ig,it->position());
+        const RF gamma = parameters.gamma(ig,it->position());
+        const RF rho = parameters.density(ig,it->position());
+        const typename Parameters::Traits::PermeabilityTensor kabs = parameters.K(ig,it->position());
+        RF tracePi = 0.0;
+        for (int i = 0; i < dim; ++i)
+          tracePi += kabs[i][i];
+        tracePi *= nu/g/rho;
 
         // integration weight
         const RF factor = it->weight() * ig.geometry().integrationElement(it->position());
@@ -212,12 +223,14 @@ public:
               u[d] += stokesx(lfsu_v,i) * v[i];
           }
 
+        const RF h1 = parameters.h1(ig,it->position());
+        const RF h2 = parameters.h2(ig,it->position());
 
         for (size_type i = 0; i < darcylfsu.size(); ++i)
-          darcyr.accumulate(darcylfsv,i, -gamma * porosity * (u * n) * psi[i] * factor);
+          darcyr.accumulate(darcylfsv,i, /*-gamma * porosity **/ -(u * n) * psi[i] * factor);
 
         Dune::FieldVector<RF,dim> tangentialFlow(0.0);
-        kabs.mv(gradphi,tangentialFlow);
+        //kabs.mv(gradphi,tangentialFlow);
         tangentialFlow /= porosity;
         tangentialFlow += u;
         // project into tangential plane
@@ -230,12 +243,13 @@ public:
             const LFSU_V& lfsu_v = lfsu_v_pfs.child(d);
             for (size_type i = 0; i < lfsu_v.size(); ++i)
               {
-                stokesr.accumulate(lfsu_v,i, - rho * g * (phi - pos[dim-1]) * v[i] * n[d] * factor);
+                // stokesr.accumulate(lfsu_v,i, - rho * g * (phi - pos[dim-1]) * v[i] * n[d] * factor);
+                stokesr.accumulate(lfsu_v,i, (h1 + phi) * v[i] * n[d] * factor);
               }
 
             for (size_type i = 0; i < lfsu_v.size(); ++i)
               {
-                stokesr.accumulate(lfsu_v,i, alpha * sqrt(dim) / sqrt(tracePi) * tangentialFlow[d] * v[i] * factor);
+                stokesr.accumulate(lfsu_v,i, (alpha / sqrt(1) * tangentialFlow[d] + h2) * v[i] * factor);
               }
           }
 

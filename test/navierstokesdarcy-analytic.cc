@@ -76,7 +76,7 @@ public:
 
   inline void evaluateGlobal(const DomainType & x, RangeType & y) const
   {
-    y=std::exp(x[0]) * std::sin(x[0]+x[1]);;
+    y=std::exp(x[0]) * std::sin(x[0]+x[1]);
   }
 };
 

@@ -995,6 +995,10 @@ int main(int argc, char** argv) {
     std::cerr << "Dune reported error: " << e << std::endl;
 	return 1;
   }
+  catch (std::exception &e){
+    std::cerr << "STL reported error: " << e.what() << std::endl;
+	return 1;
+  }
   catch (...){
     std::cerr << "Unknown exception thrown!" << std::endl;
 	return 1;

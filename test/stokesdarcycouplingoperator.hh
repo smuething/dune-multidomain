@@ -227,7 +227,7 @@ public:
         const RF h2 = parameters.h2(ig,it->position());
 
         for (size_type i = 0; i < darcylfsu.size(); ++i)
-          darcyr.accumulate(darcylfsv,i, /*-gamma * porosity **/ -(u * n) * psi[i] * factor);
+          darcyr.accumulate(darcylfsv,i, /*-gamma * porosity **/ (u * n) * psi[i] * factor);
 
         Dune::FieldVector<RF,dim> tangentialFlow(0.0);
         //kabs.mv(gradphi,tangentialFlow);
@@ -238,6 +238,8 @@ public:
         scaledNormal *= (tangentialFlow * n);
         tangentialFlow -= scaledNormal;
 
+        tangentialFlow[0] = 0;
+        tangentialFlow[1] = u[1];
         for (int d = 0; d < dim; ++d)
           {
             const LFSU_V& lfsu_v = lfsu_v_pfs.child(d);
@@ -249,7 +251,8 @@ public:
 
             for (size_type i = 0; i < lfsu_v.size(); ++i)
               {
-                stokesr.accumulate(lfsu_v,i, (alpha / sqrt(1) * tangentialFlow[d] + h2) * v[i] * factor);
+                // warning: The following only works for dim = 2 and axis-aligned interfaces!
+                stokesr.accumulate(lfsu_v,i, (alpha / sqrt(1) * tangentialFlow[d] + h2) * v[i] * (1 + n[d]) * factor);
               }
           }
 

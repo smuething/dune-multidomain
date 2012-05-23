@@ -705,10 +705,16 @@ int main(int argc, char** argv) {
     MDGV mdgv = grid.leafView();
     SDGV stokesGV = stokesGrid.leafView();
     SDGV darcyGV = darcyGrid.leafView();
+
+    typedef MDGV::Grid::ctype DF;
+    typedef double RF;
+
+    const DF interface_position = parameters.get<DF>("mesh.interface-position");
+
     grid.startSubDomainMarking();
     for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
       {
-        grid.addToSubDomain(elementIndexToPhysicalGroup[mdgv.indexSet().index(*it)] > 0 ? 0 : 1,*it);
+        grid.addToSubDomain(elementIndexToPhysicalGroup[mdgv.indexSet().index(*it)] > interface_position ? 0 : 1,*it);
         // grid.addToSubDomain(0,*it);
       }
     grid.preUpdateSubDomains();
@@ -717,8 +723,6 @@ int main(int argc, char** argv) {
 
     grid.globalRefine(parameters.get<int>("mesh.refine"));
 
-    typedef MDGV::Grid::ctype DF;
-    typedef double RF;
 
     const int stokes_k = 2;
     const int stokes_q = 2*stokes_k;
@@ -922,7 +926,7 @@ int main(int argc, char** argv) {
         "",
         Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(stokesGV.grid().domain())
       );
-      vtkwriter.write("stokes",Dune::VTKOptions::binaryappended);
+      vtkwriter.write(parameters["io.stokesfile"],Dune::VTKOptions::binaryappended);
     }
 
     {
@@ -934,7 +938,7 @@ int main(int argc, char** argv) {
         "",
         Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(darcyGV.grid().domain())
       );
-      vtkwriter.write("darcy",Dune::VTKOptions::binaryappended);
+      vtkwriter.write(parameters["io.darcyfile"],Dune::VTKOptions::binaryappended);
     }
 
 #if 0

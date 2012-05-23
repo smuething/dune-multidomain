@@ -4,6 +4,9 @@
 #include <dune/grid/sgrid.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/io/file/gmshreader.hh>
+#include <dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
+#include <dune/pdelab/gridfunctionspace/compositegridfunctionspace.hh>
+#include <dune/pdelab/gridfunctionspace/vectorgridfunctionspace.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/finiteelementmap/q1fem.hh>
 #include <dune/pdelab/finiteelementmap/p1fem.hh>
@@ -14,19 +17,17 @@
 #include <dune/pdelab/backend/istlmatrixbackend.hh>
 #include <dune/pdelab/backend/istlsolverbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
-#include <dune/pdelab/multidomain/couplinggridfunctionspace.hh>
-#include <dune/pdelab/multidomain/couplinglocalfunctionspace.hh>
-#include <dune/pdelab/multidomain/multidomaingridoperatorspace.hh>
+#include <dune/pdelab/multidomain/gridoperator.hh>
 #include <dune/pdelab/multidomain/subproblem.hh>
 #include <dune/pdelab/finiteelementmap/conformingconstraints.hh>
 #include <dune/pdelab/localoperator/poisson.hh>
 #include <dune/pdelab/localoperator/cg_stokes.hh>
 #include <dune/pdelab/multidomain/coupling.hh>
 #include <dune/pdelab/multidomain/constraints.hh>
-#include<dune/pdelab/stationary/linearproblem.hh>
-#include<dune/pdelab/instationary/onestep.hh>
-#include <dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
-#include<dune/pdelab/common/vtkexport.hh>
+#include <dune/pdelab/constraints/constraintsparameters.hh>
+#include <dune/pdelab/stationary/linearproblem.hh>
+#include<dune/pdelab/gridfunctionspace/vtk.hh>
+#include<dune/pdelab/multidomain/vtk.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 
 #include<typeinfo>

@@ -710,13 +710,28 @@ int main(int argc, char** argv) {
     typedef MDGV::Grid::ctype DF;
     typedef double RF;
 
-    const DF interface_position = parameters.get<DF>("mesh.interface-position");
+    const bool interface_by_subdomain = parameters.get<bool>("mesh.interface-by-subdomain");
+    const DF interface_position = parameters.get("mesh.interface-position",0.0);
+    const int stokes_domain_id = parameters.get("mesh.stokes-domain-id",0);
+    const int darcy_domain_id = parameters.get("mesh.darcy-domain-id",1);
+    assert(stokes_domain_id != darcy_domain_id && "Stokes and Darcy domain must have distinct ids");
 
     grid.startSubDomainMarking();
     for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
       {
-        grid.addToSubDomain(elementIndexToPhysicalGroup[mdgv.indexSet().index(*it)] > interface_position ? 0 : 1,*it);
-        // grid.addToSubDomain(0,*it);
+        if (interface_by_subdomain)
+          {
+            int domain = elementIndexToPhysicalGroup[mdgv.indexSet().index(*it)];
+            if (domain == stokes_domain_id)
+              grid.addToSubDomain(0,*it);
+            if (domain == darcy_domain_id)
+              grid.addToSubDomain(1,*it);
+          }
+        else
+          {
+            auto x = it->geometry().center()[0];
+            grid.addToSubDomain(x > interface_position ? 0 : 1,*it);
+          }
       }
     grid.preUpdateSubDomains();
     grid.updateSubDomains();

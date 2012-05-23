@@ -1,9 +1,10 @@
 #include "config.h"
 
+#include <dune/common/mpihelper.hh>
 #include <dune/grid/sgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
-#include<dune/pdelab/finiteelementmap/q1fem.hh>
-#include<dune/pdelab/backend/istlvectorbackend.hh>
+#include <dune/pdelab/finiteelementmap/q1fem.hh>
+#include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 
 int main(int argc, char** argv) {
@@ -42,7 +43,7 @@ int main(int argc, char** argv) {
     typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM;
     FEM fem;
     typedef Dune::PDELab::NoConstraints CON;
-    typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
+    typedef Dune::PDELab::ISTLVectorBackend<> VBE;
     typedef Dune::PDELab::GridFunctionSpace<MDGV,FEM,CON,VBE> MDGFS;
     typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM,CON,VBE> SDGFS;
     MDGFS mdgfs(mdgv,fem);

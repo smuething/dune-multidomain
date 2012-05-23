@@ -3,7 +3,7 @@ dunedir = $(includedir)/dune
 include $(top_srcdir)/am/global-rules
 AM_CPPFLAGS += $(ALL_PKG_CPPFLAGS) $(BOOST_CPPFLAGS) $(DUNE_CPPFLAGS) $(DUNEMPIFLAGS)
 AM_LDFLAGS += $(ALL_PKG_LDFLAGS) $(DUNE_LDFLAGS) $(DUNEMPILDFLAGS)
-LDADD = $(ALL_PKG_LIBS) $(DUNE_LIBS) $(DUNEMPILIBS) @LDADD@
+LDADD = $(ALL_PKG_LIBS) $(DUNE_LIBS) $(DUNEMPILIBS)
 
 check_PROGRAMS = testmultidomaingridfunctionspace \
 	poisson \
@@ -41,17 +41,17 @@ testlocalfunctionspace_SOURCES = testlocalfunctionspace.cc
 stokesdarcy_SOURCES = stokesdarcy.cc
 stokesdarcy_CPPFLAGS = $(AM_CPPFLAGS) $(SUPERLU_CPPFLAGS)
 stokesdarcy_LDFLAGS = $(AM_LDFLAGS) $(SUPERLU_LDFLAGS)
-stokesdarcy_LDADD = $(AM_LIBS) $(SUPERLU_LIBS)
+stokesdarcy_LDADD = $(LDADD) $(AM_LIBS) $(SUPERLU_LIBS)
 
 stokesdarcy2_SOURCES = stokesdarcy2.cc
 stokesdarcy2_CPPFLAGS = $(AM_CPPFLAGS) $(SUPERLU_CPPFLAGS)
 stokesdarcy2_LDFLAGS = $(AM_LDFLAGS) $(SUPERLU_LDFLAGS)
-stokesdarcy2_LDADD = $(AM_LIBS) $(SUPERLU_LIBS)
+stokesdarcy2_LDADD = $(LDADD) $(AM_LIBS) $(SUPERLU_LIBS)
 
 navierstokesdarcy_analytic_SOURCES = navierstokesdarcy-analytic.cc
 navierstokesdarcy_analytic_CPPFLAGS = $(AM_CPPFLAGS) $(SUPERLU_CPPFLAGS)
 navierstokesdarcy_analytic_LDFLAGS = $(AM_LDFLAGS) $(SUPERLU_LDFLAGS)
-navierstokesdarcy_analytic_LDADD = $(AM_LIBS) $(SUPERLU_LIBS)
+navierstokesdarcy_analytic_LDADD = $(LDADD) $(AM_LIBS) $(SUPERLU_LIBS)
 
 testcouplinggfs_SOURCES = testcouplinggfs.cc
 

@@ -86,7 +86,7 @@ class NavierStokesParameters
 {
 public:
 
-  static const bool assemble_navier = true;
+  static const bool assemble_navier = false;
   static const bool assemble_full_tensor = true;
 
   typedef Dune::PDELab::NavierStokesParameterTraits<GV,RF> Traits;
@@ -102,8 +102,16 @@ public:
     auto x = global_coord[0];
     auto y = global_coord[1];
     typename Traits::VelocityRange r;
-    r[0] = -y*y*std::cos(x*y) + std::exp(x+y);
-    r[1] = -std::sin(x*y) - x*y*std::cos(x*y) + std::exp(x+y);
+    /*
+    r[0] = _rho*(-y*std::sin(x*y)*std::cos(x*y) - x*std::sin(x*y)*std::exp(x+y))
+      + std::exp(x)*std::sin(x+y) + std::cos(x+y)
+      - _mu*(-(x*x + y*y)*std::cos(x*y) -y*y*std::cos(x*y) + std::exp(x+y));
+    r[1] = _rho*(std::exp(x+y)*std::cos(x*y) + std::exp(x+y)*std::exp(x+y))
+      + std::exp(x)*std::cos(x+y)
+      - _mu*(2*std::exp(x+y) -std::sin(x*y) - x*y*std::cos(x*y) + std::exp(x+y));
+    */
+    r[0] = exp(x)*sin(x+y) + exp(x)*cos(x+y) - _mu*(-2*y*y*cos(x*y)-x*x*cos(x*y)+exp(x+y));
+    r[1] = exp(x)*cos(x+y) - _mu*(3*exp(x+y) - sin(x*y) - x*y*cos(x*y));
     return r;
   }
 
@@ -127,7 +135,7 @@ public:
     if (!is.boundary())
       return Traits::BoundaryCondition::DoNothing;
     RF xg = is.geometry().global(x)[0];
-    return xg > (-0.5+1e-9) ? Traits::BoundaryCondition::VelocityDirichlet : Traits::BoundaryCondition::StressNeumann;
+    return xg > (-0.5+1e-9) ? Traits::BoundaryCondition::VelocityDirichlet : Traits::BoundaryCondition::VelocityDirichlet;
   }
 
   //! Dynamic viscosity value from local cell coordinate
@@ -202,10 +210,10 @@ public:
     auto x = global_coord[0];
     auto y = global_coord[1];
     s[0][0] = s[1][1] = std::exp(x) * std::sin(x+y);
-    s[0][0] += _mu * y * std::sin(x*y);
-    s[0][1] += _mu * x * std::sin(x*y);
-    s[1][0] -= _mu * std::exp(x+y);
-    s[1][1] -= _mu * std::exp(x+y);
+    s[0][0] += 2 * _mu * y * std::sin(x*y);
+    s[0][1] += _mu * (x * std::sin(x*y) - std::exp(x+y));
+    s[1][0] += _mu * (x * std::sin(x*y) - std::exp(x+y));
+    s[1][1] -= 2 * _mu * std::exp(x+y);
     typename Traits::VelocityRange r(0);
     s.mv(normal,r);
     return r;
@@ -290,14 +298,7 @@ public:
   typename Traits::RangeType
   b (const typename Traits::ElementType& e, const typename Traits::DomainType& x_) const
   {
-    auto global_coord = e.geometry().global(x_);
-    auto x = global_coord[0];
-    auto y = global_coord[1];
-    RF mu_over_K = _mu / _kabs[0][0];
-    typename Traits::RangeType r(0.0);
-    r[0] = std::exp(x) * std::sin(x+y) + std::cos(x+y) + mu_over_K * std::cos(x*y);
-    r[1] = std::exp(x) * std::cos(x+y) + mu_over_K * std::exp(x+y);
-    return r;
+    return typename Traits::RangeType(0.0);
   }
 
   //! tensor diffusion coefficient
@@ -334,7 +335,7 @@ public:
     auto global_coord = e.geometry().global(x_);
     auto x = global_coord[0];
     auto y = global_coord[1];
-    return -y * std::sin(x*y) + std::exp(x+y);
+    return _kabs[0][0] / _mu * std::exp(x)*(std::sin(x+y) - 2*std::cos(x+y));
   }
 
   //! boundary condition type function
@@ -347,7 +348,7 @@ public:
       Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
         x = is.geometry().global(x_);
       if (x[0] < 1e-9)
-        return BC::Flux;
+        return BC::Dirichlet;
       else
         return BC::Dirichlet;
     }
@@ -402,7 +403,7 @@ public:
     auto global_coord = ig.geometry().global(coord);
     auto x = global_coord[0];
     auto y = global_coord[1];
-    return -2 * _mu * y * std::sin(x*y);
+    return 2 * _mu * y * std::sin(x*y);
   }
 
   template<typename IG>
@@ -411,7 +412,7 @@ public:
     auto global_coord = ig.geometry().global(coord);
     auto x = global_coord[0];
     auto y = global_coord[1];
-    return std::exp(x+y) - x*sin(x*y) - _alpha/sqrt((_K[0][0] + _K[1][1])/2.0)*std::exp(x*y) - std::exp(x)*std::sin(x+y);
+    return _mu * (std::exp(x+y) - x*sin(x*y)) - _alpha/sqrt((_K[0][0] + _K[1][1])/2.0)*std::exp(x+y);
   }
 
   template<typename IG>

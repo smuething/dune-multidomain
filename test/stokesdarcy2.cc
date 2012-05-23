@@ -33,7 +33,7 @@
 #include<typeinfo>
 
 #include <dune/pdelab/finiteelementmap/opbfem.hh>
-#include "../../dune-pm/dune/pm/models/adrwip.hh"
+#include "adrwip.hh"
 
 #include "stokesdarcycouplingoperator.hh"
 #include "functionmacros.hh"
@@ -187,7 +187,6 @@ public:
 
 template<typename GV, typename RF>
 class NavierStokesParameters
-  : public Dune::PDELab::TaylorHoodNavierStokesParameters<double>
 {
 public:
 

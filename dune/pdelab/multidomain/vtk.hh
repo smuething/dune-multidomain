@@ -71,16 +71,24 @@ namespace MultiDomain {
 
   };
 
-  template<typename VTKWriter, typename GFS, typename X, typename Predicate = Dune::PDELab::default_predicate>
+  template<typename VTKWriter,
+           typename GFS,
+           typename X,
+           typename NameGenerator = DefaultVTKFunctionNameGenerator,
+           typename Predicate = Dune::PDELab::default_predicate>
   vtk_output_collector<
     VTKWriter,
     DGFTreeCommonData<GFS,X,Predicate>
     >
-  add_solution_to_vtk_writer(VTKWriter& vtk_writer, const GFS& gfs, const X& x, std::string base_name = "", const Predicate& predicate = Predicate())
+  add_solution_to_vtk_writer(VTKWriter& vtk_writer,
+                             const GFS& gfs,
+                             const X& x,
+                             const Predicate& predicate = Predicate(),
+                             const NameGenerator& name_generator = default_vtk_name_scheme())
   {
     typedef DGFTreeCommonData<GFS,X,Predicate> Data;
     vtk_output_collector<VTKWriter,Data> collector(vtk_writer,make_shared<Data>(gfs,x),predicate);
-    collector.add_solution(base_name);
+    collector.add_solution(name_generator);
     return std::move(collector);
   }
 

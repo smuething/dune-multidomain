@@ -487,7 +487,6 @@ int main(int argc, char** argv) {
         vtkwriter,
         multigfs,
         u,
-        "",
         subdomain_predicate<Grid::SubDomainIndexType>(0)
       );
       vtkwriter.write("testmortarpoisson-left",Dune::VTKOptions::ascii);
@@ -499,7 +498,6 @@ int main(int argc, char** argv) {
         vtkwriter,
         multigfs,
         u,
-        "",
         subdomain_predicate<Grid::SubDomainIndexType>(1)
       );
       vtkwriter.write("testmortarpoisson-right",Dune::VTKOptions::ascii);

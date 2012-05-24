@@ -416,6 +416,15 @@ public:
   }
 
   template<typename IG>
+  typename Traits::RangeField h3(const IG& ig, const typename Traits::IntersectionDomain& coord) const
+  {
+    auto global_coord = ig.geometry().global(coord);
+    auto x = global_coord[0];
+    auto y = global_coord[1];
+    return - _K[0][0] * std::exp(x) * (std::sin(x+y) + std::cos(x+y)) + std::cos(x*y);
+  }
+
+  template<typename IG>
   typename Traits::RangeField alpha(const IG& ig, const typename Traits::IntersectionDomain& coord) const
   {
     return _alpha;

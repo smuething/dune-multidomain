@@ -225,9 +225,10 @@ public:
 
         const RF h1 = parameters.h1(ig,it->position());
         const RF h2 = parameters.h2(ig,it->position());
+        const RF h3 = parameters.h3(ig,it->position());
 
         for (size_type i = 0; i < darcylfsu.size(); ++i)
-          darcyr.accumulate(darcylfsv,i, /*-gamma * porosity **/ (u * n) * psi[i] * factor);
+          darcyr.accumulate(darcylfsv,i, /*-gamma * porosity **/ ((u * n) + h3) * psi[i] * factor);
 
         Dune::FieldVector<RF,dim> tangentialFlow(0.0);
         //kabs.mv(gradphi,tangentialFlow);

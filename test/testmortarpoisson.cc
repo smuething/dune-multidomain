@@ -451,43 +451,12 @@ int main(int argc, char** argv) {
 
     pdesolver.apply(u);
 
-    /*
-    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,0> SGFS0;
-    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,1> SGFS1;
-    SGFS0 sgfs0(multigfs);
-    SGFS1 sgfs1(multigfs);
-    */
-
-    /*
-    V u2(u);
-
-    std::copy(u.begin()+gfs0.size(),u.begin()+(gfs0.size()+gfs1.size()),
-              u2.begin());
-
-    {
-      typedef Dune::PDELab::DiscreteGridFunction<GFS0,V> DGF0;
-      DGF0 dgf0(gfs0,u);
-      Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTKOptions::conforming);
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF0>(dgf0,"u"));
-      vtkwriter.write("testmortarpoisson-left",Dune::VTKOptions::ascii);
-    }
-
-    {
-      typedef Dune::PDELab::DiscreteGridFunction<GFS1,V> DGF1;
-      DGF1 dgf1(gfs1,u2);
-      Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF1>(dgf1,"u"));
-      vtkwriter.write("testmortarpoisson-right",Dune::VTKOptions::ascii);
-    }
-    */
-
     {
       Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTKOptions::conforming);
       Dune::PDELab::MultiDomain::add_solution_to_vtk_writer(
         vtkwriter,
         multigfs,
         u,
-        "",
         subdomain_predicate<Grid::SubDomainIndexType>(0)
       );
       vtkwriter.write("testmortarpoisson-left",Dune::VTKOptions::ascii);
@@ -499,7 +468,6 @@ int main(int argc, char** argv) {
         vtkwriter,
         multigfs,
         u,
-        "",
         subdomain_predicate<Grid::SubDomainIndexType>(1)
       );
       vtkwriter.write("testmortarpoisson-right",Dune::VTKOptions::ascii);

@@ -94,7 +94,7 @@ template<typename Parameters>
 class StokesDarcyCouplingOperator
   : public Dune::PDELab::MultiDomain::CouplingOperatorDefaultFlags
   , public Dune::PDELab::MultiDomain::FullCouplingPattern
-  , public Dune::PDELab::MultiDomain::NumericalJacobianCoupling<StokesDarcyCouplingOperator<Parameters> >
+  //  , public Dune::PDELab::MultiDomain::NumericalJacobianCoupling<StokesDarcyCouplingOperator<Parameters> >
   , public Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<StokesDarcyCouplingOperator<Parameters> >
 {
 
@@ -225,9 +225,10 @@ public:
 
         const RF h1 = parameters.h1(ig,it->position());
         const RF h2 = parameters.h2(ig,it->position());
+        const RF h3 = parameters.h3(ig,it->position());
 
         for (size_type i = 0; i < darcylfsu.size(); ++i)
-          darcyr.accumulate(darcylfsv,i, /*-gamma * porosity **/ (u * n) * psi[i] * factor);
+          darcyr.accumulate(darcylfsv,i, /*-gamma * porosity **/ ((u * n) + h3) * psi[i] * factor);
 
         Dune::FieldVector<RF,dim> tangentialFlow(0.0);
         //kabs.mv(gradphi,tangentialFlow);
@@ -258,6 +259,143 @@ public:
 
       }
   }
+
+
+  template<typename IG,
+           typename StokesLFSU,typename StokesLFSV,
+           typename DarcyLFSU, typename DarcyLFSV,
+           typename X, typename M>
+  void jacobian_coupling(const IG& ig,
+                         const StokesLFSU& stokeslfsu, const X& stokesx, const StokesLFSV& stokeslfsv,
+                         const DarcyLFSU& darcylfsu, const X& darcyx, const DarcyLFSV& darcylfsv,
+                         M& jac_stokes_stokes, M& jac_stokes_darcy,
+                         M& jac_darcy_stokes, M& jac_darcy_darcy) const
+  {
+    // dimensions
+    const int dim = IG::dimension;
+    // const int dimw = IG::dimensionworld;
+
+    // extract local function spaces
+    typedef typename StokesLFSU::template Child<0>::Type LFSU_V_PFS;
+    const LFSU_V_PFS& lfsu_v_pfs = stokeslfsu.template child<0>();
+
+    typedef typename LFSU_V_PFS::template Child<0>::Type LFSU_V;
+    const unsigned int vsize = lfsu_v_pfs.child(0).size();
+
+    typedef typename StokesLFSV::template Child<0>::Type LFSV_V_PFS;
+    const LFSV_V_PFS& lfsv_v_pfs = stokeslfsv.template child<0>();
+
+    typedef typename LFSV_V_PFS::template Child<0>::Type LFSV_V;
+
+    // domain and range field type
+    typedef typename LFSU_V::Traits::FiniteElementType::
+      Traits::LocalBasisType::Traits::RangeFieldType RF;
+    typedef typename LFSU_V::Traits::FiniteElementType::
+      Traits::LocalBasisType::Traits::RangeType RT_V;
+    typedef typename LFSU_V::Traits::SizeType size_type;
+
+    typedef typename StokesLFSU::template Child<1>::Type LFSU_P;
+    //const LFSU_P& lfsu_p = stokeslfsu.template getChild<1>();
+    //const unsigned int psize = lfsu_p.size();
+
+    typedef typename LFSU_P::Traits::FiniteElementType::
+      Traits::LocalBasisType::Traits::DomainFieldType DF;
+    typedef typename LFSU_P::Traits::FiniteElementType::
+      Traits::LocalBasisType::Traits::RangeType RT_P;
+
+    typedef typename DarcyLFSU::Traits::FiniteElementType::
+      Traits::LocalBasisType::Traits::RangeType RT_D;
+    typedef typename DarcyLFSU::Traits::FiniteElementType::
+      Traits::LocalBasisType::Traits::JacobianType JacobianType_D;
+    const unsigned int dsize = darcylfsu.size();
+
+    typedef typename IG::Geometry::LocalCoordinate LC;
+    typedef typename IG::Geometry::GlobalCoordinate GC;
+
+    // select quadrature rule
+    Dune::GeometryType gt = ig.geometry().type();
+    const int qorder = 2 * std::max(lfsu_v_pfs.template child(0).finiteElement().localBasis().order(),
+                                    darcylfsu.finiteElement().localBasis().order());
+
+    const Dune::QuadratureRule<DF,dim-1>& rule = Dune::QuadratureRules<DF,dim-1>::rule(gt,qorder);
+
+    // const typename IG::Element& darcyCell = ig.outsideElement();
+
+    // loop over quadrature points
+    for (typename Dune::QuadratureRule<DF,dim-1>::const_iterator it=rule.begin(); it!=rule.end(); ++it)
+      {
+
+        const GC pos = ig.geometry().global(it->position());
+        const GC stokesPos = ig.geometryInInside().global(it->position());
+        const GC darcyPos = ig.geometryInOutside().global(it->position());
+
+        const RF g = 0; //parameters.gravity();
+        const RF alpha = parameters.alpha(ig,it->position());
+        const RF nu = parameters.viscosity(ig,it->position());
+        const RF porosity = parameters.porosity(ig,it->position());
+        const RF gamma = parameters.gamma(ig,it->position());
+        const RF rho = parameters.density(ig,it->position());
+        const typename Parameters::Traits::PermeabilityTensor kabs = parameters.K(ig,it->position());
+        RF tracePi = 0.0;
+        for (int i = 0; i < dim; ++i)
+          tracePi += kabs[i][i];
+        tracePi *= nu/g/rho;
+
+        // integration weight
+        const RF factor = it->weight() * ig.geometry().integrationElement(it->position());
+
+        std::vector<RT_V> v(vsize);
+        lfsu_v_pfs.child(0).finiteElement().localBasis().evaluateFunction(stokesPos,v);
+
+        std::vector<RT_D> psi(dsize);
+        darcylfsu.finiteElement().localBasis().evaluateFunction(darcyPos,psi);
+
+        Dune::FieldVector<RF,dim> u(0.0);
+        const GC n = ig.unitOuterNormal(it->position());
+
+        for (int d = 0; d < dim; ++d)
+          {
+            const LFSU_V& lfsu_v = lfsu_v_pfs.child(d);
+            for (size_type i = 0; i < darcylfsv.size(); ++i)
+              for (size_type j = 0; j < lfsu_v.size(); ++j)
+                jac_darcy_stokes.accumulate(darcylfsv,i,lfsu_v,j, v[j] * n[d] * psi[i] * factor);
+          }
+
+        Dune::FieldVector<RF,dim> tangentialFlow(0.0);
+        //kabs.mv(gradphi,tangentialFlow);
+        tangentialFlow /= porosity;
+        tangentialFlow += u;
+        // project into tangential plane
+        GC scaledNormal = n;
+        scaledNormal *= (tangentialFlow * n);
+        tangentialFlow -= scaledNormal;
+
+        tangentialFlow[0] = 0;
+        tangentialFlow[1] = u[1];
+
+         for (int d = 0; d < dim; ++d)
+          {
+            const LFSV_V& lfsv_v = lfsv_v_pfs.child(d);
+            const LFSU_V& lfsu_v = lfsu_v_pfs.child(d);
+
+            for (size_type i = 0; i < lfsv_v.size(); ++i)
+              for (size_type j = 0; j < darcylfsu.size(); ++j)
+                {
+                  jac_stokes_darcy.accumulate(lfsv_v,i,darcylfsu,j, psi[j] * v[i] * n[d] * factor);
+                }
+
+
+            for (size_type i = 0; i < lfsv_v.size(); ++i)
+              for (size_type j = 0; j < lfsu_v.size(); ++j)
+                {
+                  // warning: The following only works for dim = 2 and axis-aligned interfaces!
+                  jac_stokes_stokes.accumulate(lfsv_v,i,lfsu_v,j, (alpha / sqrt(1) * v[j] * (1 + n[d])) * v[i] * (1 + n[d]) * factor);
+                }
+          }
+
+      }
+  }
+
 
 private:
 

@@ -135,7 +135,7 @@ public:
     if (!is.boundary())
       return Traits::BoundaryCondition::DoNothing;
     RF xg = is.geometry().global(x)[0];
-    return xg > (-0.5+1e-9) ? Traits::BoundaryCondition::VelocityDirichlet : Traits::BoundaryCondition::VelocityDirichlet;
+    return xg > (-0.5+1e-9) ? Traits::BoundaryCondition::VelocityDirichlet : Traits::BoundaryCondition::StressNeumann;
   }
 
   //! Dynamic viscosity value from local cell coordinate
@@ -413,6 +413,15 @@ public:
     auto x = global_coord[0];
     auto y = global_coord[1];
     return _mu * (std::exp(x+y) - x*sin(x*y)) - _alpha/sqrt((_K[0][0] + _K[1][1])/2.0)*std::exp(x+y);
+  }
+
+  template<typename IG>
+  typename Traits::RangeField h3(const IG& ig, const typename Traits::IntersectionDomain& coord) const
+  {
+    auto global_coord = ig.geometry().global(coord);
+    auto x = global_coord[0];
+    auto y = global_coord[1];
+    return - _K[0][0] * std::exp(x) * (std::sin(x+y) + std::cos(x+y)) + std::cos(x*y);
   }
 
   template<typename IG>
@@ -710,13 +719,28 @@ int main(int argc, char** argv) {
     typedef MDGV::Grid::ctype DF;
     typedef double RF;
 
-    const DF interface_position = parameters.get<DF>("mesh.interface-position");
+    const bool interface_by_subdomain = parameters.get<bool>("mesh.interface-by-subdomain");
+    const DF interface_position = parameters.get("mesh.interface-position",0.0);
+    const int stokes_domain_id = parameters.get("mesh.stokes-domain-id",0);
+    const int darcy_domain_id = parameters.get("mesh.darcy-domain-id",1);
+    assert(stokes_domain_id != darcy_domain_id && "Stokes and Darcy domain must have distinct ids");
 
     grid.startSubDomainMarking();
     for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
       {
-        grid.addToSubDomain(elementIndexToPhysicalGroup[mdgv.indexSet().index(*it)] > interface_position ? 0 : 1,*it);
-        // grid.addToSubDomain(0,*it);
+        if (interface_by_subdomain)
+          {
+            int domain = elementIndexToPhysicalGroup[mdgv.indexSet().index(*it)];
+            if (domain == stokes_domain_id)
+              grid.addToSubDomain(0,*it);
+            if (domain == darcy_domain_id)
+              grid.addToSubDomain(1,*it);
+          }
+        else
+          {
+            auto x = it->geometry().center()[0];
+            grid.addToSubDomain(x > interface_position ? 0 : 1,*it);
+          }
       }
     grid.preUpdateSubDomains();
     grid.updateSubDomains();
@@ -889,6 +913,8 @@ int main(int argc, char** argv) {
     Dune::PDELab::MultiDomain::interpolateOnTrialSpace(multigfs,u,stokesInitialFunction,stokesSubProblem);
     Dune::PDELab::set_nonconstrained_dofs(multigfs,cg,0,u);
 
+    V u0(u);
+
     //typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
     //LS ls(5000,true);
     typedef Dune::PDELab::ISTLBackend_SEQ_SuperLU LS;
@@ -915,7 +941,7 @@ int main(int argc, char** argv) {
     gridoperator.residual(u,r);
 
     /*
-     * Output initial guess
+     * Output initial guess and solution
      */
 
     {
@@ -924,9 +950,16 @@ int main(int argc, char** argv) {
         vtkwriter,
         multigfs,
         u,
-        "",
         Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(stokesGV.grid().domain())
       );
+      Dune::PDELab::MultiDomain::add_solution_to_vtk_writer(
+        vtkwriter,
+        multigfs,
+        u0,
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(stokesGV.grid().domain()),
+        Dune::PDELab::default_vtk_name_scheme().prefix("initial-")
+      );
+
       vtkwriter.write(parameters["io.stokesfile"],Dune::VTKOptions::binaryappended);
     }
 
@@ -936,9 +969,16 @@ int main(int argc, char** argv) {
         vtkwriter,
         multigfs,
         u,
-        "",
         Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(darcyGV.grid().domain())
       );
+      Dune::PDELab::MultiDomain::add_solution_to_vtk_writer(
+        vtkwriter,
+        multigfs,
+        u0,
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(darcyGV.grid().domain()),
+        Dune::PDELab::default_vtk_name_scheme().prefix("initial-")
+      );
+
       vtkwriter.write(parameters["io.darcyfile"],Dune::VTKOptions::binaryappended);
     }
 

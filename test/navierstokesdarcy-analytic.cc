@@ -913,6 +913,8 @@ int main(int argc, char** argv) {
     Dune::PDELab::MultiDomain::interpolateOnTrialSpace(multigfs,u,stokesInitialFunction,stokesSubProblem);
     Dune::PDELab::set_nonconstrained_dofs(multigfs,cg,0,u);
 
+    V u0(u);
+
     //typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
     //LS ls(5000,true);
     typedef Dune::PDELab::ISTLBackend_SEQ_SuperLU LS;
@@ -939,7 +941,7 @@ int main(int argc, char** argv) {
     gridoperator.residual(u,r);
 
     /*
-     * Output initial guess
+     * Output initial guess and solution
      */
 
     {
@@ -950,6 +952,14 @@ int main(int argc, char** argv) {
         u,
         Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(stokesGV.grid().domain())
       );
+      Dune::PDELab::MultiDomain::add_solution_to_vtk_writer(
+        vtkwriter,
+        multigfs,
+        u0,
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(stokesGV.grid().domain()),
+        Dune::PDELab::default_vtk_name_scheme().prefix("initial-")
+      );
+
       vtkwriter.write(parameters["io.stokesfile"],Dune::VTKOptions::binaryappended);
     }
 
@@ -961,6 +971,14 @@ int main(int argc, char** argv) {
         u,
         Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(darcyGV.grid().domain())
       );
+      Dune::PDELab::MultiDomain::add_solution_to_vtk_writer(
+        vtkwriter,
+        multigfs,
+        u0,
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(darcyGV.grid().domain()),
+        Dune::PDELab::default_vtk_name_scheme().prefix("initial-")
+      );
+
       vtkwriter.write(parameters["io.darcyfile"],Dune::VTKOptions::binaryappended);
     }
 

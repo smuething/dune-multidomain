@@ -806,7 +806,7 @@ int main(int argc, char** argv) {
       VectorBackend
       > DarcyGFS;
     DarcyGFS darcygfs(darcyGV,darcyfem);
-    darcygfs.name("phi");
+    darcygfs.name("p");
 
     typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<
       Grid,

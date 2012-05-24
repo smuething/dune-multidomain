@@ -939,7 +939,6 @@ int main(int argc, char** argv) {
         vtkwriter,
         multigfs,
         u,
-        "",
         Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(stokesGV.grid().domain())
       );
       vtkwriter.write(parameters["io.stokesfile"],Dune::VTKOptions::binaryappended);
@@ -951,7 +950,6 @@ int main(int argc, char** argv) {
         vtkwriter,
         multigfs,
         u,
-        "",
         Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(darcyGV.grid().domain())
       );
       vtkwriter.write(parameters["io.darcyfile"],Dune::VTKOptions::binaryappended);

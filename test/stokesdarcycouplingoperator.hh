@@ -94,7 +94,7 @@ template<typename Parameters>
 class StokesDarcyCouplingOperator
   : public Dune::PDELab::MultiDomain::CouplingOperatorDefaultFlags
   , public Dune::PDELab::MultiDomain::FullCouplingPattern
-  //  , public Dune::PDELab::MultiDomain::NumericalJacobianCoupling<StokesDarcyCouplingOperator<Parameters> >
+  , public Dune::PDELab::MultiDomain::NumericalJacobianCoupling<StokesDarcyCouplingOperator<Parameters> >
   , public Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<StokesDarcyCouplingOperator<Parameters> >
 {
 
@@ -106,7 +106,7 @@ public:
   StokesDarcyCouplingOperator(const Parameters& params)
   //: Dune::PDELab::MultiDomain::NumericalJacobianCoupling<StokesDarcyCouplingOperator<Parameters> >(params.epsilon())
   //, Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<StokesDarcyCouplingOperator<Parameters> >(params.epsilon())
-  : parameters(params)
+    : parameters(params)
   {}
 
   template<typename IG,
@@ -223,44 +223,65 @@ public:
               u[d] += stokesx(lfsu_v,i) * v[i];
           }
 
-        const RF h1 = parameters.h1(ig,it->position());
-        const RF h2 = parameters.h2(ig,it->position());
-        const RF h3 = parameters.h3(ig,it->position());
-
-        for (size_type i = 0; i < darcylfsu.size(); ++i)
-          darcyr.accumulate(darcylfsv,i, /*-gamma * porosity **/ ((u * n) + h3) * psi[i] * factor);
-
-        Dune::FieldVector<RF,dim> tangentialFlow(0.0);
+        GC tangentialFlow(0.0);
         //kabs.mv(gradphi,tangentialFlow);
-        tangentialFlow /= porosity;
+        //tangentialFlow /= porosity;
         tangentialFlow += u;
         // project into tangential plane
         GC scaledNormal = n;
         scaledNormal *= (tangentialFlow * n);
         tangentialFlow -= scaledNormal;
 
-        tangentialFlow[0] = 0;
-        tangentialFlow[1] = u[1];
+        GC unitTangent = tangentialFlow;
+        RF tangentialFlow_norm = tangentialFlow.two_norm();
+        if (tangentialFlow_norm > 1e-10)
+          unitTangent /= unitTangent.two_norm();
+        else
+          unitTangent = 0;
+
+        std::cout << "position = " << ig.geometry().global(it->position()) << "  "
+                  << "tangentialFlow = " << tangentialFlow << "  "
+                  << "unitTangent = " << unitTangent << std::endl;
+
+        const RF h1 = parameters.h1(ig,it->position(),n);
+        const RF h2 = parameters.h2(ig,it->position(),n,unitTangent);
+        const RF h3 = parameters.h3(ig,it->position(),n);
+
+        GC normalStress = n;
+        normalStress *= h1 + phi;
+
+        std::cout << "normal part = " << normalStress;
+
+        tangentialFlow *= alpha / sqrt(1);
+        unitTangent *= h2;
+
+        GC tp = tangentialFlow;
+        tp += unitTangent;
+
+        std::cout << "  tangential part = " << tp << std::endl;
+
+        normalStress += tangentialFlow;
+        normalStress += unitTangent;
+
+        std::cout << "normalStress = " << normalStress << std::endl;
+
+        for (size_type i = 0; i < darcylfsu.size(); ++i)
+          darcyr.accumulate(darcylfsv,i, ((u * n) + h3) * psi[i] * factor);
+
         for (int d = 0; d < dim; ++d)
           {
             const LFSU_V& lfsu_v = lfsu_v_pfs.child(d);
             for (size_type i = 0; i < lfsu_v.size(); ++i)
               {
                 // stokesr.accumulate(lfsu_v,i, - rho * g * (phi - pos[dim-1]) * v[i] * n[d] * factor);
-                stokesr.accumulate(lfsu_v,i, (h1 + phi) * v[i] * n[d] * factor);
-              }
-
-            for (size_type i = 0; i < lfsu_v.size(); ++i)
-              {
-                // warning: The following only works for dim = 2 and axis-aligned interfaces!
-                stokesr.accumulate(lfsu_v,i, (alpha / sqrt(1) * tangentialFlow[d] + h2) * v[i] * (1 + n[d]) * factor);
+                stokesr.accumulate(lfsu_v,i, normalStress[d] * v[i] * factor);
               }
           }
 
       }
   }
 
-
+  /*
   template<typename IG,
            typename StokesLFSU,typename StokesLFSV,
            typename DarcyLFSU, typename DarcyLFSV,
@@ -395,6 +416,7 @@ public:
 
       }
   }
+  */
 
 
 private:

@@ -26,12 +26,12 @@
 #include <dune/pdelab/multidomain/coupling.hh>
 #include <dune/pdelab/multidomain/constraints.hh>
 #include <dune/pdelab/constraints/constraintsparameters.hh>
-#include<dune/pdelab/stationary/linearproblem.hh>
-#include<dune/pdelab/gridfunctionspace/vtk.hh>
-#include<dune/pdelab/multidomain/vtk.hh>
+#include <dune/pdelab/stationary/linearproblem.hh>
+#include <dune/pdelab/gridfunctionspace/vtk.hh>
+#include <dune/pdelab/multidomain/vtk.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 
-#include<typeinfo>
+#include <typeinfo>
 
 #include <dune/pdelab/finiteelementmap/opbfem.hh>
 #include "adrwip.hh"

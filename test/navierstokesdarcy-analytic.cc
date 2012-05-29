@@ -135,7 +135,7 @@ public:
     if (!is.boundary())
       return Traits::BoundaryCondition::DoNothing;
     RF xg = is.geometry().global(x)[0];
-    return xg > (-0.5+1e-9) ? Traits::BoundaryCondition::VelocityDirichlet : Traits::BoundaryCondition::StressNeumann;
+    return xg > (-0.5+1e-9) ? Traits::BoundaryCondition::VelocityDirichlet : Traits::BoundaryCondition::VelocityDirichlet;
   }
 
   //! Dynamic viscosity value from local cell coordinate
@@ -210,9 +210,8 @@ public:
     auto x = global_coord[0];
     auto y = global_coord[1];
     s[0][0] = s[1][1] = std::exp(x) * std::sin(x+y);
+    s[0][1] = s[1][0] = _mu * (x * std::sin(x*y) - std::exp(x+y));
     s[0][0] += 2 * _mu * y * std::sin(x*y);
-    s[0][1] += _mu * (x * std::sin(x*y) - std::exp(x+y));
-    s[1][0] += _mu * (x * std::sin(x*y) - std::exp(x+y));
     s[1][1] -= 2 * _mu * std::exp(x+y);
     typename Traits::VelocityRange r(0);
     s.mv(normal,r);
@@ -398,30 +397,79 @@ public:
   typedef StokesDarcyCouplingParameterTraits<GV,RF> Traits;
 
   template<typename IG>
-  typename Traits::RangeField h1(const IG& ig, const typename Traits::IntersectionDomain& coord) const
+  typename Traits::RangeField h1(const IG& ig,
+                                 const typename Traits::IntersectionDomain& coord,
+                                 const typename Traits::Domain& normal) const
   {
     auto global_coord = ig.geometry().global(coord);
     auto x = global_coord[0];
     auto y = global_coord[1];
-    return 2 * _mu * y * std::sin(x*y);
+    Dune::FieldMatrix<RF,GV::dimension,GV::dimension> s(0.0);
+    s[0][0] = 2 * _mu * y * std::sin(x*y);
+    s[1][1] = - 2 * _mu * std::exp(x+y);
+    s[0][1] = s[1][0] = _mu * (x * std::sin(x*y) - std::exp(x+y));
+    typename Traits::Domain ps(0.0);
+    s.mv(normal,ps);
+    std::cout << "ps = " << ps << "  normal = " << normal << std::endl;
+    return ps * normal;
   }
 
   template<typename IG>
-  typename Traits::RangeField h2(const IG& ig, const typename Traits::IntersectionDomain& coord) const
+  typename Traits::RangeField h2(const IG& ig,
+                                 const typename Traits::IntersectionDomain& coord,
+                                 const typename Traits::Domain& normal,
+                                 const typename Traits::Domain& unitTangent1) const
   {
+    typedef typename Traits::Domain GC;
     auto global_coord = ig.geometry().global(coord);
     auto x = global_coord[0];
     auto y = global_coord[1];
-    return _mu * (std::exp(x+y) - x*sin(x*y)) - _alpha/sqrt((_K[0][0] + _K[1][1])/2.0)*std::exp(x+y);
-  }
+    Dune::FieldMatrix<RF,GV::dimension,GV::dimension> s(0.0);
+    s[0][0] = s[1][1] = std::exp(x) * std::sin(x+y);
+    s[0][1] = s[1][0] = _mu * (x * std::sin(x*y) - std::exp(x+y));
+    s[0][0] += 2 * _mu * y * std::sin(x*y);
+    s[1][1] -= 2 * _mu * std::exp(x+y);
+
+    GC unitTangent(unitTangent1);
+    //unitTangent[0] = normal[1];
+    //unitTangent[1] = -normal[0];
+
+    GC u(0.0);
+    u[0] = std::cos(x*y);
+    u[1] = std::exp(x+y);
+
+    GC tangentialFlow = unitTangent;
+    tangentialFlow *= (unitTangent*u);
+
+    GC ps(0.0);
+    s.mv(unitTangent,ps);
+    RF r = ps*normal;
+
+    r -= _alpha/sqrt((_K[0][0] + _K[1][1])/2.0) * tangentialFlow.two_norm();
+
+    std::cout << s << std::endl
+              << "unitTangent = " << unitTangent << "  "
+              << "u = " << u << "  "
+              << "tangentialFlow = " << tangentialFlow << std::endl
+              << "ps = " << ps << "  "
+              << "r = " << r << std::endl;
+
+    return r;  }
 
   template<typename IG>
-  typename Traits::RangeField h3(const IG& ig, const typename Traits::IntersectionDomain& coord) const
+  typename Traits::RangeField h3(const IG& ig,
+                                 const typename Traits::IntersectionDomain& coord,
+                                 const typename Traits::Domain& normal) const
   {
     auto global_coord = ig.geometry().global(coord);
     auto x = global_coord[0];
     auto y = global_coord[1];
-    return - _K[0][0] * std::exp(x) * (std::sin(x+y) + std::cos(x+y)) + std::cos(x*y);
+
+    typename Traits::Domain u(0.0);
+    u[0] = _K[0][0] * std::exp(x) * (std::sin(x+y) + std::cos(x+y)) - std::cos(x*y);
+    u[1] = _K[0][0] * std::exp(x) * std::cos(x+y) - std::exp(x+y);
+
+    return (u * normal);
   }
 
   template<typename IG>

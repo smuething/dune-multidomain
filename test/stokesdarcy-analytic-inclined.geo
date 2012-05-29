@@ -1,0 +1,21 @@
+// Gmsh project created on Thu May 10 15:29:28 2012
+lc = 0.1;
+Point(1) = {-0.5, -0.5, 0, lc};
+Point(2) = {-0.2, -0.5, 0, lc};
+Point(3) = {0.5, -0.5, 0, lc};
+Point(4) = {0.5, 0.5, 0, lc};
+Point(5) = {0.2, 0.5, 0, lc};
+Point(6) = {-0.5, 0.5, 0, lc};
+Line(1) = {1, 2};
+Line(2) = {2, 3};
+Line(3) = {3, 4};
+Line(4) = {4, 5};
+Line(5) = {5, 6};
+Line(6) = {6, 1};
+Line(7) = {5, 2};
+Line Loop(8) = {7, -1, -6, -5};
+Plane Surface(9) = {8};
+Line Loop(10) = {2, 3, 4, 7};
+Plane Surface(11) = {10};
+Physical Surface(0) = {9};
+Physical Surface(1) = {11};

@@ -1025,58 +1025,6 @@ int main(int argc, char** argv) {
       vtkwriter.write(parameters["io.darcyfile"],Dune::VTKOptions::binaryappended);
     }
 
-#if 0
-
-    typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,StokesGFS> StokesSubGFS;
-    typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,DarcyGFS> DarcySubGFS;
-    typedef Dune::PDELab::GridFunctionSubSpace<StokesSubGFS,0> StokesVelocitySubGFS;
-    typedef Dune::PDELab::GridFunctionSubSpace<StokesSubGFS,1> StokesPressureSubGFS;
-
-    StokesSubGFS stokessubgfs(multigfs);
-    DarcySubGFS darcysubgfs(multigfs);
-    StokesVelocitySubGFS stokesvelocitysubgfs(stokessubgfs);
-    StokesPressureSubGFS stokespressuresubgfs(stokessubgfs);
-
-    //Dune::PDELab::FilenameHelper fn0("instationaryexplicitlycoupledpoisson-right");
-    {
-      typedef Dune::PDELab::VectorDiscreteGridFunction<StokesVelocitySubGFS,V> VDGF;
-      typedef Dune::PDELab::DiscreteGridFunction<StokesPressureSubGFS,V> PDGF;
-      VDGF vdgf(stokesvelocitysubgfs,u);
-      PDGF pdgf(stokespressuresubgfs,u);
-      VDGF vdgf2(stokesvelocitysubgfs,r);
-      PDGF pdgf2(stokespressuresubgfs,r);
-      Dune::SubsamplingVTKWriter<SDGV> vtkwriter(stokesGV,parameters.get("mesh.refineoutput",0));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf,"u"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf,"p"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf2,"ru"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf2,"rp"));
-      vtkwriter.write(parameters["io.stokesfile"],Dune::VTKOptions::binaryappended);
-      //fn0.increment();
-    }
-
-    //Dune::PDELab::FilenameHelper fn1("instationaryexplicitlycoupledpoisson-left");
-    {
-      typedef Dune::PDELab::DarcyFlowFromPotential<DarcySubGFS,DarcyParams,V> VDGF;
-      typedef Dune::PDELab::DiscreteGridFunction<DarcySubGFS,V> PhiDGF;
-      typedef Dune::PDELab::DiscretePressureGridFunction<DarcySubGFS,DarcyParams,V> PDGF;
-      VDGF vdgf(darcysubgfs,darcyParams,u);
-      PhiDGF phidgf(darcysubgfs,u);
-      PDGF pdgf(darcysubgfs,darcyParams,u,couplingParams.gravity());
-      VDGF vdgf2(darcysubgfs,darcyParams,r);
-      PhiDGF phidgf2(darcysubgfs,r);
-      PDGF pdgf2(darcysubgfs,darcyParams,r,couplingParams.gravity());
-      Dune::SubsamplingVTKWriter<SDGV> vtkwriter(darcyGV,parameters.get("mesh.refineoutput",0));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf,"u"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PhiDGF>(phidgf,"phi"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf,"p"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf2,"ru"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PhiDGF>(phidgf2,"rphi"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf2,"rp"));
-      vtkwriter.write(parameters["io.darcyfile"],Dune::VTKOptions::binaryappended);
-      //fn1.increment();
-    }
-
-#endif
 
   }
   catch (Dune::Exception &e){

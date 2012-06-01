@@ -290,8 +290,6 @@ public:
     typedef typename LFSU_V::Traits::SizeType size_type;
 
     typedef typename StokesLFSU::template Child<1>::Type LFSU_P;
-    //const LFSU_P& lfsu_p = stokeslfsu.template getChild<1>();
-    //const unsigned int psize = lfsu_p.size();
 
     typedef typename LFSU_P::Traits::FiniteElementType::
       Traits::LocalBasisType::Traits::DomainFieldType DF;
@@ -313,8 +311,6 @@ public:
                                     darcylfsu.finiteElement().localBasis().order());
 
     const Dune::QuadratureRule<DF,dim-1>& rule = Dune::QuadratureRules<DF,dim-1>::rule(gt,qorder);
-
-    // const typename IG::Element& darcyCell = ig.outsideElement();
 
     // loop over quadrature points
     for (typename Dune::QuadratureRule<DF,dim-1>::const_iterator it=rule.begin(); it!=rule.end(); ++it)

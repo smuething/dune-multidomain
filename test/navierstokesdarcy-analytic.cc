@@ -410,7 +410,6 @@ public:
     s[0][1] = s[1][0] = _mu * (x * std::sin(x*y) - std::exp(x+y));
     typename Traits::Domain ps(0.0);
     s.mv(normal,ps);
-    std::cout << "ps = " << ps << "  normal = " << normal << std::endl;
     return ps * normal;
   }
 
@@ -447,12 +446,6 @@ public:
 
     r -= _alpha/sqrt((_K[0][0] + _K[1][1])/2.0) * tangentialFlow.two_norm();
 
-    std::cout << s << std::endl
-              << "unitTangent = " << unitTangent << "  "
-              << "u = " << u << "  "
-              << "tangentialFlow = " << tangentialFlow << std::endl
-              << "ps = " << ps << "  "
-              << "r = " << r << std::endl;
 
     return r;  }
 

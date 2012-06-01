@@ -239,10 +239,6 @@ public:
         else
           unitTangent = 0;
 
-        std::cout << "position = " << ig.geometry().global(it->position()) << "  "
-                  << "tangentialFlow = " << tangentialFlow << "  "
-                  << "unitTangent = " << unitTangent << std::endl;
-
         const RF h1 = parameters.h1(ig,it->position(),n);
         const RF h2 = parameters.h2(ig,it->position(),n,unitTangent);
         const RF h3 = parameters.h3(ig,it->position(),n);
@@ -250,20 +246,16 @@ public:
         GC normalStress = n;
         normalStress *= h1 + phi;
 
-        std::cout << "normal part = " << normalStress;
-
         tangentialFlow *= alpha / sqrt(1);
         unitTangent *= h2;
 
         GC tp = tangentialFlow;
         tp += unitTangent;
 
-        std::cout << "  tangential part = " << tp << std::endl;
 
         normalStress += tangentialFlow;
         normalStress += unitTangent;
 
-        std::cout << "normalStress = " << normalStress << std::endl;
 
         for (size_type i = 0; i < darcylfsu.size(); ++i)
           darcyr.accumulate(darcylfsv,i, ((u * n) + h3) * psi[i] * factor);

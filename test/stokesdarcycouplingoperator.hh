@@ -94,8 +94,6 @@ template<typename Parameters>
 class StokesDarcyCouplingOperator
   : public Dune::PDELab::MultiDomain::CouplingOperatorDefaultFlags
   , public Dune::PDELab::MultiDomain::FullCouplingPattern
-  , public Dune::PDELab::MultiDomain::NumericalJacobianCoupling<StokesDarcyCouplingOperator<Parameters> >
-  , public Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<StokesDarcyCouplingOperator<Parameters> >
 {
 
 public:
@@ -104,8 +102,6 @@ public:
   static const bool doAlphaCoupling = true;
 
   StokesDarcyCouplingOperator(const Parameters& params)
-  //: Dune::PDELab::MultiDomain::NumericalJacobianCoupling<StokesDarcyCouplingOperator<Parameters> >(params.epsilon())
-  //, Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<StokesDarcyCouplingOperator<Parameters> >(params.epsilon())
     : parameters(params)
   {}
 
@@ -260,7 +256,6 @@ public:
       }
   }
 
-  /*
   template<typename IG,
            typename StokesLFSU,typename StokesLFSV,
            typename DarcyLFSU, typename DarcyLFSV,
@@ -350,7 +345,6 @@ public:
         std::vector<RT_D> psi(dsize);
         darcylfsu.finiteElement().localBasis().evaluateFunction(darcyPos,psi);
 
-        Dune::FieldVector<RF,dim> u(0.0);
         const GC n = ig.unitOuterNormal(it->position());
 
         for (int d = 0; d < dim; ++d)
@@ -361,22 +355,9 @@ public:
                 jac_darcy_stokes.accumulate(darcylfsv,i,lfsu_v,j, v[j] * n[d] * psi[i] * factor);
           }
 
-        Dune::FieldVector<RF,dim> tangentialFlow(0.0);
-        //kabs.mv(gradphi,tangentialFlow);
-        tangentialFlow /= porosity;
-        tangentialFlow += u;
-        // project into tangential plane
-        GC scaledNormal = n;
-        scaledNormal *= (tangentialFlow * n);
-        tangentialFlow -= scaledNormal;
-
-        tangentialFlow[0] = 0;
-        tangentialFlow[1] = u[1];
-
          for (int d = 0; d < dim; ++d)
           {
             const LFSV_V& lfsv_v = lfsv_v_pfs.child(d);
-            const LFSU_V& lfsu_v = lfsu_v_pfs.child(d);
 
             for (size_type i = 0; i < lfsv_v.size(); ++i)
               for (size_type j = 0; j < darcylfsu.size(); ++j)
@@ -386,16 +367,19 @@ public:
 
 
             for (size_type i = 0; i < lfsv_v.size(); ++i)
-              for (size_type j = 0; j < lfsu_v.size(); ++j)
+              for (int dd = 0; dd < dim; ++dd)
                 {
-                  // warning: The following only works for dim = 2 and axis-aligned interfaces!
-                  jac_stokes_stokes.accumulate(lfsv_v,i,lfsu_v,j, (alpha / sqrt(1) * v[j] * (1 + n[d])) * v[i] * (1 + n[d]) * factor);
+                  const LFSU_V& lfsu_v = lfsu_v_pfs.child(dd);
+                  const RF dim_factor = ((d == dd ? 1.0 : 0.0) - n[d] * n[dd]) * factor;
+                  for (size_type j = 0; j < lfsu_v.size(); ++j)
+                    {
+                      jac_stokes_stokes.accumulate(lfsv_v,i,lfsu_v,j, alpha / sqrt(1) * v[j] * v[i] * dim_factor);
+                    }
                 }
           }
 
       }
   }
-  */
 
 
 private:

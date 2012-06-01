@@ -414,12 +414,11 @@ public:
   }
 
   template<typename IG>
-  typename Traits::RangeField h2(const IG& ig,
-                                 const typename Traits::IntersectionDomain& coord,
-                                 const typename Traits::Domain& normal,
-                                 const typename Traits::Domain& unitTangent1) const
+  typename Traits::VelocityRange h2(const IG& ig,
+                                    const typename Traits::IntersectionDomain& coord,
+                                    const typename Traits::Domain& normal) const
   {
-    typedef typename Traits::Domain GC;
+    typedef typename Traits::VelocityRange R;
     auto global_coord = ig.geometry().global(coord);
     auto x = global_coord[0];
     auto y = global_coord[1];
@@ -429,25 +428,28 @@ public:
     s[0][0] += 2 * _mu * y * std::sin(x*y);
     s[1][1] -= 2 * _mu * std::exp(x+y);
 
-    GC unitTangent(unitTangent1);
-    //unitTangent[0] = normal[1];
-    //unitTangent[1] = -normal[0];
+    R normal_stress(0.0);
+    s.mv(normal,normal_stress);
+    R normal_stress_normal(normal);
+    normal_stress_normal *= normal * normal_stress;
+    R normal_stress_tangent(normal_stress);
+    normal_stress_tangent -= normal_stress_normal;
 
-    GC u(0.0);
+    R u(0.0);
     u[0] = std::cos(x*y);
     u[1] = std::exp(x+y);
 
-    GC tangentialFlow = unitTangent;
-    tangentialFlow *= (unitTangent*u);
+    R normal_flow(normal);
+    normal_flow *= normal * u;
 
-    GC ps(0.0);
-    s.mv(unitTangent,ps);
-    RF r = ps*normal;
+    R tangent_flow(u);
+    tangent_flow -= normal_flow;
+    tangent_flow *= _alpha/sqrt((_K[0][0] + _K[1][1])/2.0);
 
-    r -= _alpha/sqrt((_K[0][0] + _K[1][1])/2.0) * tangentialFlow.two_norm();
+    normal_stress_tangent -= tangent_flow;
 
-
-    return r;  }
+    return normal_stress_tangent;
+  }
 
   template<typename IG>
   typename Traits::RangeField h3(const IG& ig,

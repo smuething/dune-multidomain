@@ -232,30 +232,17 @@ public:
         scaledNormal *= (tangentialFlow * n);
         tangentialFlow -= scaledNormal;
 
-        GC unitTangent = tangentialFlow;
-        RF tangentialFlow_norm = tangentialFlow.two_norm();
-        if (tangentialFlow_norm > 1e-10)
-          unitTangent /= unitTangent.two_norm();
-        else
-          unitTangent = 0;
-
         const RF h1 = parameters.h1(ig,it->position(),n);
-        const RF h2 = parameters.h2(ig,it->position(),n,unitTangent);
+        const GC h2 = parameters.h2(ig,it->position(),n);
         const RF h3 = parameters.h3(ig,it->position(),n);
 
         GC normalStress = n;
         normalStress *= h1 + phi;
 
         tangentialFlow *= alpha / sqrt(1);
-        unitTangent *= h2;
-
-        GC tp = tangentialFlow;
-        tp += unitTangent;
-
 
         normalStress += tangentialFlow;
-        normalStress += unitTangent;
-
+        normalStress += h2;
 
         for (size_type i = 0; i < darcylfsu.size(); ++i)
           darcyr.accumulate(darcylfsv,i, ((u * n) + h3) * psi[i] * factor);

@@ -181,7 +181,7 @@ public:
         const RF g = 0; //parameters.gravity();
         const RF alpha = parameters.alpha(ig,it->position());
         const RF nu = parameters.viscosity(ig,it->position());
-        const RF porosity = parameters.porosity(ig,it->position());
+        // const RF porosity = parameters.porosity(ig,it->position());
         // const RF gamma = parameters.gamma(ig,it->position());
         const RF rho = parameters.density(ig,it->position());
         const typename Parameters::Traits::PermeabilityTensor kabs = parameters.K(ig,it->position());
@@ -334,8 +334,8 @@ public:
         const RF g = 0; //parameters.gravity();
         const RF alpha = parameters.alpha(ig,it->position());
         const RF nu = parameters.viscosity(ig,it->position());
-        const RF porosity = parameters.porosity(ig,it->position());
-        const RF gamma = parameters.gamma(ig,it->position());
+        // const RF porosity = parameters.porosity(ig,it->position());
+        // const RF gamma = parameters.gamma(ig,it->position());
         const RF rho = parameters.density(ig,it->position());
         const typename Parameters::Traits::PermeabilityTensor kabs = parameters.K(ig,it->position());
         RF tracePi = 0.0;

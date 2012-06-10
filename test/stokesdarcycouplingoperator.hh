@@ -90,7 +90,7 @@ private:
 };
 */
 
-#define NUMERIC_DIFF
+// #define NUMERIC_DIFF
 
 template<typename Parameters>
 class StokesDarcyCouplingOperator

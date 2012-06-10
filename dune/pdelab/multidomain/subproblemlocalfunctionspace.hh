@@ -164,6 +164,8 @@ class SubProblemLocalFunctionSpace
 
   // friend declarations for bind() visitors
   friend struct AccumulateSize;
+
+  template<typename,typename>
   friend struct FillIndices;
 
   typedef typename GFS::Traits::BackendType B;

@@ -503,10 +503,16 @@ public:
   StokesDarcyCouplingParameters(const Dune::ParameterTree& params)
     : _mu(params.get<RF>("fluid.mu"))
     , _alpha(params.get<RF>("interface.alpha"))
+    , _epsilon(params.get("epsilon",1e-8))
   {
     for (std::size_t i = 0; i < Traits::dimDomain; ++i)
       for (std::size_t j = 0; j < Traits::dimDomain; ++j)
         _K[i][j] = (i == j ? params.get<RF>("soil.permeability") : 0);
+  }
+
+  double epsilon() const
+  {
+    return _epsilon;
   }
 
 private:
@@ -514,7 +520,7 @@ private:
   const RF _mu;
   typename Traits::PermeabilityTensor _K;
   const RF _alpha;
-
+  const double _epsilon;
 };
 
 template<typename DarcyParameters>

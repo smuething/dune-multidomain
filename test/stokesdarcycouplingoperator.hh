@@ -90,10 +90,16 @@ private:
 };
 */
 
+#define NUMERIC_DIFF
+
 template<typename Parameters>
 class StokesDarcyCouplingOperator
   : public Dune::PDELab::MultiDomain::CouplingOperatorDefaultFlags
   , public Dune::PDELab::MultiDomain::FullCouplingPattern
+#ifdef NUMERIC_DIFF
+  , public Dune::PDELab::MultiDomain::NumericalJacobianCoupling<StokesDarcyCouplingOperator<Parameters> >
+  , public Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<StokesDarcyCouplingOperator<Parameters> >
+#endif
 {
 
 public:
@@ -102,7 +108,12 @@ public:
   static const bool doAlphaCoupling = true;
 
   StokesDarcyCouplingOperator(const Parameters& params)
-    : parameters(params)
+    :
+#ifdef NUMERIC_DIFF
+    Dune::PDELab::MultiDomain::NumericalJacobianCoupling<StokesDarcyCouplingOperator<Parameters> >(params.epsilon()),
+    Dune::PDELab::MultiDomain::NumericalJacobianApplyCoupling<StokesDarcyCouplingOperator<Parameters> >(params.epsilon()),
+#endif
+    parameters(params)
   {}
 
   template<typename IG,

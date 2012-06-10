@@ -15,13 +15,13 @@ struct StokesDarcyCouplingParameterTraits
 };
 
 /*
-template<typename GV>
+template<typename GV, typename RF>
 class CouplingParameters
 {
 
 public:
 
-  typedef Stokes
+  typedef StokesDarcyCouplingParameterTraits<GV, RF> Traits;
 
   double viscosity() const
   {

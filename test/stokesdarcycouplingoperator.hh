@@ -127,7 +127,6 @@ public:
   {
     // dimensions
     const int dim = IG::dimension;
-    const int dimw = IG::dimensionworld;
 
     // extract local function spaces
     typedef typename StokesLFSU::template Child<0>::Type LFSU_V_PFS;
@@ -137,25 +136,26 @@ public:
     const unsigned int vsize = lfsu_v_pfs.child(0).size();
 
     // domain and range field type
-    typedef typename LFSU_V::Traits::FiniteElementType::
-      Traits::LocalBasisType::Traits::RangeFieldType RF;
-    typedef typename LFSU_V::Traits::FiniteElementType::
-      Traits::LocalBasisType::Traits::RangeType RT_V;
+    typedef Dune::FiniteElementInterfaceSwitch<typename LFSU_V::Traits::FiniteElementType > FESwitch_V;
+    typedef Dune::BasisInterfaceSwitch<typename FESwitch_V::Basis > BasisSwitch_V;
+    typedef typename BasisSwitch_V::DomainField DF;
+    typedef typename BasisSwitch_V::RangeField RF;
+    typedef typename BasisSwitch_V::Range RT_V;
     typedef typename LFSU_V::Traits::SizeType size_type;
 
     typedef typename StokesLFSU::template Child<1>::Type LFSU_P;
     //const LFSU_P& lfsu_p = stokeslfsu.template getChild<1>();
     //const unsigned int psize = lfsu_p.size();
 
-    typedef typename LFSU_P::Traits::FiniteElementType::
-      Traits::LocalBasisType::Traits::DomainFieldType DF;
-    typedef typename LFSU_P::Traits::FiniteElementType::
-      Traits::LocalBasisType::Traits::RangeType RT_P;
+    typedef Dune::FiniteElementInterfaceSwitch<typename LFSU_P::Traits::FiniteElementType > FESwitch_P;
+    typedef Dune::BasisInterfaceSwitch<typename FESwitch_P::Basis > BasisSwitch_P;
+    typedef typename BasisSwitch_P::Range RT_P;
 
-    typedef typename DarcyLFSU::Traits::FiniteElementType::
-      Traits::LocalBasisType::Traits::RangeType RT_D;
-    typedef typename DarcyLFSU::Traits::FiniteElementType::
-      Traits::LocalBasisType::Traits::JacobianType JacobianType_D;
+    typedef Dune::FiniteElementInterfaceSwitch<typename DarcyLFSU::Traits::FiniteElementType > FESwitch_D;
+    typedef Dune::BasisInterfaceSwitch<typename FESwitch_D::Basis > BasisSwitch_D;
+    typedef typename BasisSwitch_D::Range RT_D;
+    // typedef typename DarcyLFSU::Traits::FiniteElementType::
+    //   Traits::LocalBasisType::Traits::JacobianType JacobianType_D;
     const unsigned int dsize = darcylfsu.size();
 
     typedef typename IG::Geometry::LocalCoordinate LC;
@@ -163,12 +163,14 @@ public:
 
     // select quadrature rule
     Dune::GeometryType gt = ig.geometry().type();
-    const int qorder = 2 * std::max(lfsu_v_pfs.template child(0).finiteElement().localBasis().order(),
-                                    darcylfsu.finiteElement().localBasis().order());
+    const int qorder = 2 *
+        std::max(
+            FESwitch_V::basis(lfsu_v_pfs.template child(0).finiteElement()).order(),
+            FESwitch_D::basis(darcylfsu.finiteElement()).order());
 
     const Dune::QuadratureRule<DF,dim-1>& rule = Dune::QuadratureRules<DF,dim-1>::rule(gt,qorder);
 
-    const typename IG::Element& darcyCell = ig.outsideElement();
+    // const typename IG::Element& darcyCell = ig.outsideElement();
 
     // loop over quadrature points
     for (typename Dune::QuadratureRule<DF,dim-1>::const_iterator it=rule.begin(); it!=rule.end(); ++it)
@@ -194,20 +196,15 @@ public:
         const RF factor = it->weight() * ig.geometry().integrationElement(it->position());
 
         std::vector<RT_V> v(vsize);
-        lfsu_v_pfs.child(0).finiteElement().localBasis().evaluateFunction(stokesPos,v);
+        FESwitch_V::basis(lfsu_v_pfs.child(0).finiteElement()).evaluateFunction(stokesPos,v);
 
         std::vector<RT_D> psi(dsize);
-        darcylfsu.finiteElement().localBasis().evaluateFunction(darcyPos,psi);
+        FESwitch_D::basis(darcylfsu.finiteElement()).evaluateFunction(darcyPos,psi);
 
         // evaluate gradient of shape functions (we assume Galerkin method lfsu=lfsv)
-        std::vector<JacobianType_D> js(dsize);
-        darcylfsu.finiteElement().localBasis().evaluateJacobian(darcyPos,js);
-
-        // transform gradient to real element
-        const Dune::FieldMatrix<DF,dimw,dim> jac = darcyCell.geometry().jacobianInverseTransposed(darcyPos);
-        std::vector<Dune::FieldVector<RF,dim> > gradpsi(dsize);
-        for (size_type i=0; i<vsize; i++)
-            jac.mv(js[i][0],gradpsi[i]);
+        std::vector<Dune::FieldMatrix<RF,1,dim> > gradpsi(dsize);
+        BasisSwitch_D::gradient(FESwitch_D::basis(darcylfsu.finiteElement()),
+            ig.outside()->geometry(), darcyPos, gradpsi);
 
         // calculate phi and grad phi
         RT_D phi = 0.0;
@@ -215,7 +212,7 @@ public:
         for (size_type i = 0; i < darcylfsu.size(); ++i)
           {
             phi += darcyx(darcylfsu,i) * psi[i];
-            gradphi.axpy(darcyx(darcylfsu,i),gradpsi[i]);
+            gradphi.axpy(darcyx(darcylfsu,i),gradpsi[i][0]);
           }
 
         Dune::FieldVector<RF,dim> u(0.0);
@@ -279,7 +276,6 @@ public:
   {
     // dimensions
     const int dim = IG::dimension;
-    // const int dimw = IG::dimensionworld;
 
     // extract local function spaces
     typedef typename StokesLFSU::template Child<0>::Type LFSU_V_PFS;
@@ -294,23 +290,24 @@ public:
     typedef typename LFSV_V_PFS::template Child<0>::Type LFSV_V;
 
     // domain and range field type
-    typedef typename LFSU_V::Traits::FiniteElementType::
-      Traits::LocalBasisType::Traits::RangeFieldType RF;
-    typedef typename LFSU_V::Traits::FiniteElementType::
-      Traits::LocalBasisType::Traits::RangeType RT_V;
+    typedef Dune::FiniteElementInterfaceSwitch<typename LFSU_V::Traits::FiniteElementType > FESwitch_V;
+    typedef Dune::BasisInterfaceSwitch<typename FESwitch_V::Basis > BasisSwitch_V;
+    typedef typename BasisSwitch_V::DomainField DF;
+    typedef typename BasisSwitch_V::RangeField RF;
+    typedef typename BasisSwitch_V::Range RT_V;
     typedef typename LFSU_V::Traits::SizeType size_type;
 
     typedef typename StokesLFSU::template Child<1>::Type LFSU_P;
 
-    typedef typename LFSU_P::Traits::FiniteElementType::
-      Traits::LocalBasisType::Traits::DomainFieldType DF;
-    typedef typename LFSU_P::Traits::FiniteElementType::
-      Traits::LocalBasisType::Traits::RangeType RT_P;
+    typedef Dune::FiniteElementInterfaceSwitch<typename LFSU_P::Traits::FiniteElementType > FESwitch_P;
+    typedef Dune::BasisInterfaceSwitch<typename FESwitch_P::Basis > BasisSwitch_P;
+    typedef typename BasisSwitch_P::Range RT_P;
 
-    typedef typename DarcyLFSU::Traits::FiniteElementType::
-      Traits::LocalBasisType::Traits::RangeType RT_D;
-    typedef typename DarcyLFSU::Traits::FiniteElementType::
-      Traits::LocalBasisType::Traits::JacobianType JacobianType_D;
+    typedef Dune::FiniteElementInterfaceSwitch<typename DarcyLFSU::Traits::FiniteElementType > FESwitch_D;
+    typedef Dune::BasisInterfaceSwitch<typename FESwitch_D::Basis > BasisSwitch_D;
+    typedef typename BasisSwitch_D::Range RT_D;
+    // typedef typename DarcyLFSU::Traits::FiniteElementType::
+    //   Traits::LocalBasisType::Traits::JacobianType JacobianType_D;
     const unsigned int dsize = darcylfsu.size();
 
     typedef typename IG::Geometry::LocalCoordinate LC;
@@ -318,8 +315,10 @@ public:
 
     // select quadrature rule
     Dune::GeometryType gt = ig.geometry().type();
-    const int qorder = 2 * std::max(lfsu_v_pfs.template child(0).finiteElement().localBasis().order(),
-                                    darcylfsu.finiteElement().localBasis().order());
+    const int qorder = 2 *
+        std::max(
+            FESwitch_V::basis(lfsu_v_pfs.template child(0).finiteElement()).order(),
+            FESwitch_D::basis(darcylfsu.finiteElement()).order());
 
     const Dune::QuadratureRule<DF,dim-1>& rule = Dune::QuadratureRules<DF,dim-1>::rule(gt,qorder);
 
@@ -347,10 +346,10 @@ public:
         const RF factor = it->weight() * ig.geometry().integrationElement(it->position());
 
         std::vector<RT_V> v(vsize);
-        lfsu_v_pfs.child(0).finiteElement().localBasis().evaluateFunction(stokesPos,v);
+        FESwitch_V::basis(lfsu_v_pfs.child(0).finiteElement()).evaluateFunction(stokesPos,v);
 
         std::vector<RT_D> psi(dsize);
-        darcylfsu.finiteElement().localBasis().evaluateFunction(darcyPos,psi);
+        FESwitch_D::basis(darcylfsu.finiteElement()).evaluateFunction(darcyPos,psi);
 
         const GC n = ig.unitOuterNormal(it->position());
 

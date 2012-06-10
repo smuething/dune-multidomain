@@ -26,12 +26,12 @@
 #include <dune/pdelab/multidomain/coupling.hh>
 #include <dune/pdelab/multidomain/constraints.hh>
 #include <dune/pdelab/constraints/constraintsparameters.hh>
-#include<dune/pdelab/stationary/linearproblem.hh>
-#include<dune/pdelab/gridfunctionspace/vtk.hh>
-#include<dune/pdelab/multidomain/vtk.hh>
+#include <dune/pdelab/stationary/linearproblem.hh>
+#include <dune/pdelab/gridfunctionspace/vtk.hh>
+#include <dune/pdelab/multidomain/vtk.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 
-#include<typeinfo>
+#include <typeinfo>
 
 #include <dune/pdelab/finiteelementmap/opbfem.hh>
 #include "adrwip.hh"
@@ -135,7 +135,7 @@ public:
     if (!is.boundary())
       return Traits::BoundaryCondition::DoNothing;
     RF xg = is.geometry().global(x)[0];
-    return xg > (-0.5+1e-9) ? Traits::BoundaryCondition::VelocityDirichlet : Traits::BoundaryCondition::StressNeumann;
+    return xg > (-0.5+1e-9) ? Traits::BoundaryCondition::VelocityDirichlet : Traits::BoundaryCondition::VelocityDirichlet;
   }
 
   //! Dynamic viscosity value from local cell coordinate
@@ -393,30 +393,74 @@ public:
   typedef StokesDarcyCouplingParameterTraits<GV,RF> Traits;
 
   template<typename IG>
-  typename Traits::RangeField h1(const IG& ig, const typename Traits::IntersectionDomain& coord) const
+  typename Traits::RangeField h1(const IG& ig,
+                                 const typename Traits::IntersectionDomain& coord,
+                                 const typename Traits::Domain& normal) const
   {
     auto global_coord = ig.geometry().global(coord);
     auto x = global_coord[0];
     auto y = global_coord[1];
-    return 2 * _mu * y * std::sin(x*y);
+    Dune::FieldMatrix<RF,GV::dimension,GV::dimension> s(0.0);
+    s[0][0] = 2 * _mu * y * std::sin(x*y);
+    s[1][1] = - 2 * _mu * std::exp(x+y);
+    s[0][1] = s[1][0] = _mu * (x * std::sin(x*y) - std::exp(x+y));
+    typename Traits::Domain ps(0.0);
+    s.mv(normal,ps);
+    return ps * normal;
   }
 
   template<typename IG>
-  typename Traits::RangeField h2(const IG& ig, const typename Traits::IntersectionDomain& coord) const
+  typename Traits::VelocityRange h2(const IG& ig,
+                                    const typename Traits::IntersectionDomain& coord,
+                                    const typename Traits::Domain& normal) const
   {
+    typedef typename Traits::VelocityRange R;
     auto global_coord = ig.geometry().global(coord);
     auto x = global_coord[0];
     auto y = global_coord[1];
-    return _mu * (std::exp(x+y) - x*sin(x*y)) - _alpha/sqrt((_K[0][0] + _K[1][1])/2.0)*std::exp(x+y);
+    Dune::FieldMatrix<RF,GV::dimension,GV::dimension> s(0.0);
+    s[0][0] = s[1][1] = std::exp(x) * std::sin(x+y);
+    s[0][1] = s[1][0] = _mu * (x * std::sin(x*y) - std::exp(x+y));
+    s[0][0] += 2 * _mu * y * std::sin(x*y);
+    s[1][1] -= 2 * _mu * std::exp(x+y);
+
+    R normal_stress(0.0);
+    s.mv(normal,normal_stress);
+    R normal_stress_normal(normal);
+    normal_stress_normal *= normal * normal_stress;
+    R normal_stress_tangent(normal_stress);
+    normal_stress_tangent -= normal_stress_normal;
+
+    R u(0.0);
+    u[0] = std::cos(x*y);
+    u[1] = std::exp(x+y);
+
+    R normal_flow(normal);
+    normal_flow *= normal * u;
+
+    R tangent_flow(u);
+    tangent_flow -= normal_flow;
+    tangent_flow *= _alpha/sqrt((_K[0][0] + _K[1][1])/2.0);
+
+    normal_stress_tangent -= tangent_flow;
+
+    return normal_stress_tangent;
   }
 
   template<typename IG>
-  typename Traits::RangeField h3(const IG& ig, const typename Traits::IntersectionDomain& coord) const
+  typename Traits::RangeField h3(const IG& ig,
+                                 const typename Traits::IntersectionDomain& coord,
+                                 const typename Traits::Domain& normal) const
   {
     auto global_coord = ig.geometry().global(coord);
     auto x = global_coord[0];
     auto y = global_coord[1];
-    return - _K[0][0] * std::exp(x) * (std::sin(x+y) + std::cos(x+y)) + std::cos(x*y);
+
+    typename Traits::Domain u(0.0);
+    u[0] = _K[0][0] * std::exp(x) * (std::sin(x+y) + std::cos(x+y)) - std::cos(x*y);
+    u[1] = _K[0][0] * std::exp(x) * std::cos(x+y) - std::exp(x+y);
+
+    return (u * normal);
   }
 
   template<typename IG>
@@ -977,58 +1021,6 @@ int main(int argc, char** argv) {
       vtkwriter.write(parameters["io.darcyfile"],Dune::VTKOptions::binaryappended);
     }
 
-#if 0
-
-    typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,StokesGFS> StokesSubGFS;
-    typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,DarcyGFS> DarcySubGFS;
-    typedef Dune::PDELab::GridFunctionSubSpace<StokesSubGFS,0> StokesVelocitySubGFS;
-    typedef Dune::PDELab::GridFunctionSubSpace<StokesSubGFS,1> StokesPressureSubGFS;
-
-    StokesSubGFS stokessubgfs(multigfs);
-    DarcySubGFS darcysubgfs(multigfs);
-    StokesVelocitySubGFS stokesvelocitysubgfs(stokessubgfs);
-    StokesPressureSubGFS stokespressuresubgfs(stokessubgfs);
-
-    //Dune::PDELab::FilenameHelper fn0("instationaryexplicitlycoupledpoisson-right");
-    {
-      typedef Dune::PDELab::VectorDiscreteGridFunction<StokesVelocitySubGFS,V> VDGF;
-      typedef Dune::PDELab::DiscreteGridFunction<StokesPressureSubGFS,V> PDGF;
-      VDGF vdgf(stokesvelocitysubgfs,u);
-      PDGF pdgf(stokespressuresubgfs,u);
-      VDGF vdgf2(stokesvelocitysubgfs,r);
-      PDGF pdgf2(stokespressuresubgfs,r);
-      Dune::SubsamplingVTKWriter<SDGV> vtkwriter(stokesGV,parameters.get("mesh.refineoutput",0));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf,"u"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf,"p"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf2,"ru"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf2,"rp"));
-      vtkwriter.write(parameters["io.stokesfile"],Dune::VTKOptions::binaryappended);
-      //fn0.increment();
-    }
-
-    //Dune::PDELab::FilenameHelper fn1("instationaryexplicitlycoupledpoisson-left");
-    {
-      typedef Dune::PDELab::DarcyFlowFromPotential<DarcySubGFS,DarcyParams,V> VDGF;
-      typedef Dune::PDELab::DiscreteGridFunction<DarcySubGFS,V> PhiDGF;
-      typedef Dune::PDELab::DiscretePressureGridFunction<DarcySubGFS,DarcyParams,V> PDGF;
-      VDGF vdgf(darcysubgfs,darcyParams,u);
-      PhiDGF phidgf(darcysubgfs,u);
-      PDGF pdgf(darcysubgfs,darcyParams,u,couplingParams.gravity());
-      VDGF vdgf2(darcysubgfs,darcyParams,r);
-      PhiDGF phidgf2(darcysubgfs,r);
-      PDGF pdgf2(darcysubgfs,darcyParams,r,couplingParams.gravity());
-      Dune::SubsamplingVTKWriter<SDGV> vtkwriter(darcyGV,parameters.get("mesh.refineoutput",0));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf,"u"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PhiDGF>(phidgf,"phi"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf,"p"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf2,"ru"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PhiDGF>(phidgf2,"rphi"));
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf2,"rp"));
-      vtkwriter.write(parameters["io.darcyfile"],Dune::VTKOptions::binaryappended);
-      //fn1.increment();
-    }
-
-#endif
 
   }
   catch (Dune::Exception &e){

@@ -554,6 +554,114 @@ struct DarcyBoundaryTypeAdapter :
   DarcyParameters& parameters;
 };
 
+
+
+template<typename DarcyParameter, typename GV = typename DarcyParameter::Traits::GridViewType>
+struct DarcyFlowFromPressure
+{
+
+  template<typename LFS, typename Data>
+  class Function
+    : public Dune::PDELab::GridFunctionBase<Dune::PDELab::GridFunctionTraits<
+                                              GV,
+                                              typename DarcyParameter::Traits::RangeFieldType,
+                                              DarcyParameter::Traits::dimDomain,
+                                              typename DarcyParameter::Traits::RangeType
+                                              >,
+                                            Function<LFS,Data> >
+  {
+
+    const DarcyParameter& p;
+    const LFS& lfs;
+    std::shared_ptr<Data> data;
+    mutable std::vector<
+      Dune::FieldMatrix<
+        typename DarcyParameter::Traits::RangeFieldType,
+        1,
+        DarcyParameter::Traits::dimDomain
+        >
+      > _gradient;
+
+  public:
+
+    Function(const DarcyParameter& p_,
+             const LFS& lfs_,
+             std::shared_ptr<Data> data_)
+      : p(p_)
+      , lfs(lfs_)
+      , data(data_)
+      , _gradient(lfs_.maxSize())
+    {}
+
+    typedef Dune::PDELab::GridFunctionTraits<
+      GV,
+      typename DarcyParameter::Traits::RangeFieldType,
+      DarcyParameter::Traits::dimDomain,
+      typename DarcyParameter::Traits::RangeType
+      > Traits;
+
+    inline void evaluate (const typename Traits::ElementType& e,
+                          const typename Traits::DomainType& x,
+                          typename Traits::RangeType& y) const
+    {
+
+      data->bind(e);
+
+      typedef Dune::FiniteElementInterfaceSwitch<
+        typename LFS::Traits::FiniteElement
+        > FESwitch;
+
+      typedef Dune::BasisInterfaceSwitch<
+        typename FESwitch::Basis
+        > BasisSwitch;
+
+      typedef typename BasisSwitch::DomainField DF;
+      typedef typename BasisSwitch::RangeField RF;
+
+      BasisSwitch::gradient(
+        FESwitch::basis(lfs.finiteElement()),
+        e.geometry(),
+        x,
+        _gradient
+      );
+
+      typename Traits::RangeType gradp(0.0);
+
+      for (std::size_t i = 0; i < lfs.size(); ++i)
+        gradp.axpy(data->_x_local(lfs,i),_gradient[i][0]);
+
+      p.K(Traits::GridViewType::Grid::multiDomainEntity(e),x).mv(gradp,y);
+
+      y *= -1;
+    }
+
+    const typename Traits::GridViewType& getGridView ()
+    {
+      return lfs.gridFunctionSpace().gridview();
+    }
+  };
+
+  template<typename LFS, typename Data>
+  struct create_type
+  {
+    typedef Function<LFS,Data> type;
+  };
+
+  template<typename LFS, typename Data>
+  std::shared_ptr<typename create_type<LFS,Data>::type> create(const LFS& lfs, std::shared_ptr<Data> data)
+  {
+    typedef typename create_type<LFS,Data>::type F;
+    return std::make_shared<F>(p,lfs,data);
+  }
+
+  const DarcyParameter& p;
+
+  DarcyFlowFromPressure(const DarcyParameter& param)
+    : p(param)
+  {}
+
+};
+
 namespace Dune {
 namespace PDELab {
 
@@ -1010,6 +1118,11 @@ int main(int argc, char** argv) {
         multigfs,
         u,
         Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(darcyGV.grid().domain())
+      ).add_vertex_function(
+                            DarcyFlowFromPressure<DarcyParams,SDGV>(darcyParams),
+        Dune::PDELab::TypeTree::TreePath<1>(),
+        "v"
+      );
       );
       Dune::PDELab::MultiDomain::add_solution_to_vtk_writer(
         vtkwriter,

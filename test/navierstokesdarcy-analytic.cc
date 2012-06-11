@@ -993,13 +993,13 @@ int main(int argc, char** argv) {
         vtkwriter,
         multigfs,
         u,
-        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(stokesGV.grid().domain())
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(stokesGV.grid().domain())
       );
       Dune::PDELab::MultiDomain::add_solution_to_vtk_writer(
         vtkwriter,
         multigfs,
         u0,
-        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(stokesGV.grid().domain()),
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(stokesGV.grid().domain()),
         Dune::PDELab::default_vtk_name_scheme().prefix("initial-")
       );
 
@@ -1012,13 +1012,13 @@ int main(int argc, char** argv) {
         vtkwriter,
         multigfs,
         u,
-        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(darcyGV.grid().domain())
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(darcyGV.grid().domain())
       );
       Dune::PDELab::MultiDomain::add_solution_to_vtk_writer(
         vtkwriter,
         multigfs,
         u0,
-        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndexType>(darcyGV.grid().domain()),
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(darcyGV.grid().domain()),
         Dune::PDELab::default_vtk_name_scheme().prefix("initial-")
       );
 

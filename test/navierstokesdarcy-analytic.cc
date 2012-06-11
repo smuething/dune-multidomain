@@ -979,9 +979,6 @@ int main(int argc, char** argv) {
 
     pdesolver.apply(u);
 
-    V r(u);
-    r = 0.0;
-    gridoperator.residual(u,r);
 
     /*
      * Output initial guess and solution

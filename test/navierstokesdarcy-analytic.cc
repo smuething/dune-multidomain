@@ -134,8 +134,10 @@ public:
   {
     if (!is.boundary())
       return Traits::BoundaryCondition::DoNothing;
-    RF xg = is.geometry().global(x)[0];
-    return xg > (-0.5+1e-9) ? Traits::BoundaryCondition::VelocityDirichlet : Traits::BoundaryCondition::VelocityDirichlet;
+    auto cg = is.geometry().global(x);
+    RF xg = cg[0];
+    RF yg = cg[1];
+    return (xg > (-0.5+1e-9)) && (yg > (-0.5+1e-9)) ? Traits::BoundaryCondition::StressNeumann : Traits::BoundaryCondition::VelocityDirichlet;
   }
 
   //! Dynamic viscosity value from local cell coordinate

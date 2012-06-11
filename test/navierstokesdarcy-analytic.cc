@@ -1087,6 +1087,17 @@ int main(int argc, char** argv) {
 
     pdesolver.apply(u);
 
+    PGFS_V_GFS darcy_v_gfs(darcyGV,vfem);
+    darcy_v_gfs.name("v_cg");
+    typename Dune::PDELab::BackendVectorSelector<PGFS_V_GFS,RF>::Type darcy_v(darcy_v_gfs,0.0);
+
+    {
+      auto data = Dune::make_shared<Dune::PDELab::MultiDomain::DGFTreeCommonData<MultiGFS,V,Dune::PDELab::default_predicate> >(multigfs,u);
+
+      auto darcy_flow_function = DarcyFlowFromPressure<DarcyParams,SDGV>(darcyParams).create(data->_lfs.child<1>(),data);
+
+      Dune::PDELab::interpolate(*darcy_flow_function,darcy_v_gfs,darcy_v);
+    }
 
     /*
      * Output initial guess and solution
@@ -1123,6 +1134,10 @@ int main(int argc, char** argv) {
         Dune::PDELab::TypeTree::TreePath<1>(),
         "v"
       );
+      Dune::PDELab::add_solution_to_vtk_writer(
+        vtkwriter,
+        darcy_v_gfs,
+        darcy_v
       );
       Dune::PDELab::MultiDomain::add_solution_to_vtk_writer(
         vtkwriter,

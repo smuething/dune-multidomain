@@ -212,9 +212,8 @@ public:
     auto x = global_coord[0];
     auto y = global_coord[1];
     s[0][0] = s[1][1] = std::exp(x) * std::sin(x+y);
+    s[0][1] = s[1][0] = _mu * (x * std::sin(x*y) - std::exp(x+y));
     s[0][0] += 2 * _mu * y * std::sin(x*y);
-    s[0][1] += _mu * (x * std::sin(x*y) - std::exp(x+y));
-    s[1][0] += _mu * (x * std::sin(x*y) - std::exp(x+y));
     s[1][1] -= 2 * _mu * std::exp(x+y);
     typename Traits::VelocityRange r(0);
     s.mv(normal,r);

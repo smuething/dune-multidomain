@@ -9,6 +9,9 @@
 #include<dune/common/static_assert.hh>
 #include<dune/geometry/referenceelements.hh>
 #include<dune/pdelab/localoperator/defaultimp.hh>
+#include<dune/pdelab/common/geometrywrapper.hh>
+#include<dune/pdelab/common/function.hh>
+#include<dune/pdelab/gridoperatorspace/gridoperatorspace.hh>
 #include<dune/pdelab/localoperator/pattern.hh>
 #include<dune/pdelab/localoperator/flags.hh>
 #include<dune/pdelab/localoperator/idefault.hh>
@@ -95,20 +98,18 @@ namespace Dune {
       void alpha_volume (const EG& eg, const LFSU& lfsu, const X& x, const LFSV& lfsv, R& r) const
       {
 		// domain and range field type
-        typedef typename LFSU::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::DomainFieldType DF;
-        typedef typename LFSU::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::RangeFieldType RF;
-        typedef typename LFSU::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::JacobianType JacobianType;
-        typedef typename LFSU::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::RangeType RangeType;
-        typedef typename LFSU::Traits::SizeType size_type;
+        typedef FiniteElementInterfaceSwitch<typename LFSV::Traits::FiniteElementType > FESwitch;
+        typedef BasisInterfaceSwitch<typename FESwitch::Basis > BasisSwitch;
+        typedef typename BasisSwitch::DomainField DF;
+        typedef typename BasisSwitch::Range RT;
+        typedef typename BasisSwitch::RangeField RF;
+        typedef typename BasisSwitch::Range RangeType;
+        typedef typename LFSV::Traits::SizeType size_type;
 
         // dimensions
         const int dim = EG::Geometry::dimension;
         const int dimw = EG::Geometry::dimensionworld;
-        const int intorder = quadrature_factor*lfsu.finiteElement().localBasis().order();
+        const int intorder = quadrature_factor*FESwitch::basis(lfsu.finiteElement()).order();
 
         // select quadrature rule
         Dune::GeometryType gt = eg.geometry().type();
@@ -127,30 +128,22 @@ namespace Dune {
           {
             // evaluate basis functions
             std::vector<RangeType> phi(lfsu.size());
-            lfsu.finiteElement().localBasis().evaluateFunction(it->position(),phi);
+            FESwitch::basis(lfsu.finiteElement()).evaluateFunction(it->position(),phi);
 
             // evaluate gradient of basis functions (we assume Galerkin method lfsu=lfsv)
-            std::vector<JacobianType> js(lfsu.size());
-            lfsu.finiteElement().localBasis().evaluateJacobian(it->position(),js);
+            std::vector<Dune::FieldMatrix<RF,1,dim> > gradphi(lfsu.size());
+            BasisSwitch::gradient(FESwitch::basis(lfsu.finiteElement()),
+              eg.geometry(), it->position(), gradphi);
 
             // evaluate u
             RF u=0.0;
             for (size_type i=0; i<lfsu.size(); i++)
               u += x(lfsu,i)*phi[i];
 
-            // transform gradients of shape functions to real element
-            jac = eg.geometry().jacobianInverseTransposed(it->position());
-            std::vector<Dune::FieldVector<RF,dim> > gradphi(lfsu.size());
-            for (size_type i=0; i<lfsu.size(); i++)
-              {
-                gradphi[i] = 0.0;
-                jac.umv(js[i][0],gradphi[i]);
-              }
-
             // compute gradient of u
             Dune::FieldVector<RF,dim> gradu(0.0);
             for (size_type i=0; i<lfsu.size(); i++)
-              gradu.axpy(x(lfsu,i),gradphi[i]);
+              gradu.axpy(x(lfsu,i),gradphi[i][0]);
 
             // compute K * gradient of u
             Dune::FieldVector<RF,dim> Kgradu(0.0);
@@ -168,7 +161,7 @@ namespace Dune {
             // integrate (K grad u - bu)*grad phi_i + a*u*phi_i
             RF factor = it->weight() * eg.geometry().integrationElement(it->position());
             for (size_type i=0; i<lfsu.size(); i++)
-              r.accumulate(lfsu,i,( w*(Kgradu*gradphi[i]) - b*gradphi[i] + a*u*phi[i] )*factor);
+              r.accumulate(lfsu,i,( w*(Kgradu*gradphi[i][0]) - u*(b*gradphi[i][0]) + a*u*phi[i] )*factor);
           }
       }
 
@@ -181,20 +174,18 @@ namespace Dune {
                            R& r_s, R& r_n) const
       {
 		// domain and range field type
-        typedef typename LFSV::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::DomainFieldType DF;
-        typedef typename LFSV::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::RangeFieldType RF;
-        typedef typename LFSV::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::RangeType RangeType;
-        typedef typename LFSU::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::JacobianType JacobianType;
+        typedef FiniteElementInterfaceSwitch<typename LFSV::Traits::FiniteElementType > FESwitch;
+        typedef BasisInterfaceSwitch<typename FESwitch::Basis > BasisSwitch;
+        typedef typename BasisSwitch::DomainField DF;
+        typedef typename BasisSwitch::Range RT;
+        typedef typename BasisSwitch::RangeField RF;
+        typedef typename BasisSwitch::Range RangeType;
         typedef typename LFSV::Traits::SizeType size_type;
 
         // dimensions
         const int dim = IG::dimension;
-        const int intorder = quadrature_factor*std::max(lfsu_s.finiteElement().localBasis().order(),
-                                        lfsu_n.finiteElement().localBasis().order());
+        const int intorder = quadrature_factor*std::max(FESwitch::basis(lfsu_s.finiteElement()).order(),
+                                        FESwitch::basis(lfsu_n.finiteElement()).order());
 
         // evaluate permeability tensors
         const Dune::FieldVector<DF,dim>&
@@ -206,17 +197,8 @@ namespace Dune {
         K_n = param.K(*(ig.outside()),outside_local);
 
         // face diameter
-        RF h_F = 0.0;
-        if (dim==1) h_F = 1.0; else
-          {
-            Dune::FieldVector<DF,dim> x0 = ig.geometry().corner(0);
-            for (int i=1; i<ig.geometry().corners(); i++)
-              {
-                Dune::FieldVector<DF,dim> x = ig.geometry().corner(i);
-                x -= x0;
-                h_F = std::max(h_F,x.two_norm());
-              }
-          }
+        RF h_F = (ig.inside()->geometry().volume()
+            + ig.outside()->geometry().volume()) / 2.0 / ig.geometry().volume();
 
         // select quadrature rule
         Dune::GeometryType gtface = ig.geometryInInside().type();
@@ -252,9 +234,9 @@ namespace Dune {
 
             // evaluate basis functions
             std::vector<RangeType> phi_s(lfsu_s.size());
-            lfsu_s.finiteElement().localBasis().evaluateFunction(iplocal_s,phi_s);
+            FESwitch::basis(lfsu_s.finiteElement()).evaluateFunction(iplocal_s,phi_s);
             std::vector<RangeType> phi_n(lfsu_n.size());
-            lfsu_n.finiteElement().localBasis().evaluateFunction(iplocal_n,phi_n);
+            FESwitch::basis(lfsu_n.finiteElement()).evaluateFunction(iplocal_n,phi_n);
 
             // evaluate u
             RF u_s=0.0;
@@ -269,26 +251,21 @@ namespace Dune {
             Real w_n = param.w(*(ig.outside()),iplocal_n,u_n);
 
             // evaluate gradient of basis functions (we assume Galerkin method lfsu=lfsv)
-            std::vector<JacobianType> gradphi_s(lfsu_s.size());
-            lfsu_s.finiteElement().localBasis().evaluateJacobian(iplocal_s,gradphi_s);
-            std::vector<JacobianType> gradphi_n(lfsu_n.size());
-            lfsu_n.finiteElement().localBasis().evaluateJacobian(iplocal_n,gradphi_n);
+            std::vector<Dune::FieldMatrix<RF,1,dim> > tgradphi_s(lfsu_s.size());
+            BasisSwitch::gradient(FESwitch::basis(lfsu_s.finiteElement()),
+              ig.inside()->geometry(), iplocal_s, tgradphi_s);
 
-            // transform gradients of shape functions to real element
-            jac = ig.inside()->geometry().jacobianInverseTransposed(iplocal_s);
-            std::vector<Dune::FieldVector<RF,dim> > tgradphi_s(lfsu_s.size());
-            for (size_type i=0; i<lfsu_s.size(); i++) jac.mv(gradphi_s[i][0],tgradphi_s[i]);
-            jac = ig.outside()->geometry().jacobianInverseTransposed(iplocal_n);
-            std::vector<Dune::FieldVector<RF,dim> > tgradphi_n(lfsu_n.size());
-            for (size_type i=0; i<lfsu_n.size(); i++) jac.mv(gradphi_n[i][0],tgradphi_n[i]);
+            std::vector<Dune::FieldMatrix<RF,1,dim> > tgradphi_n(lfsu_n.size());
+            BasisSwitch::gradient(FESwitch::basis(lfsu_n.finiteElement()),
+              ig.outside()->geometry(), iplocal_n, tgradphi_n);
 
             // compute gradient of u
             Dune::FieldVector<RF,dim> gradu_s(0.0);
             for (size_type i=0; i<lfsu_s.size(); i++)
-              gradu_s.axpy(x_s(lfsu_s,i),tgradphi_s[i]);
+              gradu_s.axpy(x_s(lfsu_s,i),tgradphi_s[i][0]);
             Dune::FieldVector<RF,dim> gradu_n(0.0);
             for (size_type i=0; i<lfsu_n.size(); i++)
-              gradu_n.axpy(x_n(lfsu_n,i),tgradphi_n[i]);
+              gradu_n.axpy(x_n(lfsu_n,i),tgradphi_n[i][0]);
 
             // evaluate velocity field and upwinding, assume H(div) velocity field => choose any side
             typename Param::Traits::RangeType b = param.b(*(ig.inside()),iplocal_s);
@@ -309,7 +286,7 @@ namespace Dune {
             RF factor = it->weight() * ig.geometry().integrationElement(it->position());
 
             // convection term
-            RF term1 = /*(omegaup_s*u_s + omegaup_n*u_n) * */ normalflux *factor;
+            RF term1 = (omegaup_s*u_s + omegaup_n*u_n) * normalflux *factor;
             for (size_type i=0; i<lfsu_s.size(); i++)
               r_s.accumulate(lfsu_s,i,term1 * phi_s[i]);
             for (size_type i=0; i<lfsu_n.size(); i++)
@@ -328,9 +305,9 @@ namespace Dune {
             // (non-)symmetric IP term
             RF term3 = (u_s-u_n) * factor;
             for (size_type i=0; i<lfsu_s.size(); i++)
-              r_s.accumulate(lfsu_s,i,term3 * epsilon * omega_s * w_upwind * (Kn_F_s*tgradphi_s[i]));
+              r_s.accumulate(lfsu_s,i,term3 * epsilon * omega_s * w_upwind * (Kn_F_s*tgradphi_s[i][0]));
             for (size_type i=0; i<lfsu_n.size(); i++)
-              r_n.accumulate(lfsu_n,i,term3 * epsilon * omega_n * w_upwind * (Kn_F_n*tgradphi_n[i]));
+              r_n.accumulate(lfsu_n,i,term3 * epsilon * omega_n * w_upwind * (Kn_F_n*tgradphi_n[i][0]));
 
             // standard IP term
             RF term4;
@@ -359,19 +336,17 @@ namespace Dune {
                            R& r_s) const
       {
 		// domain and range field type
-        typedef typename LFSV::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::DomainFieldType DF;
-        typedef typename LFSV::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::RangeFieldType RF;
-        typedef typename LFSV::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::RangeType RangeType;
-        typedef typename LFSU::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::JacobianType JacobianType;
+        typedef FiniteElementInterfaceSwitch<typename LFSV::Traits::FiniteElementType > FESwitch;
+        typedef BasisInterfaceSwitch<typename FESwitch::Basis > BasisSwitch;
+        typedef typename BasisSwitch::DomainField DF;
+        typedef typename BasisSwitch::Range RT;
+        typedef typename BasisSwitch::RangeField RF;
+        typedef typename BasisSwitch::Range RangeType;
         typedef typename LFSV::Traits::SizeType size_type;
 
         // dimensions
         const int dim = IG::dimension;
-        const int intorder = quadrature_factor*lfsu_s.finiteElement().localBasis().order();
+        const int intorder = quadrature_factor*FESwitch::basis(lfsu_s.finiteElement()).order();
 
         // evaluate permeability tensors
         const Dune::FieldVector<DF,dim>&
@@ -384,17 +359,7 @@ namespace Dune {
         const Dune::QuadratureRule<DF,dim-1>& rule = Dune::QuadratureRules<DF,dim-1>::rule(gtface,intorder);
 
         // face diameter
-        RF h_F = 0.0;
-        if (dim==1) h_F = 1.0; else
-          {
-            Dune::FieldVector<DF,dim> x0 = ig.geometry().corner(0);
-            for (int i=1; i<ig.geometry().corners(); i++)
-              {
-                Dune::FieldVector<DF,dim> x = ig.geometry().corner(i);
-                x -= x0;
-                h_F = std::max(h_F,x.two_norm());
-              }
-          }
+        RF h_F = ig.inside()->geometry().volume() / ig.geometry().volume();
 
         // transformation
         Dune::FieldMatrix<DF,dim,dim> jac;
@@ -421,7 +386,7 @@ namespace Dune {
 
             // evaluate basis functions
             std::vector<RangeType> phi_s(lfsu_s.size());
-            lfsu_s.finiteElement().localBasis().evaluateFunction(iplocal_s,phi_s);
+            FESwitch::basis(lfsu_s.finiteElement()).evaluateFunction(iplocal_s,phi_s);
 
             // integration factor
             RF factor = it->weight() * ig.geometry().integrationElement(it->position());
@@ -445,24 +410,27 @@ namespace Dune {
             Real w_s = param.w(*(ig.inside()),iplocal_s,u_s);
 
             // evaluate gradient of basis functions (we assume Galerkin method lfsu=lfsv)
-            std::vector<JacobianType> gradphi_s(lfsu_s.size());
-            lfsu_s.finiteElement().localBasis().evaluateJacobian(iplocal_s,gradphi_s);
-
-            // transform gradients of shape functions to real element
-            jac = ig.inside()->geometry().jacobianInverseTransposed(iplocal_s);
-            std::vector<Dune::FieldVector<RF,dim> > tgradphi_s(lfsu_s.size());
-            for (size_type i=0; i<lfsu_s.size(); i++) jac.mv(gradphi_s[i][0],tgradphi_s[i]);
+            std::vector<Dune::FieldMatrix<RF,1,dim> > tgradphi_s(lfsu_s.size());
+            BasisSwitch::gradient(FESwitch::basis(lfsu_s.finiteElement()),
+              ig.inside()->geometry(), iplocal_s, tgradphi_s);
 
             // compute gradient of u
             Dune::FieldVector<RF,dim> gradu_s(0.0);
-            for (size_type i=0; i<lfsu_s.size(); i++) gradu_s.axpy(x_s(lfsu_s,i),tgradphi_s[i]);
+            for (size_type i=0; i<lfsu_s.size(); i++) gradu_s.axpy(x_s(lfsu_s,i),tgradphi_s[i][0]);
 
             // evaluate velocity field and upwinding, assume H(div) velocity field => choose any side
             typename Param::Traits::RangeType b = param.b(*(ig.inside()),iplocal_s);
             RF normalflux = b*n_F;
 
+            // interior penalty parameter
+            RF gamma;
+            if (weights==ADRWIPWeights::weightsOn)
+              gamma = alpha*w_s*delta_s/h_F + beta*0.5*std::abs(normalflux);
+            else
+              gamma = alpha/h_F;
+
             // convection term
-            RF term1 = normalflux * factor;
+            RF term1 = u_s * normalflux *factor;
             for (size_type i=0; i<lfsu_s.size(); i++)
               r_s.accumulate(lfsu_s,i,term1 * phi_s[i]);
 
@@ -470,13 +438,6 @@ namespace Dune {
 
             // evaluate Dirichlet boundary condition
             RF g = param.g(ig.intersection(),it->position());
-
-            // interior penalty parameter
-            RF gamma;
-            if (weights==ADRWIPWeights::weightsOn)
-              gamma = alpha*w_s*delta_s/h_F + beta*0.5*std::abs(normalflux)/(u_s-g);
-            else
-              gamma = alpha/h_F;
 
             // diffusion term
             RF term2 =  w_s*(Kn_F_s*gradu_s) * factor;
@@ -486,7 +447,7 @@ namespace Dune {
             // (non-)symmetric IP term
             RF term3 = (u_s-g) * factor;
             for (size_type i=0; i<lfsu_s.size(); i++)
-              r_s.accumulate(lfsu_s,i,term3 * epsilon * w_s * (Kn_F_s*tgradphi_s[i]));
+              r_s.accumulate(lfsu_s,i,term3 * epsilon * w_s * (Kn_F_s*tgradphi_s[i][0]));
 
             // standard IP term
             RF term4 = (u_s-g) * gamma * factor;
@@ -500,17 +461,17 @@ namespace Dune {
       void lambda_volume (const EG& eg, const LFSV& lfsv, R& r) const
       {
 		// domain and range field type
-        typedef typename LFSV::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::DomainFieldType DF;
-        typedef typename LFSV::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::RangeFieldType RF;
-        typedef typename LFSV::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::RangeType RangeType;
+        typedef FiniteElementInterfaceSwitch<typename LFSV::Traits::FiniteElementType > FESwitch;
+        typedef BasisInterfaceSwitch<typename FESwitch::Basis > BasisSwitch;
+        typedef typename BasisSwitch::DomainField DF;
+        typedef typename BasisSwitch::Range RT;
+        typedef typename BasisSwitch::RangeField RF;
+        typedef typename BasisSwitch::Range RangeType;
         typedef typename LFSV::Traits::SizeType size_type;
 
         // dimensions
         const int dim = EG::Geometry::dimension;
-        const int intorder = 2*lfsv.finiteElement().localBasis().order();
+        const int intorder = 2*FESwitch::basis(lfsv.finiteElement()).order();
 
         // select quadrature rule
         Dune::GeometryType gt = eg.geometry().type();
@@ -521,7 +482,7 @@ namespace Dune {
           {
             // evaluate shape functions
             std::vector<RangeType> phi(lfsv.size());
-            lfsv.finiteElement().localBasis().evaluateFunction(it->position(),phi);
+            FESwitch::basis(lfsv.finiteElement()).evaluateFunction(it->position(),phi);
 
             // evaluate right hand side parameter function
             Real f;
@@ -579,14 +540,13 @@ namespace Dune {
 	  void alpha_volume (const EG& eg, const LFSU& lfsu, const X& x, const LFSV& lfsv, R& r) const
 	  {
 		// domain and range field type
-        typedef typename LFSU::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::DomainFieldType DF;
-        typedef typename LFSU::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::RangeFieldType RF;
-        typedef typename LFSU::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::RangeType RangeType;
-
-        typedef typename LFSU::Traits::SizeType size_type;
+        typedef FiniteElementInterfaceSwitch<typename LFSU::Traits::FiniteElementType > FESwitch;
+        typedef BasisInterfaceSwitch<typename FESwitch::Basis > BasisSwitch;
+        typedef typename BasisSwitch::DomainField DF;
+        typedef typename BasisSwitch::Range RT;
+        typedef typename BasisSwitch::RangeField RF;
+        typedef typename BasisSwitch::Range RangeType;
+        typedef typename LFSV::Traits::SizeType size_type;
 
         // dimensions
         const int dim = EG::Geometry::dimension;
@@ -602,7 +562,7 @@ namespace Dune {
           {
             // evaluate basis functions
             std::vector<RangeType> phi(lfsu.size());
-            lfsu.finiteElement().localBasis().evaluateFunction(it->position(),phi);
+            FESwitch::basis(lfsu.finiteElement()).evaluateFunction(it->position(),phi);
 
             // evaluate u
             RF u=0.0;
@@ -622,15 +582,13 @@ namespace Dune {
                             M& mat) const
       {
 		// domain and range field type
-        typedef typename LFSU::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::DomainFieldType DF;
-        typedef typename LFSU::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::RangeFieldType RF;
-        typedef typename LFSU::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::JacobianType JacobianType;
-        typedef typename LFSU::Traits::FiniteElementType::
-		  Traits::LocalBasisType::Traits::RangeType RangeType;
-        typedef typename LFSU::Traits::SizeType size_type;
+        typedef FiniteElementInterfaceSwitch<typename LFSU::Traits::FiniteElementType > FESwitch;
+        typedef BasisInterfaceSwitch<typename FESwitch::Basis > BasisSwitch;
+        typedef typename BasisSwitch::DomainField DF;
+        typedef typename BasisSwitch::Range RT;
+        typedef typename BasisSwitch::RangeField RF;
+        typedef typename BasisSwitch::Range RangeType;
+        typedef typename LFSV::Traits::SizeType size_type;
 
         // dimensions
         const int dim = EG::Geometry::dimension;
@@ -646,7 +604,7 @@ namespace Dune {
           {
             // evaluate basis functions
             std::vector<RangeType> phi(lfsu.size());
-            lfsu.finiteElement().localBasis().evaluateFunction(it->position(),phi);
+            FESwitch::basis(lfsu.finiteElement()).evaluateFunction(it->position(),phi);
 
             // integrate phi_j*phi_i
             RF factor = it->weight() * eg.geometry().integrationElement(it->position());

@@ -209,12 +209,8 @@ public:
     auto global_coord = ig.geometry().global(coord);
     auto x = global_coord[0];
     auto y = global_coord[1];
-    s[0][0] = s[1][1] = std::exp(x) * std::sin(x+y);
-    s[0][1] = s[1][0] = _mu * (x * std::sin(x*y) - std::exp(x+y));
-    s[0][0] += 2 * _mu * y * std::sin(x*y);
-    s[1][1] -= 2 * _mu * std::exp(x+y);
-    typename Traits::VelocityRange r(0);
-    s.mv(normal,r);
+    typename Traits::VelocityRange r(normal);
+    r *= std::exp(x) * std::sin(x+y);
     return r;
   }
 
@@ -507,10 +503,16 @@ public:
   StokesDarcyCouplingParameters(const Dune::ParameterTree& params)
     : _mu(params.get<RF>("fluid.mu"))
     , _alpha(params.get<RF>("interface.alpha"))
+    , _epsilon(params.get("epsilon",1e-8))
   {
     for (std::size_t i = 0; i < Traits::dimDomain; ++i)
       for (std::size_t j = 0; j < Traits::dimDomain; ++j)
         _K[i][j] = (i == j ? params.get<RF>("soil.permeability") : 0);
+  }
+
+  double epsilon() const
+  {
+    return _epsilon;
   }
 
 private:
@@ -518,7 +520,7 @@ private:
   const RF _mu;
   typename Traits::PermeabilityTensor _K;
   const RF _alpha;
-
+  const double _epsilon;
 };
 
 template<typename DarcyParameters>
@@ -962,7 +964,7 @@ int main(int argc, char** argv) {
       VectorBackend
       > DarcyGFS;
     DarcyGFS darcygfs(darcyGV,darcyfem);
-    darcygfs.name("phi");
+    darcygfs.name("p");
 
     typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<
       Grid,
@@ -1154,6 +1156,10 @@ int main(int argc, char** argv) {
   }
   catch (Dune::Exception &e){
     std::cerr << "Dune reported error: " << e << std::endl;
+	return 1;
+  }
+  catch (std::exception &e){
+    std::cerr << "STL reported error: " << e.what() << std::endl;
 	return 1;
   }
   catch (...){

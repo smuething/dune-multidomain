@@ -349,8 +349,6 @@ public:
     ComputeSizeVisitor<Element,LFSTag> csv(e);
     Dune::PDELab::TypeTree::applyToTree(*this,csv);
 
-    _dof_index_storage.resize(n);
-
     // initialize iterators and fill indices
     FillIndicesVisitor<Element,LFSTag> fiv(e);
     Dune::PDELab::TypeTree::applyToTree(*this,fiv);

@@ -494,26 +494,28 @@ public:
 
   ConstraintsAssembler(const GFS& gfs,
                        const ConstraintsSpecifications&... specifications)
-    : _assembler(gfs,gfs)
+    : _assembler(make_shared<Assembler>(gfs,gfs))
     , _engine(
-        buildConstraintsDescriptor(
-          _assembler.lfsv_s(),
-          _assembler.lfsv_n(),
-          specifications
-        )...
+        make_shared<Engine>(
+          buildConstraintsDescriptor(
+            _assembler->lfsv_s(),
+            _assembler->lfsv_n(),
+            specifications
+          )...
+        )
       )
   {}
 
   void assemble(CG& cg)
   {
-    _engine.setConstraintsContainer(cg);
-    _assembler.assemble(_engine);
+    _engine->setConstraintsContainer(cg);
+    _assembler->assemble(*_engine);
   }
 
 private:
 
-  Assembler _assembler;
-  Engine _engine;
+  shared_ptr<Assembler> _assembler;
+  shared_ptr<Engine> _engine;
 
 };
 

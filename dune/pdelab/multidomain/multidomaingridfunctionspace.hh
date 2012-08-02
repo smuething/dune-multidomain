@@ -11,6 +11,7 @@
 #include <dune/grid/multidomaingrid.hh>
 #include <dune/pdelab/multidomain/utility.hh>
 #include <dune/pdelab/multidomain/couplinggridfunctionspace.hh>
+#include <dune/pdelab/multidomain/datahandleprovider.hh>
 //#include <dune/pdelab/multidomain/powercouplinggridfunctionspace.hh>
 #include <utility>
 
@@ -19,102 +20,6 @@ namespace Dune {
 namespace PDELab {
 
 namespace MultiDomain {
-
-namespace {
-
-  template<typename Entity>
-  struct DataHandleSize
-    : public Dune::PDELab::TypeTree::DirectChildrenVisitor
-    , public Dune::PDELab::TypeTree::DynamicTraversal
-  {
-
-    template<typename LFS, typename Child, typename TreePath, typename ChildIndex>
-    void beforeChild(const LFS& lfs, const Child& child, TreePath treePath, ChildIndex childIndex)
-    {
-      size += data_handle_size(child,typename gfs_flavor_tag<Child>::type());
-    }
-
-    template<typename Child>
-    std::size_t data_handle_size(const Child& child, MultiDomainGFSTag tag)
-    {
-      return child.dataHandleSize(e);
-    }
-
-    template<typename Child>
-    std::size_t data_handle_size(const Child& child, CouplingGFSTag tag)
-    {
-      return child.dataHandleSize(e);
-    }
-
-    template<typename Child>
-    std::size_t data_handle_size(const Child& child, SubDomainGFSTag tag)
-    {
-      typedef typename Child::Traits::GridViewType::template Codim<Entity::codimension>::EntityPointer SDEP;
-      typedef typename SDEP::Entity SDE;
-      const SDEP ep = child.gridView().grid().subDomainEntityPointer(e);
-      if (child.gridView().indexSet().contains(*ep))
-        return child.dataHandleSize(*ep);
-      else
-        return 0;
-    }
-
-    DataHandleSize(const Entity& entity)
-      : e(entity)
-      , size(0)
-    {}
-
-    const Entity& e;
-    std::size_t size;
-
-  };
-
-
-  template<typename Entity, typename Container, std::size_t gfs_depth>
-  struct DataHandleGlobalIndices
-    : public Dune::PDELab::DataHandleGlobalIndicesVisitor<Entity,Container,gfs_depth>
-  {
-
-    typedef Dune::PDELab::DataHandleGlobalIndicesVisitor<Entity,Container,gfs_depth> BaseT;
-    using BaseT::pos;
-    using BaseT::e;
-    using BaseT::g;
-
-    template<typename Child, typename TreePath>
-    void leaf(const Child& child, TreePath treePath)
-    {
-      data_handle_global_indices(child,typename gfs_flavor_tag<Child>::type());
-    }
-
-    template<typename Child>
-    void data_handle_global_indices(const Child& child, MultiDomainGFSTag tag)
-    {
-      pos += child.dataHandleGlobalIndices(e,g,pos,false);
-    }
-
-    template<typename Child>
-    void data_handle_global_indices(const Child& child, CouplingGFSTag tag)
-    {
-      pos += child.dataHandleGlobalIndices(e,g,pos,false);
-    }
-
-    template<typename Child>
-    void data_handle_global_indices(const Child& child, SubDomainGFSTag tag)
-    {
-      typedef typename Child::Traits::GridViewType::template Codim<Entity::codimension>::EntityPointer SDEP;
-      typedef typename SDEP::Entity SDE;
-      const SDEP ep = child.gridView().grid().subDomainEntityPointer(e);
-      if (child.gridView().indexSet().contains(*ep))
-        pos += child.dataHandleGlobalIndices(*ep,g,pos,false);
-    }
-
-    DataHandleGlobalIndices(const Entity& entity, Container& global)
-      : BaseT(entity,global)
-    {
-    }
-
-  };
-
-}
 
 template<typename G, typename B, typename M, bool supportMapAccess, int k>
 struct MultiDomainGridFunctionSpaceTraits
@@ -221,6 +126,7 @@ class MultiDomainGridFunctionSpace
                                                LexicographicOrderingTag,
                                                sizeof...(Children)
                                                >
+  , public DataHandleProvider<MultiDomainGridFunctionSpace<G,Backend,Children...> >
 {
 
   typedef TypeTree::VariadicCompositeNode<Children...> BaseT;
@@ -361,24 +267,6 @@ public:
     TypeTree::applyToTree(*this,VerifyChildren());
   }
 
-
-  template<typename EntityType>
-  size_t dataHandleSize (const EntityType& e) const
-  {
-    DataHandleSize<EntityType> visitor(e);
-    TypeTree::applyToTree(*this,visitor);
-    return visitor.size;
-  }
-
-  //! return vector of global indices associated with the given entity
-  template<typename EntityType, typename SizeType>
-  void dataHandleGlobalIndices (const EntityType& e,
-                                std::vector<SizeType>& global) const
-  {
-    global.resize(dataHandleSize(e));
-    DataHandleGlobalIndices<EntityType,std::vector<SizeType>,TypeTree::TreeInfo<MultiDomainGridFunctionSpace>::depth> visitor(e,global);
-    TypeTree::applyToTree(*this,visitor);
-  }
 
   //------------------------------
 

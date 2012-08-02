@@ -316,6 +316,7 @@ class ConstraintsAssemblerEngine
 
   typedef Dune::PDELab::TypeTree::VariadicCompositeNode<ConstraintsDescriptors...> NodeT;
   typedef typename CA::Traits::ConstraintsContainer CG;
+  typedef typename CG::LocalTransformation CL;
 
 public:
 
@@ -394,6 +395,7 @@ public:
   template<typename EG>
   void onBindLFSV(const EG& eg, const LFSV_Cache& lfsv_s_cache)
   {
+    _cl_s.clear();
     applyVisitor(visitor<functors::rebind_subproblem_lfs_s>::add_data());
   }
 
@@ -402,7 +404,22 @@ public:
                          const LFSV_Cache& lfsv_s_cache,
                          const LFSV_Cache& lfsv_n_cache)
   {
+    _cl_n.clear();
     applyVisitor(visitor<functors::rebind_subproblem_lfs_n>::add_data());
+  }
+
+  template<typename EG>
+  void onUnbindLFSV(const EG& eg, const LFSV_Cache& lfsv_s_cache)
+  {
+    _cg->import_local_transformation(_cl_s,lfsv_s_cache);
+  }
+
+  template<typename IG>
+  void onUnbindLFSVOutside(const IG& ig,
+			   const LFSV_Cache& lfsv_s_cache,
+			   const LFSV_Cache& lfsv_n_cache)
+  {
+    _cg->import_local_transformation(_cl_n,lfsv_n_cache);
   }
 
 
@@ -410,7 +427,7 @@ public:
   void assembleVVolume(const EG& eg, const LFSV_Cache& lfsv_s_cache)
   {
     typedef visitor<functors::volume_constraints,do_constraints_volume<> > Visitor;
-    applyVisitor(Visitor::add_data(wrap_eg(eg),wrap_lfsv_s_cache(lfsv_s_cache),wrap_cg(*cg)));
+    applyVisitor(Visitor::add_data(wrap_eg(eg),wrap_lfsv_s_cache(lfsv_s_cache),wrap_cl_s(_cl_s)));
   }
 
   template<typename IG>
@@ -419,27 +436,31 @@ public:
                          const LFSV_Cache& lfsv_n_cache)
   {
     typedef visitor<functors::skeleton_or_boundary_constraints,do_constraints_skeleton_or_boundary<> > Visitor;
-    applyVisitor(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s_cache(lfsv_s_cache),wrap_lfsv_n_cache(lfsv_n_cache),wrap_cg(*cg)));
+    applyVisitor(Visitor::add_data(wrap_ig(ig),
+				   wrap_lfsv_s_cache(lfsv_s_cache),
+				   wrap_lfsv_n_cache(lfsv_n_cache),
+				   wrap_cl_s(_cl_s),
+				   wrap_cl_n(_cl_n)));
   }
 
   template<typename IG>
   void assembleVBoundary(const IG& ig, const LFSV_Cache& lfsv_s_cache)
   {
     typedef visitor<functors::boundary_constraints,do_constraints_boundary<> > Visitor;
-    applyVisitor(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s_cache(lfsv_s_cache),wrap_cg(*cg)));
+    applyVisitor(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s_cache(lfsv_s_cache),wrap_cl_s(_cl_s)));
   }
 
   template<typename IG>
   void assembleVProcessor(const IG& ig, const LFSV_Cache& lfsv_s_cache)
   {
     typedef visitor<functors::processor_constraints,do_constraints_processor<> > Visitor;
-    applyVisitor(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s_cache(lfsv_s_cache),wrap_cg(*cg)));
+    applyVisitor(Visitor::add_data(wrap_ig(ig),wrap_lfsv_s_cache(lfsv_s_cache),wrap_cl_s(_cl_s)));
   }
 
 
-  void setConstraintsContainer(CG& cg_)
+  void setConstraintsContainer(CG& cg)
   {
-    cg = &cg_;
+    _cg = &cg;
   }
 
   ConstraintsAssemblerEngine(shared_ptr<ConstraintsDescriptors>... constraintsSpecifications)
@@ -464,7 +485,9 @@ private:
     Dune::PDELab::TypeTree::applyToTree(*this,visitor);
   }
 
-  CG* cg;
+  CG* _cg;
+  CL _cl_s;
+  CL _cl_n;
   EmptyTransformation _empty_constraints;
 
 };

@@ -50,12 +50,12 @@ namespace functors {
     {
       if (!descriptor.appliesTo(data().eg()))
         return;
-      typedef VolumeConstraints<typename Data::EG,typename Data::CG> Visitor;
+      typedef VolumeConstraints<typename Data::EG,typename Data::CL_S> Visitor;
       Dune::PDELab::TypeTree::applyToTree(
         descriptor.lfs_s(),
         Visitor(
           data().eg(),
-          data().cg()
+          data().cl_s()
         )
       );
     }
@@ -78,25 +78,26 @@ namespace functors {
         {
           if (!data().ig().oneSidedDirection())  // Constraints are always applied one-sided
             return;
-          typedef SkeletonConstraints<typename Data::IG,typename Data::CG> Visitor;
+          typedef SkeletonConstraints<typename Data::IG,typename Data::CL_S> Visitor;
           Dune::PDELab::TypeTree::applyToTreePair(
             descriptor.lfs_s(),
             descriptor.lfs_n(),
             Visitor(
               data().ig(),
-              data().cg()
+              data().cl_s(),
+              data().cl_n()
             )
           );
         }
       else
         {
-          typedef BoundaryConstraints<typename Data::IG, typename Data::CG> Visitor;
+          typedef BoundaryConstraints<typename Data::IG, typename Data::CL_S> Visitor;
           Dune::PDELab::TypeTree::applyToTreePair(
             descriptor.parameters(),
             descriptor.lfs_s(),
             Visitor(
               data().ig(),
-              data().cg()
+              data().cl_s()
             )
           );
         }
@@ -116,13 +117,13 @@ namespace functors {
     {
       if (!descriptor.appliesTo(data().ig().insideElement()))
           return;
-      typedef BoundaryConstraints<typename Data::IG,typename Data::CG> Visitor;
+      typedef BoundaryConstraints<typename Data::IG,typename Data::CL_S> Visitor;
       Dune::PDELab::TypeTree::applyToTreePair(
         descriptor.parameters(),
         descriptor.lfs_s(),
         Visitor(
           data().ig(),
-          data().cg()
+          data().cl_s()
         )
       );
     }
@@ -141,12 +142,12 @@ namespace functors {
     {
       if (!descriptor.appliesTo(data().ig().insideElement()))
         return;
-      typedef ProcessorConstraints<typename Data::IG, typename Data::CG> Visitor;
+      typedef ProcessorConstraints<typename Data::IG, typename Data::CL_S> Visitor;
       Dune::PDELab::TypeTree::applyToTree(
         descriptor.lfs_s(),
         Visitor(
           data().ig(),
-          data().cg()
+          data().cl_s()
         )
       );
     }

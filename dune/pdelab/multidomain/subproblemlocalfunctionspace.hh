@@ -42,7 +42,7 @@ namespace {
   };
 
 
-  template<typename Container, typename MultiIndexContainer>
+  template<typename Container>
   struct FillIndices
     : public Dune::PDELab::TypeTree::DirectChildrenVisitor
     , public Dune::PDELab::TypeTree::DynamicTraversal
@@ -52,32 +52,24 @@ namespace {
     void afterChild(SPLFS& splfs, const ChildLFS& childLFS, TreePath treePath, ChildIndex childIndex)
     {
       for(std::size_t i = 0; i < childLFS.size(); ++i, ++offset)
-        {
-          global_container[offset] = childLFS.globalIndex(i);
-          local_container[offset] = childLFS.localIndex(i);
-          multi_index_container[offset] = childLFS.multiIndex(i);
-        }
+        local_container[offset] = childLFS.localIndex(i);
     }
 
-    FillIndices(Container& global_container_, Container& local_container_, MultiIndexContainer& multi_index_container_)
+    FillIndices(Container& local_container_)
       : offset(0)
-      , global_container(global_container_)
       , local_container(local_container_)
-      , multi_index_container(multi_index_container_)
     {}
 
     std::size_t offset;
-    Container& global_container;
     Container& local_container;
-    MultiIndexContainer& multi_index_container;
 
   };
 
 } // anonymous namespace
 
-template<typename GFS, typename N, typename BaseLFS, typename MI, typename SubProblem_>
+template<typename GFS, typename N, typename BaseLFS, typename SubProblem_>
 struct SubProblemLocalFunctionSpaceTraits
-  : public LocalFunctionSpaceBaseTraits<GFS,MI>
+  : public LocalFunctionSpaceBaseTraits<GFS,typename GFS::Ordering::Traits::DOFIndex>
 {
 
   //! type of local function space node
@@ -99,11 +91,13 @@ struct SubProblemLocalFunctionSpaceTraits
 
 template<typename GFS, typename N, typename BaseLFS, typename SubProblem_>
 struct SubProblemLeafLocalFunctionSpaceTraits
-  : public SubProblemLocalFunctionSpaceTraits<GFS,N,BaseLFS,typename BaseLFS::Traits::DOFIndex,SubProblem_>
+  : public SubProblemLocalFunctionSpaceTraits<GFS,N,BaseLFS,SubProblem_>
 {
 
   //! \brief finite element
-  typedef typename BaseLFS::Traits::FiniteElementType FiniteElementType;
+  typedef typename BaseLFS::Traits::FiniteElement FiniteElementType;
+
+  typedef typename BaseLFS::Traits::FiniteElement FiniteElement;
 
   typedef typename BaseLFS::Traits::ConstraintsType ConstraintsType;
 
@@ -148,7 +142,7 @@ namespace {
 template<typename MDLFS, typename SubProblem, std::size_t... ChildIndices>
 class SubProblemLocalFunctionSpace
   : public Dune::PDELab::TypeTree::FilteredCompositeNode<const MDLFS,Dune::PDELab::TypeTree::IndexFilter<ChildIndices...> >
-  , public Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType,typename MDLFS::Traits::MultiIndex>
+  , public Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType,typename MDLFS::Traits::GridFunctionSpace::Ordering::Traits::DOFIndex>
 {
 
   dune_static_assert((sizeof...(ChildIndices) <= MDLFS::CHILDREN),
@@ -158,24 +152,23 @@ class SubProblemLocalFunctionSpace
                      "All child indices have to be distinct");
 
   typedef Dune::PDELab::TypeTree::FilteredCompositeNode<const MDLFS,Dune::PDELab::TypeTree::IndexFilter<ChildIndices...> > NodeT;
-  typedef Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType, typename MDLFS::Traits::MultiIndex> BaseT;
+  typedef Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType, typename MDLFS::Traits::GridFunctionSpace::Ordering::Traits::DOFIndex> BaseT;
 
   typedef typename MDLFS::Traits::GridFunctionSpaceType GFS;
 
   // friend declarations for bind() visitors
   friend struct AccumulateSize;
 
-  template<typename,typename>
+  template<typename>
   friend struct FillIndices;
 
-  typedef typename GFS::Traits::BackendType B;
+  typedef typename GFS::Traits::Backend B;
   typedef typename GFS::Traits::GridType::Traits::template Codim<0>::Entity Element;
 
 public:
   typedef SubProblemLocalFunctionSpaceTraits<GFS,
                                              SubProblemLocalFunctionSpace,
                                              void, // we are not directly based on a node in the original tree
-                                             typename MDLFS::Traits::MultiIndex,
                                              SubProblem> Traits;
 
 public:
@@ -202,11 +195,19 @@ public:
     return mdlfs().localVectorSize();
   }
 
-  //! This method does not work for SubProblemLocalFunctionSpace.
-  template<typename T>
-  typename Traits::IndexContainer::size_type localIndex (T index) const
+  typename Traits::IndexContainer::size_type maxSize() const
   {
-    return local_storage[index];
+    return mdlfs().maxSize();
+  }
+
+  typename Traits::IndexContainer::size_type localIndex (typename Traits::IndexContainer::size_type index) const
+  {
+    return _local_storage[index];
+  }
+
+  typename Traits::DOFIndex& dofIndex(typename Traits::IndexContainer::size_type index) const
+  {
+    return mdlfs().dofIndex(localIndex(index));
   }
 
   //! \brief bind local function space to entity
@@ -217,9 +218,8 @@ public:
     AccumulateSize accumulateSize;
     Dune::PDELab::TypeTree::applyToTree(*this,accumulateSize);
     n = accumulateSize.size;
-    global_storage.resize(n);
-    local_storage.resize(n);
-    Dune::PDELab::TypeTree::applyToTree(*this,FillIndices<typename Traits::IndexContainer, typename Traits::MultiIndexContainer>(global_storage,local_storage,_multi_index_storage));
+    _local_storage.resize(n);
+    Dune::PDELab::TypeTree::applyToTree(*this,FillIndices<typename Traits::IndexContainer>(_local_storage));
   }
 
   const SubProblem& subProblem() const {
@@ -234,13 +234,10 @@ public:
 private:
 
   using BaseT::offset;
-  using BaseT::global;
-  using BaseT::global_storage;
-  using BaseT::_multi_index_storage;
   using BaseT::n;
   using NodeT::unfiltered;
 
-  typename Traits::IndexContainer local_storage;
+  typename Traits::IndexContainer _local_storage;
 
   const MDLFS mdlfs() const
   {
@@ -363,7 +360,6 @@ class SubProblemLocalFunctionSpaceBase
                                                typename MDLFS::Traits::GridFunctionSpace,
                                                LFS,
                                                BaseLFS,
-                                               typename BaseLFS::Traits::DOFIndex,
                                                SubProblem
                                                >
                                              >
@@ -373,7 +369,6 @@ class SubProblemLocalFunctionSpaceBase
                                               typename MDLFS::Traits::GridFunctionSpace,
                                               LFS,
                                               BaseLFS,
-                                              typename BaseLFS::Traits::DOFIndex,
                                               SubProblem
                                               >
                                             > BaseT;

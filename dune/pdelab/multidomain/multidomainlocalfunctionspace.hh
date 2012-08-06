@@ -457,8 +457,15 @@ class CouplingLocalFunctionSpace
 {
   typedef typename Dune::PDELab::TypeTree::TransformTree<GFS,gfs_to_coupling_lfs<GFS> >::Type BaseT;
 
+  CouplingLocalFunctionSpace(const CouplingLocalFunctionSpace&);
+
 public:
-  CouplingLocalFunctionSpace(const GFS & gfs) : BaseT(TypeTree::TransformTree<GFS,gfs_to_coupling_lfs<GFS> >::transform(gfs)) { this->setup(*this); }
+  explicit CouplingLocalFunctionSpace(const GFS & gfs)
+    : BaseT(TypeTree::TransformTree<GFS,gfs_to_coupling_lfs<GFS> >::transform(gfs))
+  {
+    this->_dof_indices = &this->_dof_index_storage;
+    this->setup(*this);
+  }
 };
 
     //! \} group GridFunctionSpace

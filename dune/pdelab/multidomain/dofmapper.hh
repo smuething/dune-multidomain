@@ -39,7 +39,7 @@ public:
       {
         Coordinate c = (inside_ ? intersection_.geometryInInside() : intersection_.geometryInOutside()).corner(i);
         const VertexList& vl = vertexList(element().type());
-        typename VertexList::const_iterator it = std::find_if(vl.begin(),vl.end(),[c](Coordinate rc) { rc -= c; return rc.two_norm() < 1e-10;}); // TODO: don't use lambda expression!
+        typename VertexList::const_iterator it = std::find_if(vl.begin(),vl.end(),[c](Coordinate rc) -> typename GV::ctype { rc -= c; return rc.two_norm() < 1e-10;}); // TODO: don't use lambda expression!
         assert(it != vl.end());
         return it - vl.begin();
       }

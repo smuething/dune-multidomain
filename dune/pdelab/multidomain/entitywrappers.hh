@@ -45,13 +45,13 @@ class SkeletonIntersectionWrapper
 {
 
   typedef IntersectionGeometry<typename GV::Intersection> BaseT;
-  typedef typename GV::template Codim<0>::EntityPointer EntityPointer;
 
 public:
 
   typedef typename GV::Intersection Intersection;
   typedef ElementWrapper<GV> EntityWrapper;
   typedef EntityWrapper Element;
+  typedef typename GV::template Codim<0>::EntityPointer EntityPointer;
 
   SkeletonIntersectionWrapper(const Intersection& intersection,
                               std::size_t intersectionIndex,

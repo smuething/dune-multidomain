@@ -217,8 +217,12 @@ namespace Dune {
     template<typename LocalOrdering>
     class LeafIntersectionGridViewOrdering
       : public TypeTree::VariadicCompositeNode<LocalOrdering>
-      , public VirtualOrderingBase<typename LocalOrdering::Traits::DOFIndex,typename LocalOrdering::Traits::ContainerIndex>
-      , public OrderingBase<typename LocalOrdering::Traits::DOFIndex,typename LocalOrdering::Traits::ContainerIndex>
+      , public VirtualOrderingBase<typename LocalOrdering::Traits::DOFIndex,
+                                   typename LocalOrdering::Traits::GlobalDOFIndex,
+                                   typename LocalOrdering::Traits::ContainerIndex>
+      , public OrderingBase<typename LocalOrdering::Traits::DOFIndex,
+                            typename LocalOrdering::Traits::GlobalDOFIndex,
+                            typename LocalOrdering::Traits::ContainerIndex>
     {
     public:
       typedef typename LocalOrdering::Traits Traits;
@@ -233,7 +237,11 @@ namespace Dune {
 
       typedef TypeTree::VariadicCompositeNode<LocalOrdering> NodeT;
 
-      typedef OrderingBase<typename LocalOrdering::Traits::DOFIndex,typename LocalOrdering::Traits::ContainerIndex> BaseT;
+      typedef OrderingBase<
+        typename LocalOrdering::Traits::DOFIndex,
+        typename LocalOrdering::Traits::GlobalDOFIndex,
+        typename LocalOrdering::Traits::ContainerIndex
+        > BaseT;
 
     public:
 

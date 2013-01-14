@@ -89,16 +89,24 @@ namespace Dune {
       };
 
 
-      template<typename Entity, typename Traits>
+      template<typename Entity, typename Traits, bool map_dof_indices>
       struct indices_for_entity
         : public TypeTree::DirectChildrenVisitor
         , public TypeTree::StaticTraversal
       {
 
-        typedef typename Traits::DOFIndex::EntityIndex EntityIndex;
+        typedef typename Traits::DOFIndex DOFIndex;
+        typedef typename DOFIndex::EntityIndex EntityIndex;
         typedef typename Traits::ContainerIndex ContainerIndex;
 
         typedef std::size_t size_type;
+
+        typedef typename std::vector<ContainerIndex>::iterator CIIterator;
+        typedef typename std::conditional<
+          map_dof_indices,
+          typename std::vector<DOFIndex>::iterator,
+          DummyDOFIndexIterator
+          >::type DIIterator;
 
         template<typename GFS, typename Child, typename TreePath, typename ChildIndex>
         void beforeChild(const GFS& gfs, const Child& child, TreePath tp, ChildIndex childIndex)
@@ -112,24 +120,28 @@ namespace Dune {
         void collect_indices(const GFS& gfs, const Ordering& ordering, MultiDomainGFSTag tag)
         {
           Dune::PDELab::indices_for_entity<
-            EntityIndex,
+            DOFIndex,
             ContainerIndex,
-            TypeTree::TreeInfo<Ordering>::depth
-            > extract_indices(_entity_index,_indices,_it);
+            TypeTree::TreeInfo<Ordering>::depth,
+            map_dof_indices
+            > extract_indices(_entity_index,_ci_it,_di_it);
           TypeTree::applyToTree(ordering,extract_indices);
-          _end = extract_indices.end();
+          _ci_end = extract_indices.ci_end();
+          _di_end = extract_indices.di_end();
         }
 
         template<typename GFS, typename Ordering>
         void collect_indices(const GFS& gfs, const Ordering& ordering, CouplingGFSTag tag)
         {
           Dune::PDELab::indices_for_entity<
-            EntityIndex,
+            DOFIndex,
             ContainerIndex,
-            TypeTree::TreeInfo<Ordering>::depth
-            > extract_indices(_entity_index,_indices,_it);
+            TypeTree::TreeInfo<Ordering>::depth,
+            map_dof_indices
+            > extract_indices(_entity_index,_ci_it,_di_it);
           TypeTree::applyToTree(ordering,extract_indices);
-          _end = extract_indices.end();
+          _ci_end = extract_indices.ci_end();
+          _di_end = extract_indices.di_end();
         }
 
         template<typename GFS, typename Ordering>
@@ -149,43 +161,56 @@ namespace Dune {
           );
 
           Dune::PDELab::indices_for_entity<
-            EntityIndex,
+            DOFIndex,
             ContainerIndex,
-            TypeTree::TreeInfo<Ordering>::depth
-            > extract_indices(ei,_indices,_it);
+            TypeTree::TreeInfo<Ordering>::depth,
+            map_dof_indices
+            > extract_indices(ei,_ci_it,_di_it);
           TypeTree::applyToTree(ordering,extract_indices);
-          _end = extract_indices.end();
+          _ci_end = extract_indices.ci_end();
+          _di_end = extract_indices.di_end();
         }
 
-        template<typename Ordering, typename Child, typename TreePath, typename ChildIndex>
-        void afterChild(const Ordering& ordering, const Child& child, TreePath tp, ChildIndex childIndex)
+        template<typename GFS, typename Child, typename TreePath, typename ChildIndex>
+        void afterChild(const GFS& gfs, const Child& child, TreePath tp, ChildIndex childIndex)
         {
-          ordering.containerIndices(_entity_index,
-                                    childIndex,
-                                    _it,
-                                    _end);
-          _it = _end;
+          gfs.ordering().extract_entity_indices(_entity_index,
+                                                childIndex,
+                                                _ci_it,
+                                                _ci_end);
+
+          if (GFS::Ordering::consume_tree_index)
+            for (DIIterator it = _di_it;
+                 it != _di_end;
+                 ++it)
+              it->treeIndex().push_back(childIndex);
+
+          _ci_it = _ci_end;
+          _di_it = _di_end;
+
         }
 
 
-        indices_for_entity(const Entity& _entity,
+        indices_for_entity(const Entity& entity,
                            const EntityIndex& entity_index,
-                           std::vector<ContainerIndex>& indices)
-          : _entity_index(entity_index)
-          , _indices(indices)
-          , _it(indices.begin())
-          , _end(indices.begin())
+                           CIIterator ci_begin,
+                           DIIterator di_begin = DIIterator())
+          : _entity(entity)
+          , _entity_index(entity_index)
+          , _ci_it(ci_begin)
+          , _ci_end(ci_begin)
+          , _di_it(di_begin)
+          , _di_end(di_begin)
         {}
 
       private:
 
-        typedef typename std::vector<ContainerIndex>::iterator Iterator;
-
         const Entity& _entity;
         const EntityIndex& _entity_index;
-        std::vector<ContainerIndex>& _indices;
-        Iterator _it;
-        Iterator _end;
+        CIIterator _ci_it;
+        CIIterator _ci_end;
+        DIIterator _di_it;
+        DIIterator _di_end;
 
       };
 
@@ -194,27 +219,22 @@ namespace Dune {
 
     template<typename GFS>
     class DataHandleProvider
+      : public Dune::PDELab::DataHandleProvider<GFS>
     {
 
     public:
 
-      typedef std::size_t size_type;
+      typedef typename Dune::PDELab::DataHandleProvider<GFS>::size_type size_type;
+
+    private:
+
+      using Dune::PDELab::DataHandleProvider<GFS>::gfs;
+
+    public:
 
       //------------------------------
       // generic data handle interface
       //------------------------------
-
-      //! returns true if data for this codim should be communicated
-      bool dataHandleContains (int dim, int codim) const
-      {
-        return gfs().ordering().contains(codim);
-      }
-
-      //! returns true if size per entity of given dim and codim is a constant
-      bool dataHandleFixedSize (int dim, int codim) const
-      {
-        return gfs().ordering().fixedSize(codim);
-      }
 
       /*! how many objects of type DataType have to be sent for a given entity
 
@@ -241,9 +261,11 @@ namespace Dune {
       }
 
       //! return vector of global indices associated with the given entity
-      template<typename Entity, typename ContainerIndex>
-      size_type dataHandleContainerIndices (const Entity& e,
-                                            std::vector<ContainerIndex>& indices) const
+      template<typename Entity, typename ContainerIndex, typename DOFIndex, bool map_dof_indices>
+      size_type dataHandleIndices (const Entity& e,
+                                   std::vector<ContainerIndex>& container_indices,
+                                   std::vector<DOFIndex>& dof_indices,
+                                   std::integral_constant<bool,map_dof_indices> map_dof_indices_value) const
       {
         typedef typename GFS::Ordering Ordering;
 
@@ -251,8 +273,8 @@ namespace Dune {
                            "dataHandleContainerIndices() called with invalid ContainerIndex type.");
 
         // Clear index state
-        for (typename std::vector<ContainerIndex>::iterator it = indices.begin(),
-               endit = indices.end();
+        for (typename std::vector<ContainerIndex>::iterator it = container_indices.begin(),
+               endit = container_indices.end();
              it != endit;
              ++it)
           it->clear();
@@ -269,22 +291,18 @@ namespace Dune {
         get_size_for_entity<Entity,typename Ordering::Traits> get_size(e,ei);
         TypeTree::applyToTree(gfs(),get_size);
 
-        indices.resize(get_size.size());
+        container_indices.resize(get_size.size());
+
+        this->setup_dof_indices(dof_indices,get_size.size(),ei,map_dof_indices_value);
 
         indices_for_entity<
           Entity,
-          typename Ordering::Traits
-          > extract_indices(e,ei,indices);
+          typename Ordering::Traits,
+          map_dof_indices
+          > extract_indices(e,ei,container_indices.begin(),this->dof_indices_begin(dof_indices,map_dof_indices_value));
         TypeTree::applyToTree(gfs(),extract_indices);
 
         return get_size.size();
-      }
-
-    private:
-
-      const GFS& gfs() const
-      {
-        return static_cast<const GFS&>(*this);
       }
 
     };

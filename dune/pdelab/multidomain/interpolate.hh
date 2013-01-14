@@ -44,7 +44,7 @@ void do_interpolate(const GFS& gfs, LFS& lfs, XG& xg, SubProblems&&... subProble
   const typename GV::IndexSet& is=gfs.gridView().indexSet();
 
   // caching
-  typedef LFSContainerIndexCache<LFS> LFSCache;
+  typedef LFSIndexCache<LFS> LFSCache;
   LFSCache lfs_cache(lfs);
   typedef typename XG::template LocalView<LFSCache> XView;
 

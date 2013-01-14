@@ -155,26 +155,26 @@ struct LocalAssemblerTraits
 
     typedef typename std::conditional<
       Policy::cache_trial_constraints,
-      LFSContainerIndexCache<LFSU,typename LocalAssemblerTraits::TrialGridFunctionSpaceConstraints>,
-      LFSContainerIndexCache<LFSU,EmptyTransformation>
+      LFSIndexCache<LFSU,typename LocalAssemblerTraits::TrialGridFunctionSpaceConstraints>,
+      LFSIndexCache<LFSU,EmptyTransformation>
       >::type LFSU_Cache;
 
     typedef typename std::conditional<
       Policy::cache_test_constraints,
-      LFSContainerIndexCache<LFSV,typename LocalAssemblerTraits::TestGridFunctionSpaceConstraints>,
-      LFSContainerIndexCache<LFSV,EmptyTransformation>
+      LFSIndexCache<LFSV,typename LocalAssemblerTraits::TestGridFunctionSpaceConstraints>,
+      LFSIndexCache<LFSV,EmptyTransformation>
       >::type LFSV_Cache;
 
     typedef typename std::conditional<
       Policy::cache_coupling_trial_constraints,
-      LFSContainerIndexCache<LFSU_C,typename LocalAssemblerTraits::TrialGridFunctionSpaceConstraints>,
-      LFSContainerIndexCache<LFSU_C,EmptyTransformation>
+      LFSIndexCache<LFSU_C,typename LocalAssemblerTraits::TrialGridFunctionSpaceConstraints>,
+      LFSIndexCache<LFSU_C,EmptyTransformation>
       >::type LFSU_C_Cache;
 
     typedef typename std::conditional<
       Policy::cache_coupling_test_constraints,
-      LFSContainerIndexCache<LFSV_C,typename LocalAssemblerTraits::TestGridFunctionSpaceConstraints>,
-      LFSContainerIndexCache<LFSV_C,EmptyTransformation>
+      LFSIndexCache<LFSV_C,typename LocalAssemblerTraits::TestGridFunctionSpaceConstraints>,
+      LFSIndexCache<LFSV_C,EmptyTransformation>
       >::type LFSV_C_Cache;
 
   };

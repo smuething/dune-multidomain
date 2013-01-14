@@ -338,11 +338,11 @@ public:
       typedef CouplingLocalFunctionSpace<GFS> LFSU_C;
       typedef LFSU_C LFSV_C;
 
-      typedef LFSContainerIndexCache<LFSU,EmptyTransformation> LFSU_Cache;
+      typedef LFSIndexCache<LFSU,EmptyTransformation> LFSU_Cache;
       typedef LFSU_Cache LFSV_Cache;
       //typedef LFSContainerIndexCache<LFSV,CG> LFSV_Cache;
 
-      typedef LFSContainerIndexCache<LFSU_C,EmptyTransformation> LFSU_C_Cache;
+      typedef LFSIndexCache<LFSU_C,EmptyTransformation> LFSU_C_Cache;
       typedef LFSU_C_Cache LFSV_C_Cache;
       //typedef LFSContainerIndexCache<LFSV_C,CG> LFSV_C_Cache;
 

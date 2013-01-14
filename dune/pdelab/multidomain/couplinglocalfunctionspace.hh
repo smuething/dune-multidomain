@@ -54,18 +54,6 @@ class PowerCouplingLocalFunctionSpaceNode
   typedef LocalFunctionSpaceBaseNode<GFS,DI> BaseT;
   typedef TypeTree::PowerNode<ChildLFS,k> TreeNode;
 
-  template<typename>
-  friend struct Dune::PDELab::PropagateGlobalStorageVisitor;
-
-  template<typename>
-  friend struct Dune::PDELab::ClearSizeVisitor;
-
-  template<typename>
-  friend struct Dune::PDELab::ComputeSizeVisitor;
-
-  template<typename>
-  friend struct Dune::PDELab::FillIndicesVisitor;
-
 public:
   typedef CouplingLocalFunctionSpaceTraits<GFS,DI> Traits;
 
@@ -146,18 +134,6 @@ class CouplingLocalFunctionSpaceNode
   typedef typename GFS::Traits::BackendType B;
 
   typedef LocalFunctionSpaceBaseNode<GFS,DI> BaseT;
-
-  template<typename>
-  friend struct Dune::PDELab::PropagateGlobalStorageVisitor;
-
-  template<typename>
-  friend struct Dune::PDELab::ClearSizeVisitor;
-
-  template<typename>
-  friend struct Dune::PDELab::ComputeSizeVisitor;
-
-  template<typename>
-  friend struct Dune::PDELab::FillIndicesVisitor;
 
   using BaseT::n;
 

@@ -37,7 +37,7 @@ namespace MultiDomain {
    */
   template<typename GFS, typename X, typename Pred>
   class DGFTreeCommonData
-    : public Dune::PDELab::DGFTreeCommonData<GFS,X,Pred>
+    : public Dune::PDELab::vtk::DGFTreeCommonData<GFS,X,Pred>
   {
 
     template<typename LFS, typename Data>
@@ -59,10 +59,10 @@ namespace MultiDomain {
     typedef Pred Predicate;
 
     DGFTreeCommonData(const GFS& gfs, const X& x)
-      : Dune::PDELab::DGFTreeCommonData<GFS,X,Pred>(gfs,x)
+      : Dune::PDELab::vtk::DGFTreeCommonData<GFS,X,Pred>(gfs,x)
     {}
 
-    using Dune::PDELab::DGFTreeCommonData<GFS,X,Pred>::bind;
+    using Dune::PDELab::vtk::DGFTreeCommonData<GFS,X,Pred>::bind;
 
     void bind(const SubDomainCell& cell)
     {
@@ -74,21 +74,21 @@ namespace MultiDomain {
   template<typename VTKWriter,
            typename GFS,
            typename X,
-           typename NameGenerator = DefaultVTKFunctionNameGenerator,
-           typename Predicate = Dune::PDELab::default_predicate>
-  vtk_output_collector<
+           typename NameGenerator = vtk::DefaultFunctionNameGenerator,
+           typename Predicate = vtk::DefaultPredicate>
+  vtk::OutputCollector<
     VTKWriter,
     DGFTreeCommonData<GFS,X,Predicate>
     >
-  add_solution_to_vtk_writer(VTKWriter& vtk_writer,
-                             const GFS& gfs,
-                             const X& x,
-                             const Predicate& predicate = Predicate(),
-                             const NameGenerator& name_generator = default_vtk_name_scheme())
+  addSolutionToVTKWriter(VTKWriter& vtk_writer,
+                         const GFS& gfs,
+                         const X& x,
+                         const Predicate& predicate = Predicate(),
+                         const NameGenerator& name_generator = vtk::defaultNameScheme())
   {
     typedef DGFTreeCommonData<GFS,X,Predicate> Data;
-    vtk_output_collector<VTKWriter,Data> collector(vtk_writer,make_shared<Data>(gfs,x),predicate);
-    collector.add_solution(name_generator);
+    vtk::OutputCollector<VTKWriter,Data> collector(vtk_writer,make_shared<Data>(gfs,x),predicate);
+    collector.addSolution(name_generator);
     return std::move(collector);
   }
 

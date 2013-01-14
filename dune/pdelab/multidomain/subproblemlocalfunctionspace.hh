@@ -475,6 +475,8 @@ public:
   {
   }
 
+  using NodeT::proxiedNode;
+
 };
 
 

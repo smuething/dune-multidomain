@@ -23,6 +23,7 @@
 #include <dune/pdelab/multidomain/coupling.hh>
 #include <dune/pdelab/stationary/linearproblem.hh>
 #include <dune/pdelab/instationary/onestep.hh>
+#include <dune/pdelab/multidomain/vtk.hh>
 
 #include<typeinfo>
 
@@ -115,6 +116,7 @@ INSTATIONARY_ANALYTIC_FUNCTION(J,x,y)
       y = -5.0;
       return;
     }
+  std::cout << x << std::endl;
   assert(false);
 }
 END_INSTATIONARY_ANALYTIC_FUNCTION
@@ -180,21 +182,18 @@ int main(int argc, char** argv) {
     FEM1 fem1;
     typedef Dune::PDELab::NoConstraints NOCON;
     typedef Dune::PDELab::ConformingDirichletConstraints CON;
-    typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
+    typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
     CON con;
 
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,CON,
-      Dune::PDELab::ISTLVectorBackend<1> > GFS0;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,CON,VBE> GFS0;
 
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,CON,
-      Dune::PDELab::ISTLVectorBackend<1> > GFS1;
-
-    typedef GFS0::ConstraintsContainer<R>::Type C;
-    C cg;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,CON,VBE> GFS1;
 
     GFS0 gfs0(sdgv0,fem0,con);
     GFS1 gfs1(sdgv1,fem1,con);
+    gfs0.name("u");
+    gfs1.name("u");
 
     typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,VBE,GFS0,GFS1> MultiGFS;
 
@@ -202,6 +201,9 @@ int main(int argc, char** argv) {
 
     std::cout << "function space setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
+
+    typedef MultiGFS::ConstraintsContainer<R>::Type C;
+    C cg;
 
     typedef DirichletBoundary BType;
     BType b;
@@ -255,7 +257,7 @@ int main(int argc, char** argv) {
     std::cout << "constraints evaluation: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
-    typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
+    typedef Dune::PDELab::ISTLMatrixBackend MBE;
 
     typedef Dune::PDELab::MultiDomain::GridOperator<
       MultiGFS,MultiGFS,
@@ -297,11 +299,6 @@ int main(int argc, char** argv) {
 
     GridOperator gridoperator(go_dt_0,go_dt_1);
 
-    typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,GFS0> SGFS0;
-    typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,GFS1> SGFS1;
-    SGFS0 sgfs0(multigfs);
-    SGFS1 sgfs1(multigfs);
-
     std::cout << "operator space setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
@@ -324,22 +321,31 @@ int main(int argc, char** argv) {
     Dune::PDELab::FilenameHelper fn_right("testinstationarypoisson_right");
 
     {
-      typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> DGF;
-      DGF dgf(sgfs0,uold);
-      Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTKOptions::conforming);
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
-      vtkwriter.write(fn_left.getName(),Dune::VTKOptions::ascii);
+      Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTK::conforming);
+      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+        vtkwriter,
+        multigfs,
+        uold,
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv0.grid().domain())
+      );
+
+      vtkwriter.write(fn_left.getName(),Dune::VTK::ascii);
       fn_left.increment();
     }
 
     {
-      typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> DGF;
-      DGF dgf(sgfs1,uold);
       Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv1,2);
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
-      vtkwriter.write(fn_right.getName(),Dune::VTKOptions::ascii);
+      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+        vtkwriter,
+        multigfs,
+        uold,
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv1.grid().domain())
+      );
+
+      vtkwriter.write(fn_right.getName(),Dune::VTK::ascii);
       fn_right.increment();
     }
+
 
     // <<<9>>> time loop
     R time = 0;
@@ -359,29 +365,41 @@ int main(int argc, char** argv) {
       osm.apply(time,dt,uold,f_,unew);                           // do one time step
 
       // graphics
+
       {
-        typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> DGF;
-        DGF dgf(sgfs0,unew);
-        Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTKOptions::conforming);
-        vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
-        vtkwriter.write(fn_left.getName(),Dune::VTKOptions::ascii);
+        Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTK::conforming);
+        Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+          vtkwriter,
+          multigfs,
+          uold,
+          Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv0.grid().domain())
+        );
+
+        vtkwriter.write(fn_left.getName(),Dune::VTK::ascii);
         fn_left.increment();
       }
 
       {
-        typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> DGF;
-        DGF dgf(sgfs1,unew);
         Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv1,2);
-        vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
-        vtkwriter.write(fn_right.getName(),Dune::VTKOptions::ascii);
+        Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+          vtkwriter,
+          multigfs,
+          uold,
+          Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv1.grid().domain())
+        );
+
+        vtkwriter.write(fn_right.getName(),Dune::VTK::ascii);
         fn_right.increment();
       }
+
 
       uold = unew;                                              // advance time step
       time += dt;
     }
+
+    return 0;
   }
-  catch (Dune::Exception &e){
+  catch (int &e){
     std::cerr << "Dune reported error: " << e << std::endl;
     return 1;
   }

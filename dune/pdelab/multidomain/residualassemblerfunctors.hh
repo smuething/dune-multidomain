@@ -5,7 +5,6 @@
 #include <dune/pdelab/multidomain/visitor.hh>
 #include <dune/pdelab/multidomain/operatorcallguards.hh>
 #include <dune/pdelab/multidomain/localfunctionspaceutility.hh>
-#include <dune/pdelab/gridoperatorspace/gridoperatorspaceutilities.hh>
 #include <dune/pdelab/constraints/constraints.hh>
 
 namespace Dune {

@@ -5,10 +5,10 @@
 #define DUNE_PDELAB_MULTIDOMAIN_COUPLINGGFSORDERING_HH
 
 #include <dune/pdelab/common/typetree.hh>
-#include <dune/pdelab/gridfunctionspace/orderingutility.hh>
-#include <dune/pdelab/gridfunctionspace/localorderingdynamicbase.hh>
-#include <dune/pdelab/gridfunctionspace/orderingdynamicbase.hh>
-#include <dune/pdelab/gridfunctionspace/directleaflocalordering.hh>
+#include <dune/pdelab/ordering/utility.hh>
+#include <dune/pdelab/ordering/localorderingbase.hh>
+#include <dune/pdelab/ordering/orderingbase.hh>
+#include <dune/pdelab/ordering/directleaflocalordering.hh>
 #include <dune/pdelab/multidomain/dofmapper.hh>
 
 namespace Dune {

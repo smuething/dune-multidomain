@@ -5,7 +5,7 @@
 #include <algorithm>
 
 #include <dune/pdelab/gridfunctionspace/localvector.hh>
-#include <dune/pdelab/gridoperatorspace/localmatrix.hh>
+#include <dune/pdelab/gridoperator/common/localmatrix.hh>
 #include <dune/pdelab/gridoperator/common/localassemblerenginebase.hh>
 
 #include <dune/pdelab/multidomain/datawrappers.hh>

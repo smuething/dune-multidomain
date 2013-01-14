@@ -99,6 +99,8 @@ class JacobianAssemblerEngine
 
 public:
 
+  static const bool needs_constraints_caching = true;
+
   typedef LA LocalAssembler;
   typedef typename LA::Domain Domain;
   typedef typename LA::Jacobian Jacobian;

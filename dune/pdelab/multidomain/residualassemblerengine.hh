@@ -69,6 +69,8 @@ class ResidualAssemblerEngine
 
 public:
 
+  static const bool needs_constraints_caching = false;
+
   typedef LA LocalAssembler;
   typedef typename LA::Range Range;
   typedef typename LA::Domain Domain;

@@ -320,6 +320,8 @@ class ConstraintsAssemblerEngine
 
 public:
 
+  static const bool needs_constraints_caching = false;
+
   struct Traits
   {
 

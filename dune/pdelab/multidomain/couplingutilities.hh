@@ -38,10 +38,10 @@ public:
   {
     for (unsigned int i=0; i<lfsv_s.size(); ++i)
       for (unsigned int j=0; j<lfsu_n.size(); ++j)
-        pattern_sn.push_back(Dune::PDELab::SparsityLink(lfsv_s.localIndex(i),lfsu_n.localIndex(j)));
+        pattern_sn.addLink(lfsv_s,i,lfsu_n,j);
     for (unsigned int i=0; i<lfsv_n.size(); ++i)
       for (unsigned int j=0; j<lfsu_s.size(); ++j)
-        pattern_ns.push_back(Dune::PDELab::SparsityLink(lfsv_n.localIndex(i),lfsu_s.localIndex(j)));
+        pattern_ns.addLink(lfsv_n,i,lfsu_s,j);
   }
 
 };
@@ -231,10 +231,10 @@ public:
   {
     for (unsigned int i=0; i<lfsv_s.size(); ++i)
       for (unsigned int j=0; j<coupling_lfsu.size(); ++j)
-        pattern_sc.push_back(Dune::PDELab::SparsityLink(lfsv_s.localIndex(i),coupling_lfsu.localIndex(j)));
+        pattern_sc.addLink(lfsv_s,i,coupling_lfsu,j);
     for (unsigned int i=0; i<coupling_lfsv.size(); ++i)
       for (unsigned int j=0; j<lfsu_s.size(); ++j)
-        pattern_cs.push_back(Dune::PDELab::SparsityLink(coupling_lfsv.localIndex(i),lfsu_s.localIndex(j)));
+        pattern_cs.addLink(coupling_lfsv,i,lfsu_s,j);
   }
 
 };
@@ -257,10 +257,10 @@ public:
   {
     for (unsigned int i=0; i<lfsv_n.size(); ++i)
       for (unsigned int j=0; j<coupling_lfsu.size(); ++j)
-        pattern_nc.push_back(Dune::PDELab::SparsityLink(lfsv_n.localIndex(i),coupling_lfsu.localIndex(j)));
+        pattern_nc.addLink(lfsv_n,i,coupling_lfsu,j);
     for (unsigned int i=0; i<coupling_lfsv.size(); ++i)
       for (unsigned int j=0; j<lfsu_n.size(); ++j)
-        pattern_cn.push_back(Dune::PDELab::SparsityLink(coupling_lfsv.localIndex(i),lfsu_n.localIndex(j)));
+        pattern_cn.addLink(coupling_lfsv,i,lfsu_n,j);
   }
 
 };
@@ -280,7 +280,7 @@ public:
   {
     for (unsigned int i=0; i<coupling_lfsv.size(); ++i)
       for (unsigned int j=0; j<coupling_lfsu.size(); ++j)
-        pattern_cc.push_back(Dune::PDELab::SparsityLink(coupling_lfsv.localIndex(i),coupling_lfsu.localIndex(j)));
+        pattern_cc.addLink(coupling_lfsv,i,coupling_lfsu,j);
   }
 
 };

@@ -69,3 +69,6 @@ testmortarpoisson_SOURCES = testmortarpoisson.cc
 
 check_PROGRAMS += testpowermortarpoisson
 testpowermortarpoisson_SOURCES = testpowermortarpoisson.cc
+
+check_PROGRAMS += testpoisson
+testpoisson_SOURCES = testpoisson.cc

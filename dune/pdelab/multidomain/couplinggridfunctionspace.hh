@@ -42,7 +42,7 @@ private:
 
 
 template<typename GV, typename FEM, typename Predicate_, typename CE=NoConstraints,
-         typename B=StdVectorBackend>
+         typename B=ISTLVectorBackend<>, typename O=DefaultLeafOrderingTag>
 class CouplingGridFunctionSpace
   : public Dune::PDELab::TypeTree::LeafNode
 {
@@ -52,7 +52,7 @@ class CouplingGridFunctionSpace
 
 public:
   //! export Traits class
-  typedef GridFunctionSpaceTraits<GV,FEM,CE,B> Traits;
+  typedef GridFunctionSpaceTraits<GV,FEM,CE,B,O> Traits;
   typedef typename GV::Traits::template Codim<0>::Entity Element;
   typedef typename GV::Traits::template Codim<0>::Iterator ElementIterator;
   typedef typename GV::Traits::Intersection Intersection;
@@ -62,7 +62,7 @@ public:
 
   typedef CouplingGridFunctionSpaceTag ImplementationTag;
 
-  typedef GridFunctionGeneralMapper OrderingTag;
+  typedef O OrderingTag;
 
   typedef typename ordering_transformation::Type Ordering;
 

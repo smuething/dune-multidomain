@@ -469,12 +469,12 @@ public:
     : NodeT(constraintsSpecifications...)
   {}
 
-  const EmptyTransformation& trialGridFunctionSpaceConstraints() const
+  const EmptyTransformation& trialConstraints() const
   {
     return _empty_constraints;
   }
 
-  const EmptyTransformation& testGridFunctionSpaceConstraints() const
+  const EmptyTransformation& testConstraints() const
   {
     return _empty_constraints;
   }

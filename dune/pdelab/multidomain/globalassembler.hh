@@ -48,8 +48,8 @@ public:
     typedef typename LocalAssemblerEngine::Traits::TrialGridFunctionSpaceConstraints CU;
     typedef typename LocalAssemblerEngine::Traits::TestGridFunctionSpaceConstraints CV;
 
-    const CU& cu = engine.trialGridFunctionSpaceConstraints();
-    const CV& cv = engine.testGridFunctionSpaceConstraints();
+    const CU& cu = engine.trialConstraints();
+    const CV& cv = engine.testConstraints();
 
     typedef typename Spaces::LFSU_Cache LFSUCache;
     typedef typename Spaces::LFSV_Cache LFSVCache;

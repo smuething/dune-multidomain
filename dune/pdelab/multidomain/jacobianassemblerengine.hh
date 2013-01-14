@@ -531,12 +531,12 @@ public:
     return _localAssembler;
   }
 
-  const typename Traits::TrialGridFunctionSpaceConstraints& trialGridFunctionSpaceConstraints() const
+  const typename Traits::TrialGridFunctionSpaceConstraints& trialConstraints() const
   {
     return localAssembler().trialConstraints();
   }
 
-  const typename Traits::TestGridFunctionSpaceConstraints& testGridFunctionSpaceConstraints() const
+  const typename Traits::TestGridFunctionSpaceConstraints& testConstraints() const
   {
     return localAssembler().testConstraints();
   }

@@ -4,6 +4,7 @@
 
 #include <dune/pdelab/gridoperator/common/gridoperatorutilities.hh>
 #include <dune/pdelab/gridfunctionspace/genericdatahandle.hh>
+#include <dune/pdelab/gridoperator/common/borderdofexchanger.hh>
 
 #include <dune/pdelab/multidomain/localassembler.hh>
 #include <dune/pdelab/multidomain/globalassembler.hh>
@@ -60,6 +61,14 @@ public:
     GlobalAssembler<GFSU,GFSV>,
     LocalAssembler<GridOperator,AssemblyParticipants...>
     > Traits;
+
+  static const bool nonoverlapping_mode = false;
+
+  typedef typename SelectType<
+    nonoverlapping_mode,
+    NonOverlappingBorderDOFExchanger<GridOperator>,
+    OverlappingBorderDOFExchanger<GridOperator>
+    >::Type BorderDOFExchanger;
 
 
   template<typename P>
@@ -141,6 +150,7 @@ public:
                AssemblyParticipants&... participants)
     : _assembler(gfsu,gfsv)
     , _localAssembler(cu,cv,participants...)
+    , dof_exchanger(make_shared<BorderDOFExchanger>(*this))
   {}
 
   GridOperator(const GFSU& gfsu,
@@ -150,6 +160,7 @@ public:
                AssemblyParticipants&... participants)
     : _assembler(gfsu,gfsv)
     , _localAssembler(cu,cv,participants...)
+    , dof_exchanger(make_shared<BorderDOFExchanger>(*this))
   {}
 
   template<typename Tuple, std::size_t k>
@@ -172,11 +183,15 @@ public:
     shareData<tuple<GridOperators&...>,0>(gridOperators);
   }
 
+  void make_consistent(typename Traits::Jacobian& a) const {
+    dof_exchanger->accumulateBorderEntries(*this,a);
+  }
+
  private:
 
   mutable typename Traits::Assembler _assembler;
   mutable typename Traits::LocalAssembler _localAssembler;
-
+  shared_ptr<BorderDOFExchanger> dof_exchanger;
 
 };
 

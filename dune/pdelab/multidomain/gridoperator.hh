@@ -139,7 +139,8 @@ public:
 
     // Make solution consistent
     CopyDataHandle<typename Traits::TrialGridFunctionSpace,typename Traits::Range> cdh(trialGridFunctionSpace(),xnew);
-    trialGridFunctionSpace().gridView().communicate(cdh,Dune::InteriorBorder_All_Interface,Dune::ForwardCommunication);
+    if (trialGridFunctionSpace().gridView().comm().size() > 1)
+      trialGridFunctionSpace().gridView().communicate(cdh,Dune::InteriorBorder_All_Interface,Dune::ForwardCommunication);
   }
 
   GridOperator(const GFSU& gfsu,

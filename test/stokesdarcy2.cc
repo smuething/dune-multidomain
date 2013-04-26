@@ -5,6 +5,7 @@
 #include <dune/grid/sgrid.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/io/file/gmshreader.hh>
+#include <dune/pdelab/gridfunctionspace/vectorgridfunctionspace.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/finiteelementmap/q1fem.hh>
 #include <dune/pdelab/finiteelementmap/p1fem.hh>
@@ -27,8 +28,8 @@
 #include<dune/pdelab/stationary/linearproblem.hh>
 #include<dune/pdelab/instationary/onestep.hh>
 #include <dune/pdelab/gridfunctionspace/gridfunctionspaceutilities.hh>
-#include<dune/pdelab/common/vtkexport.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
+#include <dune/pdelab/multidomain/vtk.hh>
 
 #include<typeinfo>
 
@@ -114,6 +115,41 @@ struct ScalarNeumannBoundaryType :
 
 };
 
+template<typename GV>
+struct StokesBoundaryType
+{
+
+  typedef Dune::PDELab::BoundaryGridFunctionTraits<
+    GV,
+    Dune::PDELab::StokesBoundaryCondition::Type,
+    1,
+    Dune::FieldVector<
+      Dune::PDELab::StokesBoundaryCondition::Type,
+      1
+      >
+    > Traits;
+
+  void setTime(double t) const
+  {}
+
+  template<typename I>
+  void evaluate(const I& ig,
+                const typename Traits::DomainType& x,
+                typename Traits::RangeType& y) const
+  {
+    if (!ig.boundary())
+      {
+        y = Dune::PDELab::StokesBoundaryCondition::DoNothing;
+        return;
+      }
+    auto xg = ig.geometry().global(x);
+    if (xg[0] < 1e-6 || xg[0] > 100-1e-6)
+      y = Dune::PDELab::StokesBoundaryCondition::StressNeumann;
+    else
+      y = Dune::PDELab::StokesBoundaryCondition::VelocityDirichlet;
+  }
+
+};
 
 struct PressureDropBoundaryType :
   public Dune::PDELab::DirichletConstraintsParameters
@@ -185,38 +221,32 @@ public:
 };
 
 
-template<typename GV, typename RF>
+template<typename GV, typename RF, typename B, typename V, typename J>
 class NavierStokesParameters
-  : public Dune::PDELab::TaylorHoodNavierStokesParameters<double>
+  : public Dune::PDELab::NavierStokesDefaultParameters<GV,RF,V,B,V,J,false,true>
 {
 public:
 
-  typedef Dune::FieldVector<typename GV::Grid::ctype,GV::Grid::dimensionworld> Vector;
+  typedef Dune::PDELab::NavierStokesDefaultParameters<GV,RF,V,B,V,J,false,true> BaseT;
+  typedef typename BaseT::Traits Traits;
 
-  double rho() const{
-    return _viscosity;
-  }
-
-  double mu() const{
-    return _density;
-  }
-
-  Vector f1() const{
-    return _gravity;
-  }
-
-  NavierStokesParameters(const Dune::ParameterTree& params)
-    : _gravity(0.0)
-    , _density(params.get<RF>("fluid.density"))
-    , _viscosity(params.get<RF>("fluid.viscosity"))
+  NavierStokesParameters(const Dune::ParameterTree& params, B& b, V& v, J& j)
+    : BaseT(params.sub("fluid"),v,b,v,j)
+    , _gravity(0.0)
   {
     _gravity[GV::Grid::dimensionworld-1] = - params.get("gravity",9.81);
   }
 
+  template<typename EG>
+  typename Traits::VelocityRange
+  f(const EG& e, const typename Traits::Domain& x) const
+  {
+    return _gravity;
+  }
+
+
 private:
   Dune::FieldVector<RF,GV::Grid::dimensionworld> _gravity;
-  const RF _density;
-  const RF _viscosity;
 };
 
 
@@ -557,10 +587,11 @@ int main(int argc, char** argv) {
     const int dim = 2;
 
     typedef Dune::UGGrid<dim> BaseGrid;
-    BaseGrid baseGrid(500);
     std::vector<int> boundaryIndexToPhysicalGroup, elementIndexToPhysicalGroup;
     Dune::GmshReader<BaseGrid> gmshreader;
-    gmshreader.read(baseGrid,parameters["mesh.filename"],boundaryIndexToPhysicalGroup,elementIndexToPhysicalGroup,true,false);
+    Dune::shared_ptr<BaseGrid> baseGridPtr(gmshreader.read(parameters["mesh.filename"],boundaryIndexToPhysicalGroup,elementIndexToPhysicalGroup,true,false));
+
+    BaseGrid& baseGrid = *baseGridPtr;
 
     typedef BaseGrid::LeafGridView GV;
 
@@ -605,7 +636,7 @@ int main(int argc, char** argv) {
 
     typedef Dune::PDELab::NoConstraints NOCON;
     typedef Dune::PDELab::ConformingDirichletConstraints DCON;
-    typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
+    typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
     NOCON con;
     DCON dcon;
@@ -616,22 +647,32 @@ int main(int argc, char** argv) {
     EC c0(0);
     EC c1(1);
 
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,V_FEM,DCON,VBE> V_GFS;
-    V_GFS vgfs(stokesGV,vfem);
-
-    typedef Dune::PDELab::PowerGridFunctionSpace<V_GFS,dim,Dune::PDELab::GridFunctionSpaceLexicographicMapper> PGFS_V_GFS;
-
-    PGFS_V_GFS powervgfs(vgfs);
+    typedef Dune::PDELab::VectorGridFunctionSpace<
+      SDGV,
+      V_FEM,
+      dim,
+      VBE,
+      VBE,
+      DCON
+      > PGFS_V_GFS;
+    PGFS_V_GFS powervgfs(stokesGV,vfem);
+    powervgfs.name("v");
 
     typedef Dune::PDELab::GridFunctionSpace<SDGV,P_FEM,DCON,VBE> P_GFS;
     P_GFS pgfs(stokesGV,pfem);
+    pgfs.name("p");
 
-    typedef Dune::PDELab::CompositeGridFunctionSpace<Dune::PDELab::GridFunctionSpaceLexicographicMapper,PGFS_V_GFS,P_GFS> StokesGFS;
+    typedef Dune::PDELab::CompositeGridFunctionSpace<
+      VBE,
+      Dune::PDELab::LexicographicOrderingTag,
+      PGFS_V_GFS,
+      P_GFS> StokesGFS;
 
     StokesGFS stokesgfs(powervgfs,pgfs);
 
     typedef Dune::PDELab::GridFunctionSpace<SDGV,DarcyFEM,NOCON,VBE> DarcyGFS;
     DarcyGFS darcygfs(darcyGV,darcyfem);
+    darcygfs.name("phi");
 
     typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,VBE,StokesGFS,DarcyGFS> MultiGFS;
     MultiGFS multigfs(grid,stokesgfs,darcygfs);
@@ -650,6 +691,10 @@ int main(int argc, char** argv) {
     PressureInitialFunction pressureInitialFunction(mdgv);
     StokesInitialFunction stokesInitialFunction(velocityInitialFunction,pressureInitialFunction);
 
+    typedef StokesBoundaryType<MDGV> StokesBoundary;
+    StokesBoundary stokesBoundary;
+
+    /*
     typedef PressureDropBoundaryType StokesScalarVelocityBoundaryFunction;
     typedef Dune::PDELab::PowerConstraintsParameters<StokesScalarVelocityBoundaryFunction,dim> StokesVelocityBoundaryFunction;
     typedef ScalarNeumannBoundaryType StokesPressureBoundaryFunction;
@@ -660,17 +705,27 @@ int main(int argc, char** argv) {
     StokesPressureBoundaryFunction stokesPressureBoundaryFunction;
     StokesBoundaryFunction stokesBoundaryFunction(stokesVelocityBoundaryFunction,stokesPressureBoundaryFunction);
 
+    */
+
     typedef PressureDropFlux<MDGV,RF> NeumannFlux;
     NeumannFlux neumannFlux(mdgv,parameters.get<RF>("boundaries.inflow"),parameters.get<RF>("boundaries.outflow"));
 
-    typedef NavierStokesParameters<MDGV,RF> NavierStokesParams;
-    NavierStokesParams navierStokesParams(parameters.sub("parameters"));
+    typedef NavierStokesParameters<MDGV,RF,StokesBoundary,StokesInitialFunction,NeumannFlux> NavierStokesParams;
+    NavierStokesParams navierStokesParams(parameters.sub("parameters"),stokesBoundary,stokesInitialFunction,neumannFlux);
 
-    typedef Dune::PDELab::TaylorHoodNavierStokes<
-      StokesBoundaryFunction,NeumannFlux,NavierStokesParams,false,stokes_q>
-      StokesOperator;
-    StokesOperator stokesOperator(stokesBoundaryFunction,neumannFlux,navierStokesParams);
+    typedef Dune::PDELab::StokesVelocityDirichletConstraints<NavierStokesParams> StokesVelocityBoundaryFunction;
+    typedef Dune::PDELab::StokesPressureDirichletConstraints<NavierStokesParams> StokesPressureBoundaryFunction;
+    typedef Dune::PDELab::CompositeConstraintsParameters<
+      StokesVelocityBoundaryFunction,
+      StokesPressureBoundaryFunction
+      > StokesBoundaryFunction;
 
+    StokesVelocityBoundaryFunction stokesVelocityBoundaryFunction(navierStokesParams);
+    StokesPressureBoundaryFunction stokesPressureBoundaryFunction(navierStokesParams);
+    StokesBoundaryFunction stokesBoundaryFunction(stokesVelocityBoundaryFunction,stokesPressureBoundaryFunction);
+
+    typedef Dune::PDELab::TaylorHoodNavierStokes<NavierStokesParams> StokesOperator;
+    StokesOperator stokesOperator(navierStokesParams,stokes_q);
 
     typedef DarcyParameters<MDGV,RF> DarcyParams;
     DarcyParams darcyParams(mdgv,elementIndexToPhysicalGroup,parameters);
@@ -708,12 +763,10 @@ int main(int argc, char** argv) {
     //Dune::PDELab::MultiDomain::trialSpaceConstraints(stokesBoundaryFunction,multigfs,cg,stokesBoundaryFunction,stokesSubProblem);
     std::cout << multigfs.size() << " DOF, " << cg.size() << " restricted" << std::endl;
 
-    typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
-
-
     typedef Dune::PDELab::MultiDomain::GridOperator<
       MultiGFS,MultiGFS,
-      MBE,RF,RF,RF,C,C,
+      Dune::PDELab::ISTLMatrixBackend,
+      RF,RF,RF,C,C,
       StokesSubProblem,
       DarcySubProblem,
       Coupling
@@ -748,15 +801,16 @@ int main(int argc, char** argv) {
     r = 0.0;
     gridoperator.residual(u,r);
 
-    typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,StokesGFS> StokesSubGFS;
-    typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,DarcyGFS> DarcySubGFS;
-    typedef Dune::PDELab::GridFunctionSubSpace<StokesSubGFS,0> StokesVelocitySubGFS;
-    typedef Dune::PDELab::GridFunctionSubSpace<StokesSubGFS,1> StokesPressureSubGFS;
+    /*
+    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,Dune::PDELab::TypeTree::TreePath<0,0> > StokesVelocitySubGFS;
+    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,Dune::PDELab::TypeTree::TreePath<0,1> > StokesPressureSubGFS;
+    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,Dune::PDELab::TypeTree::TreePath<1> > DarcySubGFS;
 
     StokesSubGFS stokessubgfs(multigfs);
     DarcySubGFS darcysubgfs(multigfs);
     StokesVelocitySubGFS stokesvelocitysubgfs(stokessubgfs);
     StokesPressureSubGFS stokespressuresubgfs(stokessubgfs);
+    */
 
     /*
      * Output initial guess
@@ -765,23 +819,34 @@ int main(int argc, char** argv) {
 
     //Dune::PDELab::FilenameHelper fn0("instationaryexplicitlycoupledpoisson-right");
     {
+      /*
       typedef Dune::PDELab::VectorDiscreteGridFunction<StokesVelocitySubGFS,V> VDGF;
       typedef Dune::PDELab::DiscreteGridFunction<StokesPressureSubGFS,V> PDGF;
       VDGF vdgf(stokesvelocitysubgfs,u);
       PDGF pdgf(stokespressuresubgfs,u);
       VDGF vdgf2(stokesvelocitysubgfs,r);
       PDGF pdgf2(stokespressuresubgfs,r);
+      */
       Dune::SubsamplingVTKWriter<SDGV> vtkwriter(stokesGV,parameters.get("mesh.refineoutput",0));
+      /*
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf,"u"));
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf,"p"));
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf2,"ru"));
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf2,"rp"));
-      vtkwriter.write("stokes",Dune::VTKOptions::binaryappended);
+      */
+      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+        vtkwriter,
+        multigfs,
+        u,
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(stokesGV.grid().domain())
+      );
+      vtkwriter.write("stokes",Dune::VTK::appendedraw);
       //fn0.increment();
     }
 
     //Dune::PDELab::FilenameHelper fn1("instationaryexplicitlycoupledpoisson-left");
     {
+      /*
       typedef Dune::PDELab::DarcyFlowFromPotential<DarcySubGFS,DarcyParams,V> VDGF;
       typedef Dune::PDELab::DiscreteGridFunction<DarcySubGFS,V> PhiDGF;
       typedef Dune::PDELab::DiscretePressureGridFunction<DarcySubGFS,DarcyParams,V> PDGF;
@@ -791,14 +856,23 @@ int main(int argc, char** argv) {
       VDGF vdgf2(darcysubgfs,darcyParams,r);
       PhiDGF phidgf2(darcysubgfs,r);
       PDGF pdgf2(darcysubgfs,darcyParams,r,couplingParams.gravity());
+      */
       Dune::SubsamplingVTKWriter<SDGV> vtkwriter(darcyGV,parameters.get("mesh.refineoutput",0));
+      /*
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf,"u"));
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PhiDGF>(phidgf,"phi"));
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf,"p"));
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<VDGF>(vdgf2,"ru"));
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PhiDGF>(phidgf2,"rphi"));
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf2,"rp"));
-      vtkwriter.write("darcy",Dune::VTKOptions::binaryappended);
+      */
+      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+        vtkwriter,
+        multigfs,
+        u,
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(darcyGV.grid().domain())
+      );
+      vtkwriter.write("darcy",Dune::VTK::appendedraw);
       //fn1.increment();
     }
 

@@ -57,8 +57,8 @@ public:
     , gamma_(params.get("coupling.gamma",1.0))
     , porosity_(params.get<double>("soil.porosity"))
     , gravity_(params.get("gravity",9.81))
-    , density_(params.get<double>("fluid.density"))
-    , viscosity_(params.get<double>("fluid.viscosity"))
+    , density_(params.get<double>("fluid.rho"))
+    , viscosity_(params.get<double>("fluid.mu"))
     , epsilon_(params.get("epsilon",1e-8))
   {
     for (int i = 0; i < GV::dimension; ++i)

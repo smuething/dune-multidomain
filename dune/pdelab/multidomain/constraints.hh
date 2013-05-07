@@ -3,6 +3,7 @@
 
 #include <dune/pdelab/constraints/constraints.hh>
 
+#include <dune/pdelab/multidomain/policy.hh>
 #include <dune/pdelab/multidomain/globalassembler.hh>
 #include <dune/pdelab/gridoperator/common/localassemblerenginebase.hh>
 #include <dune/pdelab/multidomain/operatorflagtests.hh>

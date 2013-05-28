@@ -45,6 +45,8 @@ struct MultiDomainGridFunctionSpaceTraits
   //! \brief mapper
   typedef M MapperType;
 
+  typedef M OrderingTag;
+
   //! \brief short cut for size type exported by Backend
   typedef typename B::size_type SizeType;
 
@@ -117,32 +119,32 @@ struct gfs_flavor_tag<PowerCouplingGridFunctionSpace<T,k,Ordering> >
 };
   */
 
-template<typename G, typename Backend, typename... Children>
+template<typename G, typename Backend, typename OrderingTag, typename... Children>
 class MultiDomainGridFunctionSpace
   : public TypeTree::VariadicCompositeNode<Children...>
-  , public PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,Children...>,
+  , public PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,OrderingTag,Children...>,
                                                typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
                                                Backend,
-                                               LexicographicOrderingTag,
+                                               OrderingTag,
                                                sizeof...(Children)
                                                >
-  , public DataHandleProvider<MultiDomainGridFunctionSpace<G,Backend,Children...> >
+  , public DataHandleProvider<MultiDomainGridFunctionSpace<G,Backend,OrderingTag,Children...> >
 {
 
   typedef TypeTree::VariadicCompositeNode<Children...> BaseT;
 
   friend class
-  PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,Children...>,
+  PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,OrderingTag,Children...>,
                                       typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
                                       Backend,
-                                      LexicographicOrderingTag,
+                                      OrderingTag,
                                       sizeof...(Children)
                                       >;
 
-  typedef PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,Children...>,
+  typedef PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,OrderingTag,Children...>,
                                               typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
                                               Backend,
-                                              LexicographicOrderingTag,
+                                              OrderingTag,
                                               sizeof...(Children)
                                               > ImplementationBase;
 
@@ -334,7 +336,7 @@ template<typename GridFunctionSpace, typename Params>
 composite_gfs_to_ordering_descriptor<
   GridFunctionSpace,
   gfs_to_ordering<Params>,
-  LexicographicOrderingTag
+  typename GridFunctionSpace::OrderingTag
   >
 lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_ordering<Params>* t, MultiDomainGridFunctionSpaceTag tag);
 

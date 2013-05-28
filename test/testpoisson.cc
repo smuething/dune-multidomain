@@ -191,7 +191,13 @@ int main(int argc, char** argv) {
     gfs0.name("u");
     gfs1.name("u");
 
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,VBE,GFS0,GFS1> MultiGFS;
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<
+      Grid,
+      VBE,
+      Dune::PDELab::LexicographicOrderingTag,
+      GFS0,
+      GFS1
+      > MultiGFS;
 
     MultiGFS multigfs(grid,gfs0,gfs1);
 

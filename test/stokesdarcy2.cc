@@ -674,7 +674,13 @@ int main(int argc, char** argv) {
     DarcyGFS darcygfs(darcyGV,darcyfem);
     darcygfs.name("phi");
 
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,VBE,StokesGFS,DarcyGFS> MultiGFS;
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<
+      Grid,
+      VBE,
+      Dune::PDELab::LexicographicOrderingTag,
+      StokesGFS,
+      DarcyGFS
+      > MultiGFS;
     MultiGFS multigfs(grid,stokesgfs,darcygfs);
 
     typedef MultiGFS::ConstraintsContainer<RF>::Type C;

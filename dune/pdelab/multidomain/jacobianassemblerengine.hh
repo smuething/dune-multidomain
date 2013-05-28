@@ -479,7 +479,7 @@ public:
     if (localAssembler().writeData())
       {
         // save reference to container for constraints handling
-        auto& jacobian = data().jacobian_ss_view.global_container();
+        auto& jacobian = data().jacobian_ss_view.container();
 
         data().domain_s_view.detach();
         data().domain_n_view.detach();

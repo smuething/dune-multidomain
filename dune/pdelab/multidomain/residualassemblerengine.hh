@@ -550,7 +550,7 @@ public:
   {
     if (localAssembler().writeData())
       {
-        Dune::PDELab::constrain_residual(localAssembler().testConstraints(),data().range_s_view.global_container());
+        Dune::PDELab::constrain_residual(localAssembler().testConstraints(),data().range_s_view.container());
 
         // detach container views
         data().domain_s_view.detach();

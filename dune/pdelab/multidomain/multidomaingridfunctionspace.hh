@@ -6,6 +6,7 @@
 #include <dune/pdelab/common/typetree.hh>
 #include <dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
 #include <dune/pdelab/gridfunctionspace/powercompositegridfunctionspacebase.hh>
+#include <dune/pdelab/ordering/transformations.hh>
 #include <dune/pdelab/multidomain/multidomainlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/typemap.hh>
 #include <dune/grid/multidomaingrid.hh>
@@ -248,10 +249,29 @@ public:
     return grid().leafView();
   }
 
+  MultiDomainGridFunctionSpace (G& g, const Backend& backend, const OrderingTag& ordering_tag, Children&... children)
+    : BaseT(children...)
+    , ImplementationBase(backend,ordering_tag)
+    , _g(g)
+  {
+    dune_static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
+                       "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
+    TypeTree::applyToTree(*this,VerifyChildren());
+  }
 
   MultiDomainGridFunctionSpace (G& g, const Backend& backend, Children&... children)
     : BaseT(children...)
-    , ImplementationBase(backend)
+    , ImplementationBase(backend,OrderingTag())
+    , _g(g)
+  {
+    dune_static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
+                       "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
+    TypeTree::applyToTree(*this,VerifyChildren());
+  }
+
+  MultiDomainGridFunctionSpace (G& g, const OrderingTag& ordering_tag, Children&... children)
+    : BaseT(children...)
+    , ImplementationBase(Backend(),ordering_tag)
     , _g(g)
   {
     dune_static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
@@ -261,7 +281,7 @@ public:
 
   MultiDomainGridFunctionSpace (G& g, Children&... children)
     : BaseT(children...)
-    , ImplementationBase(Backend())
+    , ImplementationBase(Backend(),OrderingTag())
     , _g(g)
   {
     dune_static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,

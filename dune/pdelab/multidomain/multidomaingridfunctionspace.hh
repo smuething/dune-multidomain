@@ -366,7 +366,7 @@ composite_gfs_to_local_ordering_descriptor<
   gfs_to_local_ordering<Params>,
   typename GridFunctionSpace::OrderingTag
   >
-lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_local_ordering<Params>* t, MultiDomainGridFunctionSpace tag);
+lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_local_ordering<Params>* t, MultiDomainGridFunctionSpaceTag tag);
 
 
   /*

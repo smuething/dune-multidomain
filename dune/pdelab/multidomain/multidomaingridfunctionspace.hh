@@ -349,7 +349,7 @@ struct get_subproblem_index
 
 
 // ********************************************************************************
-// register GFS -> Ordering transformation
+// register GFS -> (Local)Ordering transformations
 // ********************************************************************************
 
 template<typename GridFunctionSpace, typename Params>
@@ -359,6 +359,14 @@ composite_gfs_to_ordering_descriptor<
   typename GridFunctionSpace::OrderingTag
   >
 lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_ordering<Params>* t, MultiDomainGridFunctionSpaceTag tag);
+
+template<typename GridFunctionSpace, typename Params>
+composite_gfs_to_local_ordering_descriptor<
+  GridFunctionSpace,
+  gfs_to_local_ordering<Params>,
+  typename GridFunctionSpace::OrderingTag
+  >
+lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_local_ordering<Params>* t, MultiDomainGridFunctionSpace tag);
 
 
   /*

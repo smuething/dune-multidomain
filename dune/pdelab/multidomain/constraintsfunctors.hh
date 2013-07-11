@@ -1,7 +1,7 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTSFUNCTORS_HH
 #define DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTSFUNCTORS_HH
 
-#include <dune/pdelab/constraints/constraints.hh>
+#include <dune/pdelab/constraints/common/constraints.hh>
 #include <dune/pdelab/common/typetree.hh>
 #include <dune/pdelab/multidomain/datawrappers.hh>
 #include <dune/pdelab/multidomain/visitor.hh>

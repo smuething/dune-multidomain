@@ -16,7 +16,7 @@
 #include <dune/pdelab/multidomain/couplinglocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/multidomaingridoperatorspace.hh>
 #include <dune/pdelab/multidomain/subproblem.hh>
-#include <dune/pdelab/finiteelementmap/conformingconstraints.hh>
+#include <dune/pdelab/constraints/conforming.hh>
 #include <dune/pdelab/localoperator/poisson.hh>
 #include <dune/pdelab/multidomain/coupling.hh>
 

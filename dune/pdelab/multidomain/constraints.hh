@@ -1,7 +1,7 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTS_HH
 #define DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTS_HH
 
-#include <dune/pdelab/constraints/constraints.hh>
+#include <dune/pdelab/constraints/common/constraints.hh>
 
 #include <dune/pdelab/multidomain/policy.hh>
 #include <dune/pdelab/multidomain/globalassembler.hh>

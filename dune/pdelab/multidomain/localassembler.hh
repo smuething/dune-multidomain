@@ -2,8 +2,9 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_LOCALASSEMBLER_HH
 #define DUNE_PDELAB_MULTIDOMAIN_LOCALASSEMBLER_HH
 
-#include <dune/pdelab/common/typetree.hh>
-#include <dune/pdelab/common/typetree/filteredcompositenode.hh>
+#include <dune/typetree/typetree.hh>
+#include <dune/typetree/filteredcompositenode.hh>
+
 #include <dune/pdelab/gridoperator/common/assemblerutilities.hh>
 
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>

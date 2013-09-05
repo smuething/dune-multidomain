@@ -3,10 +3,12 @@
 #define DUNE_MULTIDOMAIN_SUBPROBLEMLOCALFUNCTIONSPACE_HH
 
 #include <vector>
+
+#include <dune/typetree/typetree.hh>
+#include <dune/typetree/proxynode.hh>
+#include <dune/typetree/filteredcompositenode.hh>
+
 #include <dune/pdelab/multidomain/utility.hh>
-#include <dune/pdelab/common/typetree.hh>
-#include <dune/pdelab/common/typetree/proxynode.hh>
-#include <dune/pdelab/common/typetree/filteredcompositenode.hh>
 #include <dune/pdelab/gridfunctionspace/localfunctionspace.hh>
 #include <dune/grid/multidomaingrid.hh>
 

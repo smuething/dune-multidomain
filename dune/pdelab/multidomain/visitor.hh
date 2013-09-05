@@ -1,11 +1,11 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_VISITOR_HH
 #define DUNE_PDELAB_MULTIDOMAIN_VISITOR_HH
 
+#include <dune/typetree/typetree.hh>
+
 namespace Dune {
 namespace PDELab {
 namespace MultiDomain {
-
-#include <dune/pdelab/common/typetree.hh>
 
 template<typename data_container>
 struct data_accessor

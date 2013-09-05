@@ -1,7 +1,8 @@
 #ifndef DUNE_MULTIDOMAIN_SUBPROBLEM_HH
 #define DUNE_MULTIDOMAIN_SUBPROBLEM_HH
 
-#include <dune/pdelab/common/typetree.hh>
+#include <dune/typetree/typetree.hh>
+
 #include <dune/pdelab/multidomain/subdomainset.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 

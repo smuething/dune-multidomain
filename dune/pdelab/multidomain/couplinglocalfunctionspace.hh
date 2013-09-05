@@ -1,8 +1,9 @@
 #ifndef DUNE_MULTIDOMAIN_COUPLINGLOCALFUNCTIONSPACE_HH
 #define DUNE_MULTIDOMAIN_COUPLINGLOCALFUNCTIONSPACE_HH
 
+#include <dune/typetree/typetree.hh>
+
 #include <dune/pdelab/gridfunctionspace/localfunctionspace.hh>
-#include <dune/pdelab/common/typetree.hh>
 
 #include <dune/pdelab/multidomain/dofmapper.hh>
 

@@ -3,7 +3,9 @@
 #define DUNE_MULTIDOMAIN_MULTIDOMAINLOCALFUNCTIONSPACE_HH
 
 #include <vector>
-#include <dune/pdelab/common/typetree.hh>
+
+#include <dune/typetree/typetree.hh>
+
 #include <dune/pdelab/gridfunctionspace/localfunctionspace.hh>
 #include <dune/grid/multidomaingrid.hh>
 

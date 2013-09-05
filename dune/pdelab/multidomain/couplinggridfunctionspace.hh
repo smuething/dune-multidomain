@@ -1,10 +1,11 @@
 #ifndef DUNE_MULTIDOMAIN_COUPLINGGRIDFUNCTIONSPACE_HH
 #define DUNE_MULTIDOMAIN_COUPLINGGRIDFUNCTIONSPACE_HH
 
+#include <dune/typetree/typetree.hh>
+
 #include <dune/pdelab/multidomain/couplinglocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/couplinggfsordering.hh>
 #include <dune/pdelab/multidomain/dofmapper.hh>
-#include <dune/pdelab/common/typetree.hh>
 
 namespace Dune {
 namespace PDELab {

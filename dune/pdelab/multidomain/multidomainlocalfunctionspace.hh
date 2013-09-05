@@ -384,7 +384,7 @@ TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
     gfs_to_lfs<data>
     >::template result
   >
-lookupNodeTransformation(MultiDomainGFS*, Dune::PDELab::gfs_to_lfs<data>*, MultiDomainGridFunctionSpaceTag);
+registerNodeTransformation(MultiDomainGFS*, Dune::PDELab::gfs_to_lfs<data>*, MultiDomainGridFunctionSpaceTag*);
 
 
 template<typename GFS>
@@ -406,7 +406,7 @@ TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
     gfs_to_coupling_lfs<data>
     >::template result
   >
-lookupNodeTransformation(MultiDomainGFS*, gfs_to_coupling_lfs<data>*, MultiDomainGridFunctionSpaceTag);
+registerNodeTransformation(MultiDomainGFS*, gfs_to_coupling_lfs<data>*, MultiDomainGridFunctionSpaceTag*);
 
 
 
@@ -419,7 +419,7 @@ TypeTree::TemplatizedGenericPowerNodeTransformation<
     gfs_to_coupling_lfs<data>
     >::template result
   >
-lookupNodeTransformation(PowerGridFunctionSpace* pgfs, gfs_to_coupling_lfs<data>* t, PowerGridFunctionSpaceTag tag);
+registerNodeTransformation(PowerGridFunctionSpace* pgfs, gfs_to_coupling_lfs<data>* t, PowerGridFunctionSpaceTag* tag);
 
 #if HAVE_VARIADIC_TEMPLATES
 
@@ -432,7 +432,7 @@ TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
     gfs_to_coupling_lfs<data>
     >::template result
   >
-lookupNodeTransformation(CompositeGridFunctionSpace* cgfs, gfs_to_coupling_lfs<data>* t, CompositeGridFunctionSpaceTag tag);
+registerNodeTransformation(CompositeGridFunctionSpace* cgfs, gfs_to_coupling_lfs<data>* t, CompositeGridFunctionSpaceTag* tag);
 
 #else
 #error "require variadic templates"
@@ -447,7 +447,7 @@ TypeTree::GenericLeafNodeTransformation<
     typename gfs_to_coupling_lfs<data>::DOFIndex
     >
   >
-lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, LeafGridFunctionSpaceTag tag);
+registerNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, LeafGridFunctionSpaceTag* tag);
 
 
 

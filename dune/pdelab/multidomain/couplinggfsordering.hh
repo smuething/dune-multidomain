@@ -435,7 +435,7 @@ namespace Dune {
       GridFunctionSpace,
       gfs_to_ordering<Params>
       >
-    lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_ordering<Params>* t, CouplingGridFunctionSpaceTag tag);
+    registerNodeTransformation(GridFunctionSpace* gfs, gfs_to_ordering<Params>* t, CouplingGridFunctionSpaceTag* tag);
 
 
 

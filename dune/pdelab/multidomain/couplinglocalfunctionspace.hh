@@ -99,7 +99,7 @@ TypeTree::TemplatizedGenericPowerNodeTransformation<
     gfs_to_coupling_lfs<data>
     >::template result
   >
-lookupNodeTransformation(PowerCouplingGridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, PowerCouplingGridFunctionSpaceTag tag);
+registerNodeTransformation(PowerCouplingGridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, PowerCouplingGridFunctionSpaceTag* tag);
 
 
 template<typename SourceNode, typename Transformation>
@@ -121,7 +121,7 @@ TypeTree::TemplatizedGenericPowerNodeTransformation<
     gfs_to_lfs<data>
     >::template result
   >
-lookupNodeTransformation(PowerCouplingGridFunctionSpace* gfs, gfs_to_lfs<data>* t, PowerCouplingGridFunctionSpaceTag tag);
+registerNodeTransformation(PowerCouplingGridFunctionSpace* gfs, gfs_to_lfs<data>* t, PowerCouplingGridFunctionSpaceTag* tag);
 
 
 struct CouplingLocalFunctionSpaceTag {};
@@ -338,7 +338,7 @@ TypeTree::GenericLeafNodeTransformation<
     typename gfs_to_coupling_lfs<data>::DOFIndex
     >
   >
-lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, CouplingGridFunctionSpaceTag tag);
+registerNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, CouplingGridFunctionSpaceTag* tag);
 
 template<typename GridFunctionSpace, typename data>
 TypeTree::GenericLeafNodeTransformation<
@@ -349,7 +349,7 @@ TypeTree::GenericLeafNodeTransformation<
     typename gfs_to_lfs<data>::DOFIndex
     >
   >
-lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_lfs<data>* t, CouplingGridFunctionSpaceTag tag);
+registerNodeTransformation(GridFunctionSpace* gfs, gfs_to_lfs<data>* t, CouplingGridFunctionSpaceTag* tag);
 
 } // namespace MultiDomain
 } // namespace PDELab

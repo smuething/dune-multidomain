@@ -31,7 +31,7 @@ template<
   typename CouplingOperator
   >
 class Coupling
-  : public Dune::PDELab::TypeTree::LeafNode
+  : public TypeTree::LeafNode
 {
 
 public:
@@ -125,7 +125,7 @@ template<
   std::size_t couplingLFSIndex
   >
 class EnrichedCoupling
-  : public Dune::PDELab::TypeTree::LeafNode
+  : public TypeTree::LeafNode
 {
 
 public:

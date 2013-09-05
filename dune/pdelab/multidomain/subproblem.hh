@@ -48,7 +48,7 @@ template<
   std::size_t... Indices
   >
 class SubProblem
-  : public Dune::PDELab::TypeTree::LeafNode
+  : public TypeTree::LeafNode
 {
 
   dune_static_assert(sizeof...(Indices) >= 1,"You need to provide at least one index");

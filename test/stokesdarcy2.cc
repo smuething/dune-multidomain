@@ -808,9 +808,9 @@ int main(int argc, char** argv) {
     gridoperator.residual(u,r);
 
     /*
-    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,Dune::PDELab::TypeTree::TreePath<0,0> > StokesVelocitySubGFS;
-    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,Dune::PDELab::TypeTree::TreePath<0,1> > StokesPressureSubGFS;
-    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,Dune::PDELab::TypeTree::TreePath<1> > DarcySubGFS;
+    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,TypeTree::TreePath<0,0> > StokesVelocitySubGFS;
+    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,TypeTree::TreePath<0,1> > StokesPressureSubGFS;
+    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,TypeTree::TreePath<1> > DarcySubGFS;
 
     StokesSubGFS stokessubgfs(multigfs);
     DarcySubGFS darcysubgfs(multigfs);

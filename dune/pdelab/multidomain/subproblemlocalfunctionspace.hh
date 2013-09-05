@@ -25,8 +25,8 @@ namespace MultiDomain {
 namespace {
 
   struct AccumulateSize
-    : public Dune::PDELab::TypeTree::DirectChildrenVisitor
-    , public Dune::PDELab::TypeTree::DynamicTraversal
+    : public TypeTree::DirectChildrenVisitor
+    , public TypeTree::DynamicTraversal
   {
 
     template<typename SPLFS, typename ChildLFS, typename TreePath, typename ChildIndex>
@@ -46,8 +46,8 @@ namespace {
 
   template<typename Container>
   struct FillIndices
-    : public Dune::PDELab::TypeTree::DirectChildrenVisitor
-    , public Dune::PDELab::TypeTree::DynamicTraversal
+    : public TypeTree::DirectChildrenVisitor
+    , public TypeTree::DynamicTraversal
   {
 
     template<typename SPLFS, typename ChildLFS, typename TreePath, typename ChildIndex>
@@ -143,7 +143,7 @@ namespace {
 
 template<typename MDLFS, typename SubProblem, std::size_t... ChildIndices>
 class SubProblemLocalFunctionSpace
-  : public Dune::PDELab::TypeTree::FilteredCompositeNode<const MDLFS,Dune::PDELab::TypeTree::IndexFilter<ChildIndices...> >
+  : public TypeTree::FilteredCompositeNode<const MDLFS,TypeTree::IndexFilter<ChildIndices...> >
   , public Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType,typename MDLFS::Traits::GridFunctionSpace::Ordering::Traits::DOFIndex>
 {
 
@@ -153,7 +153,7 @@ class SubProblemLocalFunctionSpace
   dune_static_assert((!arg_pack_contains_duplicate_values<std::size_t,ChildIndices...>::value),
                      "All child indices have to be distinct");
 
-  typedef Dune::PDELab::TypeTree::FilteredCompositeNode<const MDLFS,Dune::PDELab::TypeTree::IndexFilter<ChildIndices...> > NodeT;
+  typedef TypeTree::FilteredCompositeNode<const MDLFS,TypeTree::IndexFilter<ChildIndices...> > NodeT;
   typedef Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType, typename MDLFS::Traits::GridFunctionSpace::Ordering::Traits::DOFIndex> BaseT;
 
   typedef typename MDLFS::Traits::GridFunctionSpaceType GFS;
@@ -218,10 +218,10 @@ public:
     // make offset
     offset = 0;
     AccumulateSize accumulateSize;
-    Dune::PDELab::TypeTree::applyToTree(*this,accumulateSize);
+    TypeTree::applyToTree(*this,accumulateSize);
     n = accumulateSize.size;
     _local_storage.resize(n);
-    Dune::PDELab::TypeTree::applyToTree(*this,FillIndices<typename Traits::IndexContainer>(_local_storage));
+    TypeTree::applyToTree(*this,FillIndices<typename Traits::IndexContainer>(_local_storage));
   }
 
   const SubProblem& subProblem() const {
@@ -451,7 +451,7 @@ protected:
 
 template<typename MDLFS, typename SubProblem, std::size_t ChildIndex>
 class SubProblemLocalFunctionSpace<MDLFS,SubProblem,ChildIndex>
-  : public Dune::PDELab::TypeTree::ProxyNode<const typename MDLFS::template Child<ChildIndex>::Type>
+  : public TypeTree::ProxyNode<const typename MDLFS::template Child<ChildIndex>::Type>
   , public SubProblemLocalFunctionSpaceBase<MDLFS,
                                             SubProblemLocalFunctionSpace<MDLFS,SubProblem,ChildIndex>,
                                             typename MDLFS::template Child<ChildIndex>::Type,
@@ -460,7 +460,7 @@ class SubProblemLocalFunctionSpace<MDLFS,SubProblem,ChildIndex>
                                             >
 {
 
-  typedef Dune::PDELab::TypeTree::ProxyNode<const typename MDLFS::template Child<ChildIndex>::Type> NodeT;
+  typedef TypeTree::ProxyNode<const typename MDLFS::template Child<ChildIndex>::Type> NodeT;
 
   typedef SubProblemLocalFunctionSpaceBase<MDLFS,
                                            SubProblemLocalFunctionSpace<MDLFS,SubProblem,ChildIndex>,

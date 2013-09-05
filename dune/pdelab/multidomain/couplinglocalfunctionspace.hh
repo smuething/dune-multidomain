@@ -91,7 +91,7 @@ struct power_coupling_gfs_to_coupling_lfs_template
 };
 
 template<typename PowerCouplingGridFunctionSpace, typename data>
-Dune::PDELab::TypeTree::TemplatizedGenericPowerNodeTransformation<
+TypeTree::TemplatizedGenericPowerNodeTransformation<
   PowerCouplingGridFunctionSpace,
   gfs_to_coupling_lfs<data>,
   power_coupling_gfs_to_coupling_lfs_template<
@@ -113,7 +113,7 @@ struct power_coupling_gfs_to_lfs_template
 };
 
 template<typename PowerCouplingGridFunctionSpace, typename data>
-Dune::PDELab::TypeTree::TemplatizedGenericPowerNodeTransformation<
+TypeTree::TemplatizedGenericPowerNodeTransformation<
   PowerCouplingGridFunctionSpace,
   gfs_to_lfs<data>,
   power_coupling_gfs_to_lfs_template<
@@ -330,7 +330,7 @@ private:
 };
 
 template<typename GridFunctionSpace, typename data>
-Dune::PDELab::TypeTree::GenericLeafNodeTransformation<
+TypeTree::GenericLeafNodeTransformation<
   GridFunctionSpace,
   gfs_to_coupling_lfs<data>,
   CouplingLocalFunctionSpaceNode<
@@ -341,7 +341,7 @@ Dune::PDELab::TypeTree::GenericLeafNodeTransformation<
 lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, CouplingGridFunctionSpaceTag tag);
 
 template<typename GridFunctionSpace, typename data>
-Dune::PDELab::TypeTree::GenericLeafNodeTransformation<
+TypeTree::GenericLeafNodeTransformation<
   GridFunctionSpace,
   gfs_to_lfs<data>,
   CouplingLocalFunctionSpaceNode<

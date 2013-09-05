@@ -41,8 +41,8 @@ struct visitor
   template<typename... data_wrappers>
   struct data_enriched_visitor
     : public functor_template<data_enriched_visitor<data_wrappers...> >
-    , public Dune::PDELab::TypeTree::TreeVisitor
-    , public Dune::PDELab::TypeTree::DynamicTraversal
+    , public TypeTree::TreeVisitor
+    , public TypeTree::DynamicTraversal
     , public data_wrappers...
   {
 

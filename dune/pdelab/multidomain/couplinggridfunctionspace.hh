@@ -45,7 +45,7 @@ private:
 template<typename GV, typename FEM, typename Predicate_, typename CE=NoConstraints,
          typename B=ISTLVectorBackend<>, typename O=DefaultLeafOrderingTag>
 class CouplingGridFunctionSpace
-  : public Dune::PDELab::TypeTree::LeafNode
+  : public TypeTree::LeafNode
 {
 
   typedef TypeTree::TransformTree<CouplingGridFunctionSpace,gfs_to_ordering<CouplingGridFunctionSpace> > ordering_transformation;

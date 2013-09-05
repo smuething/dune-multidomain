@@ -34,10 +34,12 @@ namespace {
 template<typename Tree, typename Predicate>
 struct any_child
 {
-  static const bool value = Dune::PDELab::TypeTree::AccumulateValue<Tree,
-                                                                    predicate_wrapper<Predicate>,
-                                                                    Dune::PDELab::TypeTree::or_<bool>,
-                                                                    false>::result;
+  static const bool value = TypeTree::AccumulateValue<
+    Tree,
+    predicate_wrapper<Predicate>,
+    TypeTree::or_<bool>,
+    false
+    >::result;
 };
 
 

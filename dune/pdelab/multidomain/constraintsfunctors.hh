@@ -1,8 +1,9 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTSFUNCTORS_HH
 #define DUNE_PDELAB_MULTIDOMAIN_CONSTRAINTSFUNCTORS_HH
 
+#include <dune/typetree/typetree.hh>
+
 #include <dune/pdelab/constraints/common/constraints.hh>
-#include <dune/pdelab/common/typetree.hh>
 #include <dune/pdelab/multidomain/datawrappers.hh>
 #include <dune/pdelab/multidomain/visitor.hh>
 
@@ -51,7 +52,7 @@ namespace functors {
       if (!descriptor.appliesTo(data().eg()))
         return;
       typedef VolumeConstraints<typename Data::EG,typename Data::CL_S> Visitor;
-      Dune::PDELab::TypeTree::applyToTree(
+      TypeTree::applyToTree(
         descriptor.lfs_s(),
         Visitor(
           data().eg(),
@@ -79,7 +80,7 @@ namespace functors {
           if (!data().ig().oneSidedDirection())  // Constraints are always applied one-sided
             return;
           typedef SkeletonConstraints<typename Data::IG,typename Data::CL_S> Visitor;
-          Dune::PDELab::TypeTree::applyToTreePair(
+          TypeTree::applyToTreePair(
             descriptor.lfs_s(),
             descriptor.lfs_n(),
             Visitor(
@@ -92,7 +93,7 @@ namespace functors {
       else
         {
           typedef BoundaryConstraints<typename Data::IG, typename Data::CL_S> Visitor;
-          Dune::PDELab::TypeTree::applyToTreePair(
+          TypeTree::applyToTreePair(
             descriptor.parameters(),
             descriptor.lfs_s(),
             Visitor(
@@ -118,7 +119,7 @@ namespace functors {
       if (!descriptor.appliesTo(data().ig().insideElement()))
           return;
       typedef BoundaryConstraints<typename Data::IG,typename Data::CL_S> Visitor;
-      Dune::PDELab::TypeTree::applyToTreePair(
+      TypeTree::applyToTreePair(
         descriptor.parameters(),
         descriptor.lfs_s(),
         Visitor(
@@ -143,7 +144,7 @@ namespace functors {
       if (!descriptor.appliesTo(data().ig().insideElement()))
         return;
       typedef ProcessorConstraints<typename Data::IG, typename Data::CL_S> Visitor;
-      Dune::PDELab::TypeTree::applyToTree(
+      TypeTree::applyToTree(
         descriptor.lfs_s(),
         Visitor(
           data().ig(),

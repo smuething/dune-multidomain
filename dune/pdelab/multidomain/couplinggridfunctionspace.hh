@@ -1,10 +1,11 @@
 #ifndef DUNE_MULTIDOMAIN_COUPLINGGRIDFUNCTIONSPACE_HH
 #define DUNE_MULTIDOMAIN_COUPLINGGRIDFUNCTIONSPACE_HH
 
+#include <dune/typetree/typetree.hh>
+
 #include <dune/pdelab/multidomain/couplinglocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/couplinggfsordering.hh>
 #include <dune/pdelab/multidomain/dofmapper.hh>
-#include <dune/pdelab/common/typetree.hh>
 
 namespace Dune {
 namespace PDELab {
@@ -44,7 +45,7 @@ private:
 template<typename GV, typename FEM, typename Predicate_, typename CE=NoConstraints,
          typename B=ISTLVectorBackend<>, typename O=DefaultLeafOrderingTag>
 class CouplingGridFunctionSpace
-  : public Dune::PDELab::TypeTree::LeafNode
+  : public TypeTree::LeafNode
 {
 
   typedef TypeTree::TransformTree<CouplingGridFunctionSpace,gfs_to_ordering<CouplingGridFunctionSpace> > ordering_transformation;

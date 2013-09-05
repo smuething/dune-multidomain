@@ -142,7 +142,7 @@ constrainSubProblem(const SubProblem& subProblem, const Parameters& parameters)
 
 template<typename MDLFS, typename Parameters>
 struct MultiDomainGridFunctionSpaceConstraints
-  : public Dune::PDELab::TypeTree::LeafNode
+  : public TypeTree::LeafNode
   , public ParameterHolder<Parameters>
 {
 
@@ -216,7 +216,7 @@ buildConstraintsDescriptor(const MDLFS& mdlfs_s, const MDLFS& mdlfs_n,
 
 template<typename MDLFS, typename SubProblem, typename Parameters>
 struct SubProblemConstraints
-  : public Dune::PDELab::TypeTree::LeafNode
+  : public TypeTree::LeafNode
   , public ParameterHolder<Parameters>
 {
 
@@ -311,11 +311,11 @@ buildConstraintsDescriptor(const MDLFS& mdlfs_s, const MDLFS& mdlfs_n,
 
 template<typename CA, typename... ConstraintsDescriptors>
 class ConstraintsAssemblerEngine
-  : public Dune::PDELab::TypeTree::VariadicCompositeNode<ConstraintsDescriptors...>
+  : public TypeTree::VariadicCompositeNode<ConstraintsDescriptors...>
   , public Dune::PDELab::LocalAssemblerEngineBase
 {
 
-  typedef Dune::PDELab::TypeTree::VariadicCompositeNode<ConstraintsDescriptors...> NodeT;
+  typedef TypeTree::VariadicCompositeNode<ConstraintsDescriptors...> NodeT;
   typedef typename CA::Traits::ConstraintsContainer CG;
   typedef typename CG::LocalTransformation CL;
 
@@ -485,7 +485,7 @@ private:
   template<typename Visitor>
   void applyVisitor(Visitor&& visitor)
   {
-    Dune::PDELab::TypeTree::applyToTree(*this,visitor);
+    TypeTree::applyToTree(*this,visitor);
   }
 
   CG* _cg;

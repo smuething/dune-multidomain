@@ -3,7 +3,9 @@
 #define DUNE_MULTIDOMAIN_MULTIDOMAINLOCALFUNCTIONSPACE_HH
 
 #include <vector>
-#include <dune/pdelab/common/typetree.hh>
+
+#include <dune/typetree/typetree.hh>
+
 #include <dune/pdelab/gridfunctionspace/localfunctionspace.hh>
 #include <dune/grid/multidomaingrid.hh>
 
@@ -33,8 +35,8 @@ struct gfs_flavor_tag;
 
 template<typename Entity, typename Impl>
 struct ComputeSizeVisitorBase
-  : public Dune::PDELab::TypeTree::DirectChildrenVisitor
-  , public Dune::PDELab::TypeTree::DynamicTraversal
+  : public TypeTree::DirectChildrenVisitor
+  , public TypeTree::DynamicTraversal
 {
 
   template<typename Node, typename TreePath>
@@ -95,7 +97,7 @@ struct ComputeSizeVisitor<Entity,StandardLFSTag>
   void compute_size(Child& child, MultiDomainGFSTag tag)
   {
     Dune::PDELab::ComputeSizeVisitor<Entity> child_visitor(e,offset);
-    Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
+    TypeTree::applyToTree(child,child_visitor);
     offset = child_visitor.offset;
   }
 
@@ -108,14 +110,14 @@ struct ComputeSizeVisitor<Entity,StandardLFSTag>
     if (child.gridFunctionSpace().gridView().indexSet().contains(*ep))
       {
         Dune::PDELab::ComputeSizeVisitor<SDE> child_visitor(*ep,offset);
-        Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
+        TypeTree::applyToTree(child,child_visitor);
         offset = child_visitor.offset;
       }
     else
       {
         // make sure all children know they are empty
         Dune::PDELab::ClearSizeVisitor<> child_visitor(offset);
-        Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
+        TypeTree::applyToTree(child,child_visitor);
       }
   }
 
@@ -145,14 +147,14 @@ struct ComputeSizeVisitor<Intersection,CouplingLFSTag>
     if (child.gridFunctionSpace().contains(e))
       {
         Dune::PDELab::ComputeSizeVisitor<Intersection> child_visitor(e,offset);
-        Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
+        TypeTree::applyToTree(child,child_visitor);
         offset = child_visitor.offset;
       }
     else
       {
         // make sure all children know they are empty
         Dune::PDELab::ClearSizeVisitor<> child_visitor(offset);
-        Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
+        TypeTree::applyToTree(child,child_visitor);
       }
   }
 
@@ -161,8 +163,8 @@ struct ComputeSizeVisitor<Intersection,CouplingLFSTag>
 
 template<typename Impl>
 struct FillIndicesVisitorBase
-  : public Dune::PDELab::TypeTree::DirectChildrenVisitor
-  , public Dune::PDELab::TypeTree::DynamicTraversal
+  : public TypeTree::DirectChildrenVisitor
+  , public TypeTree::DynamicTraversal
 {
 
   template<typename LFS, typename Child, typename TreePath, typename ChildIndex>
@@ -216,7 +218,7 @@ struct FillIndicesVisitor<Entity,StandardLFSTag>
   void fill_indices(Child& child, MultiDomainGFSTag tag)
   {
     Dune::PDELab::FillIndicesVisitor<Entity> child_visitor(e);
-    Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
+    TypeTree::applyToTree(child,child_visitor);
   }
 
   template<typename Child>
@@ -228,7 +230,7 @@ struct FillIndicesVisitor<Entity,StandardLFSTag>
     if (child.gridFunctionSpace().gridView().indexSet().contains(*ep))
       {
         Dune::PDELab::FillIndicesVisitor<SDE> child_visitor(*ep);
-        Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
+        TypeTree::applyToTree(child,child_visitor);
       }
   }
 
@@ -268,7 +270,7 @@ struct FillIndicesVisitor<Intersection,CouplingLFSTag>
       {
         // TODO: Fix this - it is definitely wrong!
         Dune::PDELab::FillIndicesVisitor<Intersection> child_visitor(is);
-        Dune::PDELab::TypeTree::applyToTree(child,child_visitor);
+        TypeTree::applyToTree(child,child_visitor);
       }
   }
 
@@ -347,11 +349,11 @@ public:
   void bind (const Element& e)
   {
     ComputeSizeVisitor<Element,LFSTag> csv(e);
-    Dune::PDELab::TypeTree::applyToTree(*this,csv);
+    TypeTree::applyToTree(*this,csv);
 
     // initialize iterators and fill indices
     FillIndicesVisitor<Element,LFSTag> fiv(e);
-    Dune::PDELab::TypeTree::applyToTree(*this,fiv);
+    TypeTree::applyToTree(*this,fiv);
 
   }
 
@@ -373,7 +375,7 @@ struct MultiDomainLocalFunctionSpaceTransformationTemplate
 };
 
 template<typename MultiDomainGFS, typename data>
-Dune::PDELab::TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
+TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
   MultiDomainGFS,
   Dune::PDELab::gfs_to_lfs<data>,
   MultiDomainLocalFunctionSpaceTransformationTemplate<
@@ -382,7 +384,7 @@ Dune::PDELab::TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
     gfs_to_lfs<data>
     >::template result
   >
-lookupNodeTransformation(MultiDomainGFS*, Dune::PDELab::gfs_to_lfs<data>*, MultiDomainGridFunctionSpaceTag);
+registerNodeTransformation(MultiDomainGFS*, Dune::PDELab::gfs_to_lfs<data>*, MultiDomainGridFunctionSpaceTag*);
 
 
 template<typename GFS>
@@ -395,7 +397,7 @@ struct gfs_to_coupling_lfs {
 
 
 template<typename MultiDomainGFS,typename data>
-Dune::PDELab::TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
+TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
   MultiDomainGFS,
   gfs_to_coupling_lfs<data>,
   MultiDomainLocalFunctionSpaceTransformationTemplate<
@@ -404,12 +406,12 @@ Dune::PDELab::TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
     gfs_to_coupling_lfs<data>
     >::template result
   >
-lookupNodeTransformation(MultiDomainGFS*, gfs_to_coupling_lfs<data>*, MultiDomainGridFunctionSpaceTag);
+registerNodeTransformation(MultiDomainGFS*, gfs_to_coupling_lfs<data>*, MultiDomainGridFunctionSpaceTag*);
 
 
 
 template<typename PowerGridFunctionSpace, typename data>
-Dune::PDELab::TypeTree::TemplatizedGenericPowerNodeTransformation<
+TypeTree::TemplatizedGenericPowerNodeTransformation<
   PowerGridFunctionSpace,
   gfs_to_coupling_lfs<data>,
   power_gfs_to_lfs_template<
@@ -417,12 +419,12 @@ Dune::PDELab::TypeTree::TemplatizedGenericPowerNodeTransformation<
     gfs_to_coupling_lfs<data>
     >::template result
   >
-lookupNodeTransformation(PowerGridFunctionSpace* pgfs, gfs_to_coupling_lfs<data>* t, PowerGridFunctionSpaceTag tag);
+registerNodeTransformation(PowerGridFunctionSpace* pgfs, gfs_to_coupling_lfs<data>* t, PowerGridFunctionSpaceTag* tag);
 
 #if HAVE_VARIADIC_TEMPLATES
 
 template<typename CompositeGridFunctionSpace, typename data>
-Dune::PDELab::TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
+TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
   CompositeGridFunctionSpace,
   gfs_to_coupling_lfs<data>,
   variadic_composite_gfs_to_lfs_template<
@@ -430,14 +432,14 @@ Dune::PDELab::TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
     gfs_to_coupling_lfs<data>
     >::template result
   >
-lookupNodeTransformation(CompositeGridFunctionSpace* cgfs, gfs_to_coupling_lfs<data>* t, CompositeGridFunctionSpaceTag tag);
+registerNodeTransformation(CompositeGridFunctionSpace* cgfs, gfs_to_coupling_lfs<data>* t, CompositeGridFunctionSpaceTag* tag);
 
 #else
 #error "require variadic templates"
 #endif
 
 template<typename GridFunctionSpace, typename data>
-Dune::PDELab::TypeTree::GenericLeafNodeTransformation<
+TypeTree::GenericLeafNodeTransformation<
   GridFunctionSpace,
   gfs_to_coupling_lfs<data>,
   LeafLocalFunctionSpaceNode<
@@ -445,7 +447,7 @@ Dune::PDELab::TypeTree::GenericLeafNodeTransformation<
     typename gfs_to_coupling_lfs<data>::DOFIndex
     >
   >
-lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, LeafGridFunctionSpaceTag tag);
+registerNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, LeafGridFunctionSpaceTag* tag);
 
 
 
@@ -453,9 +455,9 @@ lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_coupling_lfs<data>* t, L
 // TODO: Add support for tags
 template<typename GFS, typename Tag=AnySpaceTag>
 class CouplingLocalFunctionSpace
-  : public Dune::PDELab::TypeTree::TransformTree<GFS,gfs_to_coupling_lfs<GFS> >::Type
+  : public TypeTree::TransformTree<GFS,gfs_to_coupling_lfs<GFS> >::Type
 {
-  typedef typename Dune::PDELab::TypeTree::TransformTree<GFS,gfs_to_coupling_lfs<GFS> >::Type BaseT;
+  typedef typename TypeTree::TransformTree<GFS,gfs_to_coupling_lfs<GFS> >::Type BaseT;
 
   CouplingLocalFunctionSpace(const CouplingLocalFunctionSpace&);
 

@@ -4,7 +4,8 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_COUPLINGGFSORDERING_HH
 #define DUNE_PDELAB_MULTIDOMAIN_COUPLINGGFSORDERING_HH
 
-#include <dune/pdelab/common/typetree.hh>
+#include <dune/typetree/typetree.hh>
+
 #include <dune/pdelab/ordering/utility.hh>
 #include <dune/pdelab/ordering/localorderingbase.hh>
 #include <dune/pdelab/ordering/orderingbase.hh>
@@ -434,7 +435,7 @@ namespace Dune {
       GridFunctionSpace,
       gfs_to_ordering<Params>
       >
-    lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_ordering<Params>* t, CouplingGridFunctionSpaceTag tag);
+    registerNodeTransformation(GridFunctionSpace* gfs, gfs_to_ordering<Params>* t, CouplingGridFunctionSpaceTag* tag);
 
 
 

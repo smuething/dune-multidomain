@@ -3,7 +3,9 @@
 
 #include <tuple>
 #include <type_traits>
-#include <dune/pdelab/common/typetree.hh>
+
+#include <dune/typetree/typetree.hh>
+
 #include <dune/pdelab/gridfunctionspace/gridfunctionspace.hh>
 #include <dune/pdelab/gridfunctionspace/powercompositegridfunctionspacebase.hh>
 #include <dune/pdelab/ordering/transformations.hh>
@@ -358,7 +360,7 @@ composite_gfs_to_ordering_descriptor<
   gfs_to_ordering<Params>,
   typename GridFunctionSpace::OrderingTag
   >
-lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_ordering<Params>* t, MultiDomainGridFunctionSpaceTag tag);
+registerNodeTransformation(GridFunctionSpace* gfs, gfs_to_ordering<Params>* t, MultiDomainGridFunctionSpaceTag* tag);
 
 template<typename GridFunctionSpace, typename Params>
 composite_gfs_to_local_ordering_descriptor<
@@ -366,7 +368,7 @@ composite_gfs_to_local_ordering_descriptor<
   gfs_to_local_ordering<Params>,
   typename GridFunctionSpace::OrderingTag
   >
-lookupNodeTransformation(GridFunctionSpace* gfs, gfs_to_local_ordering<Params>* t, MultiDomainGridFunctionSpaceTag tag);
+registerNodeTransformation(GridFunctionSpace* gfs, gfs_to_local_ordering<Params>* t, MultiDomainGridFunctionSpaceTag* tag);
 
 
   /*

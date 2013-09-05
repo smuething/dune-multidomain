@@ -1,11 +1,11 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_VISITOR_HH
 #define DUNE_PDELAB_MULTIDOMAIN_VISITOR_HH
 
+#include <dune/typetree/typetree.hh>
+
 namespace Dune {
 namespace PDELab {
 namespace MultiDomain {
-
-#include <dune/pdelab/common/typetree.hh>
 
 template<typename data_container>
 struct data_accessor
@@ -41,8 +41,8 @@ struct visitor
   template<typename... data_wrappers>
   struct data_enriched_visitor
     : public functor_template<data_enriched_visitor<data_wrappers...> >
-    , public Dune::PDELab::TypeTree::TreeVisitor
-    , public Dune::PDELab::TypeTree::DynamicTraversal
+    , public TypeTree::TreeVisitor
+    , public TypeTree::DynamicTraversal
     , public data_wrappers...
   {
 

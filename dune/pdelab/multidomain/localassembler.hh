@@ -2,8 +2,9 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_LOCALASSEMBLER_HH
 #define DUNE_PDELAB_MULTIDOMAIN_LOCALASSEMBLER_HH
 
-#include <dune/pdelab/common/typetree.hh>
-#include <dune/pdelab/common/typetree/filteredcompositenode.hh>
+#include <dune/typetree/typetree.hh>
+#include <dune/typetree/filteredcompositenode.hh>
+
 #include <dune/pdelab/gridoperator/common/assemblerutilities.hh>
 
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
@@ -24,7 +25,7 @@ namespace MultiDomain {
 
 
 struct SubProblemFilter
-  : public Dune::PDELab::TypeTree::SimpleFilter
+  : public TypeTree::SimpleFilter
 {
   template<typename T, std::size_t new_k, std::size_t old_k>
   struct apply
@@ -33,7 +34,7 @@ struct SubProblemFilter
 };
 
 struct CouplingFilter
-  : public Dune::PDELab::TypeTree::SimpleFilter
+  : public TypeTree::SimpleFilter
 {
   template<typename T, std::size_t new_k, std::size_t old_k>
   struct apply
@@ -183,7 +184,7 @@ struct LocalAssemblerTraits
 
 template<typename GO, typename... AssemblyParticipants>
 class LocalAssembler
-  : public Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...>
+  : public TypeTree::VariadicCompositeNode<AssemblyParticipants...>
   , public Dune::PDELab::LocalAssemblerBase<typename GO::Traits::MatrixBackend,
                                             typename GO::Traits::TrialGridFunctionSpaceConstraints,
                                             typename GO::Traits::TestGridFunctionSpaceConstraints>
@@ -207,15 +208,15 @@ public:
 
 private:
 
-  typedef Dune::PDELab::TypeTree::VariadicCompositeNode<AssemblyParticipants...> NodeT;
+  typedef TypeTree::VariadicCompositeNode<AssemblyParticipants...> NodeT;
   typedef Dune::PDELab::LocalAssemblerBase<
     typename GO::Traits::MatrixBackend,
     typename GO::Traits::TrialGridFunctionSpaceConstraints,
     typename GO::Traits::TestGridFunctionSpaceConstraints
     > BaseT;
 
-  typedef Dune::PDELab::TypeTree::FilteredCompositeNode<LocalAssembler,SubProblemFilter> SubProblems;
-  typedef Dune::PDELab::TypeTree::FilteredCompositeNode<LocalAssembler,CouplingFilter> Couplings;
+  typedef TypeTree::FilteredCompositeNode<LocalAssembler,SubProblemFilter> SubProblems;
+  typedef TypeTree::FilteredCompositeNode<LocalAssembler,CouplingFilter> Couplings;
 
 public:
 
@@ -294,42 +295,42 @@ public:
   template<typename Visitor>
   const Visitor& applyToSubProblems(Visitor&& v)
   {
-    Dune::PDELab::TypeTree::applyToTree(_subProblems,v);
+    TypeTree::applyToTree(_subProblems,v);
     return v;
   }
 
   template<typename Visitor>
   const Visitor& applyToCouplings(Visitor&& v)
   {
-    Dune::PDELab::TypeTree::applyToTree(_couplings,v);
+    TypeTree::applyToTree(_couplings,v);
     return v;
   }
 
   template<typename Visitor>
   const Visitor& applyToParticipants(Visitor&& v)
   {
-    Dune::PDELab::TypeTree::applyToTree(*this,v);
+    TypeTree::applyToTree(*this,v);
     return v;
   }
 
   template<typename Visitor>
   const Visitor& applyToSubProblems(Visitor&& v) const
   {
-    Dune::PDELab::TypeTree::applyToTree(_subProblems,v);
+    TypeTree::applyToTree(_subProblems,v);
     return v;
   }
 
   template<typename Visitor>
   const Visitor& applyToCouplings(Visitor&& v) const
   {
-    Dune::PDELab::TypeTree::applyToTree(_couplings,v);
+    TypeTree::applyToTree(_couplings,v);
     return v;
   }
 
   template<typename Visitor>
   const Visitor& applyToParticipants(Visitor&& v) const
   {
-    Dune::PDELab::TypeTree::applyToTree(*this,v);
+    TypeTree::applyToTree(*this,v);
     return v;
   }
 

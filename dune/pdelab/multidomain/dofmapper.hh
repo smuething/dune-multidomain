@@ -77,8 +77,8 @@ private:
 
   static VertexList buildVertexList(Dune::GeometryType gt)
   {
-    const Dune::GenericReferenceElement<typename GV::Grid::ctype,GV::Grid::dimension>& refEl =
-      Dune::GenericReferenceElements<typename GV::Grid::ctype,GV::Grid::dimension>::general(gt);
+    const Dune::ReferenceElement<typename GV::Grid::ctype,GV::Grid::dimension>& refEl =
+      Dune::ReferenceElements<typename GV::Grid::ctype,GV::Grid::dimension>::general(gt);
     VertexList vl(refEl.size(GV::Grid::dimension));
     for (std::size_t i = 0; i < vl.size(); ++i)
       vl[i] = refEl.position(i,GV::Grid::dimension);

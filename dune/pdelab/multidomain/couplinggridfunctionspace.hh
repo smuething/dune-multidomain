@@ -248,7 +248,7 @@ public:
             // insert geometry type of all subentities into set
             for (std::size_t i=0; i<lc.size(); ++i)
               {
-                Dune::GeometryType gt=Dune::GenericReferenceElements<double,GV::Grid::dimension - 1>
+                Dune::GeometryType gt=Dune::ReferenceElements<double,GV::Grid::dimension - 1>
                   ::general(iit->type()).type(lc.localKey(i).subEntity(),lc.localKey(i).codim());
                 gtused.insert(gt);
                 codimUsed.insert(GV::Grid::dimension-gt.dim());
@@ -301,7 +301,7 @@ public:
             // compute maximum size for each subentity
             for (std::size_t i=0; i<lc.size(); ++i)
               {
-                Dune::GeometryType gt=Dune::GenericReferenceElements<double,GV::Grid::dimension - 1>
+                Dune::GeometryType gt=Dune::ReferenceElements<double,GV::Grid::dimension - 1>
                   ::general(iit->type()).type(lc.localKey(i).subEntity(),lc.localKey(i).codim());
                 unsigned int index = gtoffset[gt] +
                   is.subIndex(dm.element(),

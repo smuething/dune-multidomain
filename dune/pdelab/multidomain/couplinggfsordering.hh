@@ -121,7 +121,7 @@ namespace Dune {
 
         _max_local_size = std::max(_max_local_size,coeffs.size());
 
-        const GenericReferenceElement<typename Traits::GridView::ctype, Traits::GridView::dimension-1>& ref_el = GenericReferenceElements<typename Traits::GridView::ctype,Traits::GridView::dimension-1>::general(intersection.type());
+        const ReferenceElement<typename Traits::GridView::ctype, Traits::GridView::dimension-1>& ref_el = ReferenceElements<typename Traits::GridView::ctype,Traits::GridView::dimension-1>::general(intersection.type());
 
         for (std::size_t i = 0; i < coeffs.size(); ++i)
           {
@@ -159,8 +159,8 @@ namespace Dune {
 
         typedef typename Traits::SizeType size_type;
 
-        const GenericReferenceElement<typename Traits::GridView::ctype,Traits::GridView::dimension-1>& ref_el =
-          GenericReferenceElements<typename Traits::GridView::ctype,Traits::GridView::dimension-1>::general(intersection.type());
+        const ReferenceElement<typename Traits::GridView::ctype,Traits::GridView::dimension-1>& ref_el =
+          ReferenceElements<typename Traits::GridView::ctype,Traits::GridView::dimension-1>::general(intersection.type());
 
         DOFMapper<GV> dm(intersection);
 

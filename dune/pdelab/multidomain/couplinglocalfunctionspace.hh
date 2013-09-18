@@ -183,8 +183,8 @@ public:
 
     DOFMapper<GV> dm(is);
 
-    const Dune::GenericReferenceElement<typename GV::ctype,GV::Grid::dimension-1>& refEl =
-      Dune::GenericReferenceElements<typename GV::ctype,GV::Grid::dimension-1>::general(this->pfe->type());
+    const Dune::ReferenceElement<typename GV::ctype,GV::Grid::dimension-1>& refEl =
+      Dune::ReferenceElements<typename GV::ctype,GV::Grid::dimension-1>::general(this->pfe->type());
 
     for (std::size_t i = 0; i < std::size_t(coeffs.size()); ++i, ++it)
       {
@@ -225,8 +225,8 @@ public:
 
     DOFMapper<GV> dm(is);
 
-    const Dune::GenericReferenceElement<typename GV::ctype,GV::Grid::dimension-1>& refEl =
-      Dune::GenericReferenceElements<typename GV::ctype,GV::Grid::dimension-1>::general(this->pfe->type());
+    const Dune::ReferenceElement<typename GV::ctype,GV::Grid::dimension-1>& refEl =
+      Dune::ReferenceElements<typename GV::ctype,GV::Grid::dimension-1>::general(this->pfe->type());
 
     for (std::size_t i = 0; i < std::size_t(coeffs.size()); ++i, ++it)
       {

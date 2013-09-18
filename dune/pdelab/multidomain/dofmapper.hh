@@ -1,10 +1,13 @@
 #ifndef DUNE_MULTIDOMAIN_DOFMAPPER_HH
 #define DUNE_MULTIDOMAIN_DOFMAPPER_HH
 
-#include <vector>
+#include <algorithm>
 #include <utility>
+#include <vector>
 
+#include <dune/geometry/referenceelements.hh>
 #include <dune/geometry/typeindex.hh>
+#include <dune/grid/common/exceptions.hh>
 
 namespace Dune {
 namespace PDELab {

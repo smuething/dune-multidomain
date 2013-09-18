@@ -3,6 +3,8 @@
 
 #include <type_traits>
 
+#include <dune/common/static_assert.hh>
+
 namespace Dune {
 
 namespace PDELab {

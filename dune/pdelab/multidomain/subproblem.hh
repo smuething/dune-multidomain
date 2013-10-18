@@ -3,6 +3,7 @@
 
 #include <dune/typetree/typetree.hh>
 
+#include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/multidomain/subdomainset.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 

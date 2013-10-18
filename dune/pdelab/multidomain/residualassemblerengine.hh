@@ -8,8 +8,9 @@
 #include <dune/pdelab/gridoperator/common/localmatrix.hh>
 #include <dune/pdelab/gridoperator/common/localassemblerenginebase.hh>
 
-#include <dune/pdelab/multidomain/policy.hh>
 #include <dune/pdelab/multidomain/datawrappers.hh>
+#include <dune/pdelab/multidomain/operatorflagtests.hh>
+#include <dune/pdelab/multidomain/policy.hh>
 #include <dune/pdelab/multidomain/residualassemblerfunctors.hh>
 
 namespace Dune {

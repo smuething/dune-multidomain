@@ -1,6 +1,8 @@
 #ifndef DUNE_MULTIDOMAIN_OPERATORFLAGTESTS_HH
 #define DUNE_MULTIDOMAIN_OPERATORFLAGTESTS_HH
 
+#include <dune/typetree/accumulate_static.hh>
+
 namespace Dune {
 
 namespace PDELab {

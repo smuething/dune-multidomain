@@ -11,6 +11,7 @@
 #include <dune/pdelab/ordering/orderingbase.hh>
 #include <dune/pdelab/ordering/directleaflocalordering.hh>
 #include <dune/pdelab/multidomain/dofmapper.hh>
+#include <dune/pdelab/multidomain/istlhelpers.hh>
 
 namespace Dune {
   namespace PDELab {

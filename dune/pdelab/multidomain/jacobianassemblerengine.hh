@@ -10,7 +10,7 @@
 
 #include <dune/pdelab/multidomain/datawrappers.hh>
 #include <dune/pdelab/multidomain/jacobianassemblerfunctors.hh>
-
+#include <dune/pdelab/multidomain/operatorflagtests.hh>
 
 namespace Dune {
 

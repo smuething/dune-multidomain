@@ -7,6 +7,7 @@
 
 #include <dune/pdelab/common/elementmapper.hh>
 #include <dune/pdelab/gridoperator/common/assemblerutilities.hh>
+#include <dune/pdelab/multidomain/couplinglocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/entitywrappers.hh>
 
 namespace Dune {

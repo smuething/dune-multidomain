@@ -1,6 +1,8 @@
 #ifndef DUNE_MULTIDOMAIN_COUPLINGUTILITIES_HH
 #define DUNE_MULTIDOMAIN_COUPLINGUTILITIES_HH
 
+#include <dune/pdelab/gridoperator/common/assemblerutilities.hh>
+
 namespace Dune {
 
 namespace PDELab {

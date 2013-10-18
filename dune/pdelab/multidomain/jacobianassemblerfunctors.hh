@@ -3,6 +3,8 @@
 
 #include <dune/pdelab/multidomain/operatorcallguards.hh>
 #include <dune/pdelab/multidomain/datawrappers.hh>
+#include <dune/pdelab/multidomain/localfunctionspaceutility.hh>
+#include <dune/pdelab/multidomain/policy.hh>
 #include <dune/pdelab/multidomain/visitor.hh>
 
 namespace Dune {

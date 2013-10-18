@@ -3,6 +3,8 @@
 
 #include <dune/typetree/typetree.hh>
 
+#include <dune/pdelab/multidomain/utility.hh>
+
 namespace Dune {
 
 namespace PDELab {

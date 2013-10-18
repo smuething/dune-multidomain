@@ -1,9 +1,10 @@
 #ifndef DUNE_MULTIDOMAIN_INTERPOLATE_HH
 #define DUNE_MULTIDOMAIN_INTERPOLATE_HH
 
-#include <dune/pdelab/gridfunctionspace/interpolate.hh>
-#include <dune/pdelab/multidomain/utility.hh>
 #include <dune/common/tupleutility.hh>
+#include <dune/pdelab/gridfunctionspace/interpolate.hh>
+#include <dune/pdelab/multidomain/entitywrappers.hh>
+#include <dune/pdelab/multidomain/utility.hh>
 
 namespace Dune {
 namespace PDELab {

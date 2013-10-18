@@ -4,6 +4,7 @@
 #define DUNE_PDELAB_MULTIDOMAIN_DATAHANDLEPROVIDER_HH
 
 #include <dune/pdelab/gridfunctionspace/datahandleprovider.hh>
+#include <dune/pdelab/multidomain/multidomainlocalfunctionspace.hh>
 
 namespace Dune {
   namespace PDELab {

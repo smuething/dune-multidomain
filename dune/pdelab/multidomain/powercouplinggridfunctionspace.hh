@@ -4,6 +4,7 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_POWERCOUPLINGGRIDFUNCTIONSPACE_HH
 #define DUNE_PDELAB_MULTIDOMAIN_POWERCOUPLINGGRIDFUNCTIONSPACE_HH
 
+#include <dune/pdelab/multidomain/couplinglocalfunctionspace.hh>
 #include <dune/pdelab/gridfunctionspace/powergridfunctionspace.hh>
 
 namespace Dune {

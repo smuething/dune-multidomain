@@ -1,6 +1,10 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_OPERATORCALLGUARDS_HH
 #define DUNE_PDELAB_MULTIDOMAIN_OPERATORCALLGUARDS_HH
 
+#include <utility>
+
+#include <dune/common/typetraits.hh>
+
 namespace Dune {
 
 namespace PDELab {

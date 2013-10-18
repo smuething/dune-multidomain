@@ -1,9 +1,11 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_PATTERNASSEMBLERFUNCTORS_HH
 #define DUNE_PDELAB_MULTIDOMAIN_PATTERNASSEMBLERFUNCTORS_HH
 
+#include <dune/pdelab/gridoperator/common/assemblerutilities.hh>
 #include <dune/pdelab/multidomain/datawrappers.hh>
-#include <dune/pdelab/multidomain/visitor.hh>
+#include <dune/pdelab/multidomain/localfunctionspaceutility.hh>
 #include <dune/pdelab/multidomain/operatorcallguards.hh>
+#include <dune/pdelab/multidomain/visitor.hh>
 
 namespace Dune {
 namespace PDELab {

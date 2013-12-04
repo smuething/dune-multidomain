@@ -1,8 +1,11 @@
 #ifndef STOKESDARCYCOUPLINGOPERATOR_HH
 #define STOKESDARCYCOUPLINGOPERATOR_HH
 
-#include <dune/pdelab/multidomain/couplingutilities.hh>
+#include <dune/common/fmatrix.hh>
 #include <dune/common/parametertree.hh>
+#include <dune/geometry/quadraturerules.hh>
+
+#include <dune/pdelab/multidomain/couplingutilities.hh>
 
 template<typename GV>
 class CouplingParameters

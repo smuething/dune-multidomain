@@ -2,6 +2,8 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_DATAWRAPPERS_HH
 #define DUNE_PDELAB_MULTIDOMAIN_DATAWRAPPERS_HH
 
+#include <dune/pdelab/multidomain/coupling.hh>
+
 namespace Dune {
 
 namespace PDELab {

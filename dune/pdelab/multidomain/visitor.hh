@@ -2,6 +2,7 @@
 #define DUNE_PDELAB_MULTIDOMAIN_VISITOR_HH
 
 #include <dune/typetree/typetree.hh>
+#include <dune/pdelab/multidomain/datawrappers.hh>
 
 namespace Dune {
 namespace PDELab {

@@ -1,6 +1,7 @@
 #ifndef PROPORTIONALFLOWCOUPLING_HH
 #define PROPORTIONALFLOWCOUPLING_HH
 
+#include <dune/geometry/quadraturerules.hh>
 
 #include <dune/pdelab/multidomain/couplingutilities.hh>
 #include <dune/pdelab/localoperator/pattern.hh>

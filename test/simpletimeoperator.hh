@@ -1,7 +1,12 @@
 #ifndef SIMPLETIMEOPERATOR_HH
 #define SIMPLETIMEOPERATOR_HH
 
+#include <dune/geometry/quadraturerules.hh>
+
+#include <dune/pdelab/localoperator/defaultimp.hh>
+#include <dune/pdelab/localoperator/flags.hh>
 #include <dune/pdelab/localoperator/idefault.hh>
+#include <dune/pdelab/localoperator/pattern.hh>
 
 class SimpleTimeOperator
   : public Dune::PDELab::NumericalJacobianApplyVolume<SimpleTimeOperator>,

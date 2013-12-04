@@ -138,9 +138,9 @@ int main(int argc, char** argv) {
     timer.start();
     const int dim = 2;
     typedef Dune::YaspGrid<dim> BaseGrid;
-    const Dune::FieldVector<int,dim> s(1);
     const Dune::FieldVector<double,dim> h(1.0);
-    const Dune::FieldVector<bool,dim> p(false);
+    const Dune::array<int,dim> s = { {1,1} };
+    const std::bitset<dim> p(false);
     BaseGrid baseGrid(h,s,p,0);
     baseGrid.globalRefine(atoi(argv[1]));
     typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;

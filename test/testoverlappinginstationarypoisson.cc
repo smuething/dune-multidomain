@@ -137,9 +137,10 @@ int main(int argc, char** argv) {
     timer.start();
     const int dim = 2;
     typedef Dune::YaspGrid<dim> BaseGrid;
-    Dune::FieldVector<int,dim> s(1 << atoi(argv[1]));
     const Dune::FieldVector<double,dim> h(1.0);
-    const Dune::FieldVector<bool,dim> p(false);
+    const int gridCells = 1 << atoi(argv[1]);
+    const Dune::array<int,dim> s = { {gridCells,gridCells} };
+    const std::bitset<dim> p(false);
     const int overlap = 1;
     BaseGrid baseGrid(mpihelper.getCommunicator(),h,s,p,overlap);
     //baseGrid.globalRefine();

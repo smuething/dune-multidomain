@@ -158,14 +158,10 @@ int main(int argc, char** argv) {
     FEM0 fem0;
     FEM1 fem1;
     typedef Dune::PDELab::NoConstraints NOCON;
-    typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
+    typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,NOCON,
-      Dune::PDELab::ISTLVectorBackend<1> > GFS0;
-
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,NOCON,
-      Dune::PDELab::ISTLVectorBackend<1> > GFS1;
-
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,NOCON,VBE> GFS0;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,NOCON,VBE> GFS1;
     typedef Dune::PDELab::GridFunctionSpace<MDGV,FEM0,NOCON,VBE> GFS2;
 
     typedef Dune::PDELab::PowerGridFunctionSpace<GFS0,2,Dune::PDELab::GridFunctionSpaceLexicographicMapper> PowerGFS;

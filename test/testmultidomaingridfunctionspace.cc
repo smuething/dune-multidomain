@@ -1,10 +1,10 @@
 #include "config.h"
 
-#include <dune/common/mpihelper.hh>
+#include <dune/common/parallel/mpihelper.hh>
 #include <dune/grid/sgrid.hh>
-#include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/finiteelementmap/q1fem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
+#include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 
 int main(int argc, char** argv) {

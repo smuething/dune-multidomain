@@ -156,15 +156,12 @@ int main(int argc, char** argv) {
     FEM1 fem1;
     typedef Dune::PDELab::NoConstraints NOCON;
     typedef Dune::PDELab::ConformingDirichletConstraints CON;
-    typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
+    typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
     CON con;
 
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,CON,
-      Dune::PDELab::ISTLVectorBackend<1> > GFS0;
-
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,CON,
-      Dune::PDELab::ISTLVectorBackend<1> > GFS1;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,CON,VBE> GFS0;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,CON,VBE> GFS1;
 
     typedef GFS0::ConstraintsContainer<R>::Type C;
     C cg;

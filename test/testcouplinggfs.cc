@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
 
   COUPLINGFEM couplingfem;
   typedef Dune::PDELab::NoConstraints NOCON;
-  typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
+  typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
   NOCON con;
 

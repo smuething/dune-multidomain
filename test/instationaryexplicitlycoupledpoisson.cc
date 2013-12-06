@@ -197,13 +197,10 @@ int main(int argc, char** argv) {
      * to the SubDomainGrid they are given at construction time
      */
 
-    typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
+    typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,NOCON,
-                                            Dune::PDELab::ISTLVectorBackend<1> > GFS0;
-
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,NOCON,
-                                            Dune::PDELab::ISTLVectorBackend<1> > GFS1;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,NOCON,VBE> GFS0;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,NOCON,VBE> GFS1;
 
     GFS0 gfs0(sdgv0,fem0);
     GFS1 gfs1(sdgv1,fem1);

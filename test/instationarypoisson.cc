@@ -208,10 +208,9 @@ int main(int argc, char** argv) {
      * This will provide an implicit coupling of the two subproblems.
      */
 
-    typedef Dune::PDELab::ISTLVectorBackend<1> VBE;
+    typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
-    typedef Dune::PDELab::GridFunctionSpace<MDGV,FEM,NOCON,
-                                            Dune::PDELab::ISTLVectorBackend<1> > GFS;
+    typedef Dune::PDELab::GridFunctionSpace<MDGV,FEM,NOCON,VBE> GFS;
 
     GFS gfs(mdgv,fem);
 

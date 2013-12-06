@@ -1,5 +1,7 @@
-#include <dune/pdelab/multidomain/visitor.hh>
+#include "config.h"
+
 #include <iostream>
+#include <dune/pdelab/multidomain/visitor.hh>
 
 template<typename data_container>
 struct Visitor

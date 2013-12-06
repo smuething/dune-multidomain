@@ -1,13 +1,11 @@
 #include "config.h"
 
 #include <dune/grid/yaspgrid.hh>
-#include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/finiteelementmap/q1fem.hh>
 #include <dune/pdelab/finiteelementmap/q22dfem.hh>
+#include <dune/pdelab/gridfunctionspace/vectorgridfunctionspace.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/backend/istlmatrixbackend.hh>
-#include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
-#include <dune/pdelab/multidomain/subproblem.hh>
 #include <dune/pdelab/constraints/conforming.hh>
 //#include <dune/pdelab/multidomain/constraints.hh>
 //#include <dune/pdelab/multidomain/interpolate.hh>
@@ -17,10 +15,12 @@
 #include<dune/pdelab/common/vtkexport.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/pdelab/multidomain/coupling.hh>
+#include <dune/pdelab/multidomain/gridoperator.hh>
+#include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
+#include <dune/pdelab/multidomain/subproblem.hh>
+#include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 
 #include "functionmacros.hh"
-
-#include <dune/pdelab/multidomain/gridoperator.hh>
 
 
 // source term
@@ -147,8 +147,6 @@ int main(int argc, char** argv) {
     grid.updateSubDomains();
     grid.postUpdateSubDomains();
 
-    typedef MDGV::Grid::ctype DF;
-
     typedef Dune::PDELab::Q22DLocalFiniteElementMap<ctype,double> FEM0;
     typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM1;
 
@@ -164,9 +162,9 @@ int main(int argc, char** argv) {
     typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,NOCON,VBE> GFS1;
     typedef Dune::PDELab::GridFunctionSpace<MDGV,FEM0,NOCON,VBE> GFS2;
 
-    typedef Dune::PDELab::PowerGridFunctionSpace<GFS0,2,Dune::PDELab::GridFunctionSpaceLexicographicMapper> PowerGFS;
+    typedef Dune::PDELab::VectorGridFunctionSpace<SDGV,FEM0,2,VBE,VBE,NOCON> VectorGFS;
 
-    typedef Dune::PDELab::CompositeGridFunctionSpace<Dune::PDELab::GridFunctionSpaceLexicographicMapper,GFS0,PowerGFS> CompositeGFS;
+    typedef Dune::PDELab::CompositeGridFunctionSpace<VBE,Dune::PDELab::LexicographicOrderingTag, GFS0, VectorGFS> CompositeGFS;
 
     typedef GFS0::ConstraintsContainer<R>::Type C;
     C cg;
@@ -174,12 +172,18 @@ int main(int argc, char** argv) {
     GFS0 gfs0(sdgv0,fem0);
     GFS1 gfs1(sdgv1,fem1);
     GFS2 gfs2(mdgv,fem0);
-    PowerGFS powergfs(gfs0);
-    CompositeGFS compositegfs(gfs0,powergfs);
+    VectorGFS vectorgfs(sdgv0,fem0);
+    CompositeGFS compositegfs(gfs0,vectorgfs);
 
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS0,GFS1/*,GFS2,PowerGFS,CompositeGFS*/> MultiGFS;
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<
+      Grid,
+      VBE,
+      Dune::PDELab::LexicographicOrderingTag,
+      GFS0,
+      GFS1
+      > MultiGFS;
 
-    MultiGFS multigfs(grid,gfs0,gfs1/*,gfs2,powergfs,compositegfs*/);
+    MultiGFS multigfs(grid,gfs0,gfs1);
 
     Dune::PDELab::LocalFunctionSpace<MultiGFS> multilfs(multigfs);
 
@@ -213,7 +217,7 @@ int main(int argc, char** argv) {
     typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,PowerGFS> SubProblem3;
     typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,CompositeGFS> SubProblem4;
     */
-    NOCON nocon;
+//     NOCON nocon;
     SubProblem0 sp0(lop,c0);
     SubProblem1 sp1(lop,c1);
     /*SubProblem2 sp2(nocon,nocon,lop,c0);
@@ -228,7 +232,7 @@ int main(int argc, char** argv) {
     typedef Dune::PDELab::MultiDomain::GridOperator<
       MultiGFS,
       MultiGFS,
-      Dune::PDELab::ISTLBCRSMatrixBackend<1,1>,
+      Dune::PDELab::ISTLMatrixBackend,
       double,double,double,
       Dune::PDELab::EmptyTransformation,
       Dune::PDELab::EmptyTransformation,

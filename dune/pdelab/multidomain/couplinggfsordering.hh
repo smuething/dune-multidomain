@@ -321,10 +321,8 @@ namespace Dune {
         lo.pre_collect_used_geometry_types_from_intersection();
 
         typedef typename GV::template Codim<0>::Iterator CellIterator;
-        typedef typename GV::template Codim<0>::Entity Cell;
 
         typedef typename GV::IntersectionIterator IntersectionIterator;
-        typedef typename GV::Intersection Intersection;
 
         const CellIterator end_it = _gv.template end<0>();
         for (CellIterator it = _gv.template begin<0>(); it != end_it; ++it)

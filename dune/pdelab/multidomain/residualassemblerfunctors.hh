@@ -174,7 +174,6 @@ namespace functors {
     {
       if (!coupling.appliesTo(data().ig()))
         return;
-      typedef typename Data::Operator::template ExtractType<Coupling>::Type LOP;
       typedef typename Coupling::Traits::LocalSubProblem LocalSubProblem;
       typedef typename Coupling::Traits::RemoteSubProblem RemoteSubProblem;
       const LocalSubProblem& localSubProblem = coupling.localSubProblem();
@@ -204,7 +203,6 @@ namespace functors {
     {
       if (!coupling.appliesTo(data().ig()))
         return;
-      typedef typename Data::Operator::template ExtractType<Coupling>::Type LOP;
       typedef typename Coupling::Traits::LocalSubProblem LocalSubProblem;
       typedef typename Coupling::Traits::RemoteSubProblem RemoteSubProblem;
       const LocalSubProblem& localSubProblem = coupling.localSubProblem();
@@ -230,7 +228,6 @@ namespace functors {
     {
       if (!coupling.appliesTo(data().ig()))
         return;
-      typedef typename Data::Operator::template ExtractType<Coupling>::Type LOP;
       typedef typename Coupling::Traits::LocalSubProblem LocalSubProblem;
       typedef typename Coupling::Traits::RemoteSubProblem RemoteSubProblem;
       const LocalSubProblem& localSubProblem = coupling.localSubProblem();
@@ -272,7 +269,6 @@ namespace functors {
     {
       if (!coupling.appliesTo(data().ig()))
         return;
-      typedef typename Data::Operator::template ExtractType<Coupling>::Type LOP;
       typedef typename Coupling::Traits::LocalSubProblem LocalSubProblem;
       typedef typename Coupling::Traits::RemoteSubProblem RemoteSubProblem;
       const LocalSubProblem& localSubProblem = coupling.localSubProblem();

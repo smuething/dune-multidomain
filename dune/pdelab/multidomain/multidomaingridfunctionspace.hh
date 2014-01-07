@@ -101,10 +101,10 @@ struct gfs_flavor_tag
 
   static const Dune::mdgrid::MultiDomainGridType gridType = Dune::mdgrid::GridType<typename GFS::Traits::GridViewType::Grid>::v;
 
-  typedef typename Dune::SelectType<gridType == Dune::mdgrid::multiDomainGrid,
-                                    MultiDomainGFSTag,
-                                    SubDomainGFSTag
-                                    >::Type type;
+  typedef typename Dune::conditional<gridType == Dune::mdgrid::multiDomainGrid,
+                                     MultiDomainGFSTag,
+                                     SubDomainGFSTag
+                                     >::type type;
 
 };
 
@@ -243,7 +243,7 @@ public:
 
   typename G::LeafGridView gridView() const
   {
-    return grid().leafView();
+    return grid().leafGridView();
   }
 
   typename G::LeafGridView gridview() const DUNE_DEPRECATED_MSG("Use gridView() instead of gridview()")

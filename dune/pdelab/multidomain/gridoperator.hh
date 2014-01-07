@@ -64,11 +64,11 @@ public:
 
   static const bool nonoverlapping_mode = false;
 
-  typedef typename SelectType<
+  typedef typename Dune::conditional<
     nonoverlapping_mode,
     NonOverlappingBorderDOFExchanger<GridOperator>,
     OverlappingBorderDOFExchanger<GridOperator>
-    >::Type BorderDOFExchanger;
+    >::type BorderDOFExchanger;
 
 
   template<typename P>

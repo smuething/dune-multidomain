@@ -64,7 +64,7 @@ public:
 
   static const bool nonoverlapping_mode = false;
 
-  typedef typename Dune::conditional<
+  typedef typename conditional<
     nonoverlapping_mode,
     NonOverlappingBorderDOFExchanger<GridOperator>,
     OverlappingBorderDOFExchanger<GridOperator>

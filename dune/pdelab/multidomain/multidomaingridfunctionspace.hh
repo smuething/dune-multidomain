@@ -101,10 +101,10 @@ struct gfs_flavor_tag
 
   static const Dune::mdgrid::MultiDomainGridType gridType = Dune::mdgrid::GridType<typename GFS::Traits::GridViewType::Grid>::v;
 
-  typedef typename Dune::conditional<gridType == Dune::mdgrid::multiDomainGrid,
-                                     MultiDomainGFSTag,
-                                     SubDomainGFSTag
-                                     >::type type;
+  typedef typename conditional<gridType == Dune::mdgrid::multiDomainGrid,
+                               MultiDomainGFSTag,
+                               SubDomainGFSTag
+                               >::type type;
 
 };
 

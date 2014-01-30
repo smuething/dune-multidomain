@@ -5,6 +5,6 @@
 #Name of the module
 Module: dune-multidomain
 Version: 0.1
-Maintainer: steffen.muething@ipvs.uni-stuttgart.de
-#depending on 
-Depends: dune-common dune-grid dune-istl dune-localfunctions dune-pdelab dune-multidomaingrid
+Maintainer: steffen.muething@iwr.uni-heidelberg.de
+#depending on
+Depends: dune-pdelab dune-multidomaingrid

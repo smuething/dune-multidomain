@@ -50,8 +50,8 @@ int main(int argc, char** argv) {
   typedef Grid::ctype ctype;
   typedef Grid::LeafGridView MDGV;
   typedef SubDomainGrid::LeafGridView SDGV;
-  MDGV mdgv = grid.leafView();
-  SDGV sdgv0 = sdg0.leafView();
+  MDGV mdgv = grid.leafGridView();
+  SDGV sdgv0 = sdg0.leafGridView();
 
   grid.startSubDomainMarking();
   for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)

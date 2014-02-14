@@ -339,7 +339,7 @@ int main(int argc, char** argv) {
 
     typedef BaseGrid::LeafGridView GV;
 
-    GV gv = baseGrid.leafView();
+    GV gv = baseGrid.leafGridView();
 
     typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;
     Grid grid(baseGrid,false);
@@ -349,9 +349,9 @@ int main(int argc, char** argv) {
     typedef Grid::ctype ctype;
     typedef Grid::LeafGridView MDGV;
     typedef SubDomainGrid::LeafGridView SDGV;
-    MDGV mdgv = grid.leafView();
-    SDGV stokesGV = stokesGrid.leafView();
-    SDGV darcyGV = darcyGrid.leafView();
+    MDGV mdgv = grid.leafGridView();
+    SDGV stokesGV = stokesGrid.leafGridView();
+    SDGV darcyGV = darcyGrid.leafGridView();
     grid.startSubDomainMarking();
     for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
       {

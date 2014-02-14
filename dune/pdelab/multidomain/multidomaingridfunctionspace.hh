@@ -248,7 +248,7 @@ public:
 
   typename G::LeafGridView gridview() const DUNE_DEPRECATED_MSG("Use gridView() instead of gridview()")
   {
-    return grid().leafView();
+    return grid().leafGridView();
   }
 
   MultiDomainGridFunctionSpace (G& g, const Backend& backend, const OrderingTag& ordering_tag, Children&... children)

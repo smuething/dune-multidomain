@@ -152,13 +152,13 @@ int main(int argc, char** argv) {
     typedef Grid::ctype ctype;
     typedef Grid::LeafGridView MDGV;
     typedef SubDomainGrid::LeafGridView SDGV;
-    MDGV mdgv = grid.leafView();
-    SDGV sdgv0 = sdg0.leafView();
-    SDGV sdgv1 = sdg1.leafView();
+    MDGV mdgv = grid.leafGridView();
+    SDGV sdgv0 = sdg0.leafGridView();
+    SDGV sdgv1 = sdg1.leafGridView();
     sdg0.hostEntityPointer(*sdgv0.begin<0>());
     grid.startSubDomainMarking();
     typedef Grid::Partition<Dune::Interior_Partition>::LeafGridView IMDGV;
-    IMDGV imdgv = grid.leafView<Dune::Interior_Partition>();
+    IMDGV imdgv = grid.leafGridView<Dune::Interior_Partition>();
     for (IMDGV::Codim<0>::Iterator it = imdgv.begin<0>(); it != imdgv.end<0>(); ++it)
       {
         if (it->geometry().center()[0] > 0.5)

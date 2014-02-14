@@ -26,9 +26,9 @@ int main(int argc, char** argv) {
     typedef Grid::ctype ctype;
     typedef Grid::LeafGridView MDGV;
     typedef SubDomainGrid::LeafGridView SDGV;
-    MDGV mdgv = grid.leafView();
-    SDGV sdgv0 = sdg0.leafView();
-    SDGV sdgv1 = sdg1.leafView();
+    MDGV mdgv = grid.leafGridView();
+    SDGV sdgv0 = sdg0.leafGridView();
+    SDGV sdgv1 = sdg1.leafGridView();
     grid.startSubDomainMarking();
     for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
       {
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
     SDGFS sdgfs1(sdgv1,fem);
 
     typedef BaseGrid::LeafGridView BGV;
-    BGV bgv = baseGrid.leafView();
+    BGV bgv = baseGrid.leafGridView();
     typedef Dune::PDELab::GridFunctionSpace<BGV,FEM,CON,VBE> BGFS;
     BGFS bgfs(bgv,fem);
 

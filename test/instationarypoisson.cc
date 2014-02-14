@@ -147,9 +147,9 @@ int main(int argc, char** argv) {
     SubDomainGrid& sdg0 = grid.subDomain(0);
     SubDomainGrid& sdg1 = grid.subDomain(1);
 
-    MDGV mdgv = grid.leafView();
-    SDGV sdgv0 = sdg0.leafView();
-    SDGV sdgv1 = sdg1.leafView();
+    MDGV mdgv = grid.leafGridView();
+    SDGV sdgv0 = sdg0.leafGridView();
+    SDGV sdgv1 = sdg1.leafGridView();
 
     /*
      * Initialize subdomains. The right half of the domain is assigned to

@@ -277,7 +277,7 @@ public:
         if (data().a_ss_view.modified())
           {
             data().jacobian_ss_view.bind(lfsv_s_cache,lfsu_s_cache);
-            localAssembler().etadd(data().a_ss,data().jacobian_ss_view);
+            localAssembler().scatter_jacobian(data().a_ss,data().jacobian_ss_view,false);
             data().jacobian_ss_view.commit();
           }
         data().a_ss_view.resetModified();
@@ -295,21 +295,21 @@ public:
         if (data().a_nn_view.modified())
           {
             data().jacobian_nn_view.bind(lfsv_n_cache,lfsu_n_cache);
-            localAssembler().etadd(data().a_nn,data().jacobian_nn_view);
+            localAssembler().scatter_jacobian(data().a_nn,data().jacobian_nn_view,false);
             data().jacobian_nn_view.commit();
           }
         data().a_nn_view.resetModified();
         if (data().a_sn_view.modified())
           {
             data().jacobian_sn_view.bind(lfsv_s_cache,lfsu_n_cache);
-            localAssembler().etadd(data().a_sn,data().jacobian_sn_view);
+            localAssembler().scatter_jacobian(data().a_sn,data().jacobian_sn_view,false);
             data().jacobian_sn_view.commit();
           }
         data().a_sn_view.resetModified();
         if (data().a_ns_view.modified())
           {
             data().jacobian_ns_view.bind(lfsv_n_cache,lfsu_s_cache);
-            localAssembler().etadd(data().a_ns,data().jacobian_ns_view);
+            localAssembler().scatter_jacobian(data().a_ns,data().jacobian_ns_view,false);
             data().jacobian_ns_view.commit();
           }
         data().a_ns_view.resetModified();
@@ -328,35 +328,35 @@ public:
         if (data().a_cc_view.modified())
           {
             data().jacobian_cc_view.bind(lfsv_c_cache,lfsu_c_cache);
-            localAssembler().etadd(data().a_cc,data().jacobian_cc_view);
+            localAssembler().scatter_jacobian(data().a_cc,data().jacobian_cc_view,false);
             data().jacobian_cc_view.commit();
           }
         data().a_cc_view.resetModified();
         if (data().a_sc_view.modified())
           {
             data().jacobian_sc_view.bind(lfsv_s_cache,lfsu_c_cache);
-            localAssembler().etadd(data().a_sc,data().jacobian_sc_view);
+            localAssembler().scatter_jacobian(data().a_sc,data().jacobian_sc_view,false);
             data().jacobian_sc_view.commit();
           }
         data().a_sc_view.resetModified();
         if (data().a_cs_view.modified())
           {
             data().jacobian_cs_view.bind(lfsv_c_cache,lfsu_s_cache);
-            localAssembler().etadd(data().a_cs,data().jacobian_cs_view);
+            localAssembler().scatter_jacobian(data().a_cs,data().jacobian_cs_view,false);
             data().jacobian_cs_view.commit();
           }
         data().a_cs_view.resetModified();
         if (data().a_nc_view.modified())
           {
             data().jacobian_nc_view.bind(lfsv_n_cache,lfsu_c_cache);
-            localAssembler().etadd(data().a_nc,data().jacobian_nc_view);
+            localAssembler().scatter_jacobian(data().a_nc,data().jacobian_nc_view,false);
             data().jacobian_nc_view.commit();
           }
         data().a_nc_view.resetModified();
         if (data().a_cn_view.modified())
           {
             data().jacobian_cn_view.bind(lfsv_c_cache,lfsu_n_cache);
-            localAssembler().etadd(data().a_cn,data().jacobian_cn_view);
+            localAssembler().scatter_jacobian(data().a_cn,data().jacobian_cn_view,false);
             data().jacobian_cn_view.commit();
           }
         data().a_cn_view.resetModified();

@@ -99,7 +99,11 @@ class JacobianAssemblerEngine
 
 public:
 
-  static const bool needs_constraints_caching = true;
+  template<typename TrialConstraintsContainer, typename TestConstraintsContainer>
+  bool needsConstraintsCaching(const TrialConstraintsContainer& cu, const TestConstraintsContainer& cv) const
+  {
+    return cu.containsNonDirichletConstraints() || cv.containsNonDirichletConstraints();
+  }
 
   typedef LA LocalAssembler;
   typedef typename LA::Domain Domain;
@@ -111,8 +115,7 @@ public:
     typedef typename LA::Traits::TrialGridFunctionSpaceConstraints TrialGridFunctionSpaceConstraints;
     typedef typename LA::Traits::TestGridFunctionSpaceConstraints TestGridFunctionSpaceConstraints;
 
-    typedef NoConstraintsCachingPolicy CachePolicy;
-    typedef typename LA::Traits::template Spaces<CachePolicy> Spaces;
+    typedef typename LA::Traits::Spaces Spaces;
 
   };
 

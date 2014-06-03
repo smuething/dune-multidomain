@@ -321,14 +321,18 @@ class ConstraintsAssemblerEngine
 
 public:
 
-  static const bool needs_constraints_caching = false;
+  template<typename TrialConstraintsContainer, typename TestConstraintsContainer>
+  bool needsConstraintsCaching(const TrialConstraintsContainer& cu, const TestConstraintsContainer& cv) const
+  {
+    return false;
+  }
+
 
   struct Traits
   {
 
     typedef EmptyTransformation TrialGridFunctionSpaceConstraints;
     typedef EmptyTransformation TestGridFunctionSpaceConstraints;
-    typedef NoConstraintsCachingPolicy CachePolicy;
 
     struct Spaces
     {

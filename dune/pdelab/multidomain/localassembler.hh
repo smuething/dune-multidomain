@@ -141,7 +141,6 @@ struct LocalAssemblerTraits
   : public Dune::PDELab::LocalAssemblerTraits<GO>
 {
 
-  template<typename Policy>
   struct Spaces
   {
 
@@ -154,31 +153,14 @@ struct LocalAssemblerTraits
     typedef CouplingLocalFunctionSpace<GFSU> LFSU_C;
     typedef CouplingLocalFunctionSpace<GFSV> LFSV_C;
 
-    typedef typename std::conditional<
-      Policy::cache_trial_constraints,
-      LFSIndexCache<LFSU,typename LocalAssemblerTraits::TrialGridFunctionSpaceConstraints>,
-      LFSIndexCache<LFSU,EmptyTransformation>
-      >::type LFSU_Cache;
+    typedef LFSIndexCache<LFSU,typename LocalAssemblerTraits::TrialGridFunctionSpaceConstraints> LFSU_Cache;
+    typedef LFSIndexCache<LFSV,typename LocalAssemblerTraits::TestGridFunctionSpaceConstraints> LFSV_Cache;
 
-    typedef typename std::conditional<
-      Policy::cache_test_constraints,
-      LFSIndexCache<LFSV,typename LocalAssemblerTraits::TestGridFunctionSpaceConstraints>,
-      LFSIndexCache<LFSV,EmptyTransformation>
-      >::type LFSV_Cache;
-
-    typedef typename std::conditional<
-      Policy::cache_coupling_trial_constraints,
-      LFSIndexCache<LFSU_C,typename LocalAssemblerTraits::TrialGridFunctionSpaceConstraints>,
-      LFSIndexCache<LFSU_C,EmptyTransformation>
-      >::type LFSU_C_Cache;
-
-    typedef typename std::conditional<
-      Policy::cache_coupling_test_constraints,
-      LFSIndexCache<LFSV_C,typename LocalAssemblerTraits::TestGridFunctionSpaceConstraints>,
-      LFSIndexCache<LFSV_C,EmptyTransformation>
-      >::type LFSV_C_Cache;
+    typedef LFSIndexCache<LFSU_C,typename LocalAssemblerTraits::TrialGridFunctionSpaceConstraints> LFSU_C_Cache;
+    typedef LFSIndexCache<LFSV_C,typename LocalAssemblerTraits::TestGridFunctionSpaceConstraints> LFSV_C_Cache;
 
   };
+
 };
 
 

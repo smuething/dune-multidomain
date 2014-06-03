@@ -58,12 +58,14 @@ public:
     typedef typename Spaces::LFSU_C_Cache CouplingLFSUCache;
     typedef typename Spaces::LFSU_C_Cache CouplingLFSVCache;
 
-    LFSUCache lfsu_s_cache(_lfsu_s,cu);
-    LFSVCache lfsv_s_cache(_lfsv_s,cv);
-    LFSUCache lfsu_n_cache(_lfsu_n,cu);
-    LFSVCache lfsv_n_cache(_lfsv_n,cv);
-    CouplingLFSUCache lfsu_c_cache(_lfsu_c,cu);
-    CouplingLFSVCache lfsv_c_cache(_lfsv_c,cv);
+    const bool needs_constraints_caching = engine.needsConstraintsCaching(cu,cv);
+
+    LFSUCache lfsu_s_cache(_lfsu_s,cu,needs_constraints_caching);
+    LFSVCache lfsv_s_cache(_lfsv_s,cv,needs_constraints_caching);
+    LFSUCache lfsu_n_cache(_lfsu_n,cu,needs_constraints_caching);
+    LFSVCache lfsv_n_cache(_lfsv_n,cv,needs_constraints_caching);
+    CouplingLFSUCache lfsu_c_cache(_lfsu_c,cu,needs_constraints_caching);
+    CouplingLFSVCache lfsv_c_cache(_lfsv_c,cv,needs_constraints_caching);
 
     // extract relevant requirements
     const bool require_intersections = engine.requireSkeleton();

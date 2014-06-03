@@ -11,7 +11,6 @@ set(TESTS
   testoverlappinginstationarypoisson.cc
   testpoisson.cc
   testpowermortarpoisson.cc
-  testxfempattern.cc
 )
 
 add_executable(reactiondiffusion reactiondiffusion.cc)
@@ -28,7 +27,6 @@ add_executable(testmultidomaingridfunctionspace testmultidomaingridfunctionspace
 add_executable(testoverlappinginstationarypoisson testoverlappinginstationarypoisson.cc)
 add_executable(testpoisson testpoisson.cc)
 add_executable(testpowermortarpoisson testpowermortarpoisson.cc)
-add_executable(testxfempattern testxfempattern.cc)
 
 # install th header as done for the auto-tools
 install(FILES checkgeometry.hh

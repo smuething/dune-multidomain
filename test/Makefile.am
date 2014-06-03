@@ -45,9 +45,6 @@ testinstationarypoisson_SOURCES = testinstationarypoisson.cc
 check_PROGRAMS += testoverlappinginstationarypoisson
 testoverlappinginstationarypoisson_SOURCES = testoverlappinginstationarypoisson.cc
 
-check_PROGRAMS += testxfempattern
-testxfempattern_SOURCES = testxfempattern.cc
-
 check_PROGRAMS += testmortarpoisson
 testmortarpoisson_SOURCES = testmortarpoisson.cc
 

@@ -160,6 +160,7 @@ public:
                AssemblyParticipants&... participants)
     : _assembler(gfsu,gfsv)
     , _localAssembler(cu,cv,participants...)
+    , _matrix_backend(mb)
     , dof_exchanger(make_shared<BorderDOFExchanger>(*this))
   {}
 
@@ -197,10 +198,17 @@ public:
     dof_exchanger->accumulateBorderEntries(*this,a);
   }
 
+  //! Get the matrix backend for this grid operator.
+  const typename Traits::MatrixBackend& matrixBackend() const
+  {
+    return _matrix_backend;
+  }
+
  private:
 
   mutable typename Traits::Assembler _assembler;
   mutable typename Traits::LocalAssembler _localAssembler;
+  MB _matrix_backend;
   shared_ptr<BorderDOFExchanger> dof_exchanger;
 
 };

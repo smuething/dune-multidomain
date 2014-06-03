@@ -4,7 +4,7 @@
 
 #Name of the module
 Module: dune-multidomain
-Version: 0.1
+Version: 2.0-dev
 Maintainer: steffen.muething@iwr.uni-heidelberg.de
 #depending on
-Depends: dune-pdelab dune-multidomaingrid
+Depends: dune-pdelab (>= 2.0) dune-multidomaingrid (>= 2.0)

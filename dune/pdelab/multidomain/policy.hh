@@ -8,18 +8,6 @@ namespace PDELab {
 
 namespace MultiDomain {
 
-
-struct NoConstraintsCachingPolicy
-{
-
-  static const bool cache_trial_constraints = false;
-  static const bool cache_test_constraints = false;
-  static const bool cache_coupling_trial_constraints = false;
-  static const bool cache_coupling_test_constraints = false;
-
-};
-
-
 } // namespace MultiDomain
 } // namespace PDELab
 } // namespace Dune

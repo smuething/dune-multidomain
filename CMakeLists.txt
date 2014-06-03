@@ -20,7 +20,11 @@ dune_project()
 
 # add documentation files
 set(EXTRA_DIST
+  COPYING.md
   dune.module
+  GPL-2
+  GPL-3
+  LGPL-3
   README
   README.md
   README.GIT.md

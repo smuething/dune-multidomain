@@ -1,7 +1,11 @@
 # we need the module file to be able to build via dunecontrol
 EXTRA_DIST =					\
 	CMakeLists.txt				\
+	COPYING.md				\
 	dune.module				\
+	GPL-2					\
+	GPL-3					\
+	LGPL-3					\
 	README					\
 	README.md				\
 	README.GIT.md				\

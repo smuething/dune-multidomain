@@ -3,10 +3,9 @@
 #include <dune/grid/sgrid.hh>
 #include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
-#include <dune/pdelab/finiteelementmap/q1fem.hh>
-#include <dune/pdelab/finiteelementmap/q22dfem.hh>
+#include <dune/pdelab/finiteelementmap/qkfem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
-#include <dune/pdelab/backend/istlmatrixbackend.hh>
+#include <dune/pdelab/backend/istl/bcrsmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/gridoperator.hh>
 #include <dune/pdelab/gridoperator/onestep.hh>
@@ -144,7 +143,6 @@ int main(int argc, char** argv) {
     typedef Grid::SubDomainGrid SubDomainGrid;
     SubDomainGrid& sdg0 = grid.subDomain(0);
     SubDomainGrid& sdg1 = grid.subDomain(1);
-    typedef Grid::ctype ctype;
     typedef Grid::LeafGridView MDGV;
     typedef SubDomainGrid::LeafGridView SDGV;
     MDGV mdgv = grid.leafGridView();
@@ -168,15 +166,14 @@ int main(int argc, char** argv) {
 
     typedef MDGV::Grid::ctype DF;
 
-    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM0;
-    typedef Dune::PDELab::Q22DLocalFiniteElementMap<ctype,double> FEM1;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,1> FEM0;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,2> FEM1;
 
     typedef FEM0::Traits::FiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
 
-    FEM0 fem0;
-    FEM1 fem1;
-    typedef Dune::PDELab::NoConstraints NOCON;
+    FEM0 fem0(sdgv0);
+    FEM1 fem1(sdgv1);
     typedef Dune::PDELab::ConformingDirichletConstraints CON;
     typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
@@ -219,8 +216,8 @@ int main(int argc, char** argv) {
     typedef J<MDGV,R> JType;
     JType j(mdgv);
 
-    typedef Dune::PDELab::Poisson<FType,BType,JType,4> LOP;
-    LOP lop(f,b,j);
+    typedef Dune::PDELab::Poisson<FType,BType,JType> LOP;
+    LOP lop(f,b,j,4);
 
     typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> Condition;
 
@@ -252,7 +249,8 @@ int main(int argc, char** argv) {
     std::cout << "constraints evaluation: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
-    typedef Dune::PDELab::ISTLMatrixBackend MBE;
+    typedef Dune::PDELab::istl::BCRSMatrixBackend<> MBE;
+    MBE mbe(27);
 
     typedef Dune::PDELab::MultiDomain::GridOperator<
       MultiGFS,MultiGFS,
@@ -274,6 +272,7 @@ int main(int argc, char** argv) {
 
     GridOperator gridoperator(multigfs,multigfs,
                               cg,cg,
+                              mbe,
                               left_sp,
                               right_sp,
                               coupling);

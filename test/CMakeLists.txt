@@ -3,7 +3,6 @@ set(TESTS
   reactiondiffusion.cc
   stokesdarcy.cc
   stokesdarcy2.cc
-  testassembler.cc
   testcouplinggfs.cc
   testinstationarypoisson.cc
   testlocalfunctionspace.cc
@@ -23,7 +22,6 @@ add_executable(stokesdarcy stokesdarcy.cc)
 add_dune_superlu_flags(stokesdarcy)
 add_executable(stokesdarcy2 stokesdarcy2.cc)
 add_dune_superlu_flags(stokesdarcy2)
-add_executable(testassembler testassembler.cc)
 add_executable(testcouplinggfs testcouplinggfs.cc)
 add_executable(testinstationarypoisson testinstationarypoisson.cc)
 add_executable(testlocalfunctionspace testlocalfunctionspace.cc)

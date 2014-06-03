@@ -9,7 +9,7 @@ DEPENDENCIES=@REQUIRES@
 Name: @PACKAGE_NAME@
 Version: @VERSION@
 Description: dune-multidomain module
-URL: http://dune-project.org/
+URL: http://github.com/smuething/dune-multidomain
 Requires: dune-common dune-grid dune-istl dune-localfunctions dune-pdelab dune-multidomaingrid
 Libs: -L
 Cflags: -I

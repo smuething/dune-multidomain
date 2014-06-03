@@ -3,10 +3,9 @@
 #include <dune/grid/sgrid.hh>
 #include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
-#include <dune/pdelab/finiteelementmap/q1fem.hh>
-#include <dune/pdelab/finiteelementmap/q22dfem.hh>
+#include <dune/pdelab/finiteelementmap/qkfem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
-#include <dune/pdelab/backend/istlmatrixbackend.hh>
+#include <dune/pdelab/backend/istl/bcrsmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/gridoperator.hh>
 #include <dune/pdelab/multidomain/subproblem.hh>
@@ -19,6 +18,7 @@
 #include<dune/pdelab/common/vtkexport.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/pdelab/multidomain/coupling.hh>
+#include <dune/pdelab/multidomain/vtk.hh>
 
 #include<typeinfo>
 
@@ -122,7 +122,6 @@ int main(int argc, char** argv) {
     typedef Grid::SubDomainGrid SubDomainGrid;
     SubDomainGrid& sdg0 = grid.subDomain(0);
     SubDomainGrid& sdg1 = grid.subDomain(1);
-    typedef Grid::ctype ctype;
     typedef Grid::LeafGridView MDGV;
     typedef SubDomainGrid::LeafGridView SDGV;
     MDGV mdgv = grid.leafGridView();
@@ -146,15 +145,14 @@ int main(int argc, char** argv) {
 
     typedef MDGV::Grid::ctype DF;
 
-    typedef Dune::PDELab::Q22DLocalFiniteElementMap<ctype,double> FEM0;
-    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM1;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,2> FEM0;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,1> FEM1;
 
     typedef FEM0::Traits::FiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
 
-    FEM0 fem0;
-    FEM1 fem1;
-    typedef Dune::PDELab::NoConstraints NOCON;
+    FEM0 fem0(sdgv0);
+    FEM1 fem1(sdgv1);
     typedef Dune::PDELab::ConformingDirichletConstraints CON;
     typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
@@ -163,15 +161,23 @@ int main(int argc, char** argv) {
     typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,CON,VBE> GFS0;
     typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,CON,VBE> GFS1;
 
-    typedef GFS0::ConstraintsContainer<R>::Type C;
-    C cg;
-
     GFS0 gfs0(sdgv0,fem0,con);
     GFS1 gfs1(sdgv1,fem1,con);
+    gfs0.name("u");
+    gfs1.name("u");
 
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS0,GFS1> MultiGFS;
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<
+      Grid,
+      VBE,
+      Dune::PDELab::LexicographicOrderingTag,
+      GFS0,
+      GFS1
+      > MultiGFS;
 
     MultiGFS multigfs(grid,gfs0,gfs1);
+
+    typedef MultiGFS::ConstraintsContainer<R>::Type C;
+    C cg;
 
     std::cout << "function space setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
@@ -188,8 +194,8 @@ int main(int argc, char** argv) {
     typedef J<MDGV,R> JType;
     JType j(mdgv);
 
-    typedef Dune::PDELab::Poisson<FType,BType,JType,4> LOP;
-    LOP lop(f,b,j);
+    typedef Dune::PDELab::Poisson<FType,BType,JType> LOP;
+    LOP lop(f,b,j,4);
 
     typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> Condition;
 
@@ -237,12 +243,8 @@ int main(int argc, char** argv) {
     std::cout << x0.N() << " dof total, " << cg.size() << " dof constrained" << std::endl;
     timer.reset();
 
-    typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,GFS0> SGFS0;
-    typedef Dune::PDELab::MultiDomain::TypeBasedGridFunctionSubSpace<MultiGFS,GFS1> SGFS1;
-    SGFS0 sgfs0(multigfs);
-    SGFS1 sgfs1(multigfs);
-
-    typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
+    typedef Dune::PDELab::istl::BCRSMatrixBackend<> MBE;
+    MBE mbe(27);
 
     //typedef Dune::PDELab::MultiDomain::MultiDomainGridOperatorSpace<MultiGFS,MultiGFS,MBE,SubProblem0,SubProblem1,Coupling> MultiGOS;
 
@@ -261,6 +263,7 @@ int main(int argc, char** argv) {
                               multigfs,
                               cg,
                               cg,
+                              mbe,
                               sp0,
                               sp1,
                               coupling);
@@ -274,6 +277,8 @@ int main(int argc, char** argv) {
     M m(gridOperator);
     m = 0.0;
 
+    std::cout << "******************** Pattern statistics ********************" << std::endl
+              << m.patternStatistics() << std::endl;
 
     std::cout << "matrix construction: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
@@ -291,15 +296,23 @@ int main(int argc, char** argv) {
     std::cout << "residual evaluation: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
-    Dune::MatrixAdapter<M,V,V> opa(m);
-    Dune::SeqSSOR<M,V,V> ssor(m,1,1.0);
-    Dune::CGSolver<V> solver(opa,ssor,1e-10,5000,2);
+    Dune::MatrixAdapter<
+      Dune::PDELab::istl::raw_type<M>::type,
+      Dune::PDELab::istl::raw_type<V>::type,
+      Dune::PDELab::istl::raw_type<V>::type
+      > opa(Dune::PDELab::istl::raw(m));
+    Dune::SeqSSOR<
+      Dune::PDELab::istl::raw_type<M>::type,
+      Dune::PDELab::istl::raw_type<V>::type,
+      Dune::PDELab::istl::raw_type<V>::type
+      > ssor(Dune::PDELab::istl::raw(m),1,1.0);
+    Dune::CGSolver<Dune::PDELab::istl::raw_type<V>::type> solver(opa,ssor,1e-10,5000,2);
     Dune::InverseOperatorResult stat;
 
     r *= -1.0;
 
     V x(multigfs,0.0);
-    solver.apply(x,r,stat);
+    solver.apply(Dune::PDELab::istl::raw(x),Dune::PDELab::istl::raw(r),stat);
 
     std::cout << "linear system: " << timer.elapsed() << " sec" << std::endl;
     std::cout << "total time: " << totalTimer.elapsed() << " sec" << std::endl;
@@ -308,19 +321,27 @@ int main(int argc, char** argv) {
     x += x0;
 
     {
-      typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> DGF;
-      DGF dgf(sgfs0,x);
       Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv0,2);
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
-      vtkwriter.write("poisson-right",Dune::VTKOptions::ascii);
+      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+        vtkwriter,
+        multigfs,
+        x,
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv0.grid().domain())
+      );
+
+      vtkwriter.write("poisson-right",Dune::VTK::ascii);
     }
 
     {
-      typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> DGF;
-      DGF dgf(sgfs1,x);
-      Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
-      vtkwriter.write("poisson-left",Dune::VTKOptions::ascii);
+      Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv1,2);
+      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+        vtkwriter,
+        multigfs,
+        x,
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv1.grid().domain())
+      );
+
+      vtkwriter.write("poisson-left",Dune::VTK::ascii);
     }
 
     std::cout << "output I/O: " << timer.elapsed() << " sec" << std::endl;

@@ -222,8 +222,8 @@ int main(int argc, char** argv) {
     typedef J<MDGV,R,R> JType;
     JType j(mdgv);
 
-    typedef Dune::PDELab::InstationaryPoisson<R,FType,BType,JType,4> LOP;
-    LOP lop(f,b,j);
+    typedef Dune::PDELab::InstationaryPoisson<R,FType,BType,JType> LOP;
+    LOP lop(f,b,j,4);
 
     typedef Dune::PDELab::L2 TLOP;
     TLOP tlop(4);

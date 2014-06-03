@@ -2,8 +2,7 @@
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
-#include <dune/pdelab/finiteelementmap/q1fem.hh>
-#include <dune/pdelab/finiteelementmap/q22dfem.hh>
+#include <dune/pdelab/finiteelementmap/qkfem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/backend/istlmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
@@ -144,37 +143,62 @@ int main(int argc, char** argv) {
     grid.updateSubDomains();
     grid.postUpdateSubDomains();
 
-    typedef MDGV::Grid::ctype DF;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<MDGV,ctype,double,2> MDFEM;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,ctype,double,1> SDFEM0;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,ctype,double,2> SDFEM1;
 
-    typedef Dune::PDELab::Q22DLocalFiniteElementMap<ctype,double> FEM0;
-    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM1;
-
-    typedef FEM0::Traits::FiniteElementType::Traits::
+    typedef SDFEM0::Traits::FiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
 
-    FEM0 fem0;
-    FEM1 fem1;
+    MDFEM mdfem(mdgv);
+    SDFEM0 sdfem0(sdgv0);
+    SDFEM1 sdfem1(sdgv1);
     typedef Dune::PDELab::NoConstraints NOCON;
     typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,NOCON,VBE> GFS0;
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,NOCON,VBE> GFS1;
-    typedef Dune::PDELab::GridFunctionSpace<MDGV,FEM0,NOCON,VBE> GFS2;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,SDFEM0,NOCON,VBE> GFS0;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,SDFEM1,NOCON,VBE> GFS1;
+    typedef Dune::PDELab::GridFunctionSpace<MDGV,MDFEM,NOCON,VBE> GFS2;
 
-    typedef Dune::PDELab::PowerGridFunctionSpace<GFS0,2,Dune::PDELab::GridFunctionSpaceLexicographicMapper> PowerGFS;
+    typedef Dune::PDELab::PowerGridFunctionSpace<
+      GFS0,
+      2,
+      VBE,
+      Dune::PDELab::LexicographicOrderingTag
+      > PowerGFS;
 
-    typedef Dune::PDELab::CompositeGridFunctionSpace<Dune::PDELab::GridFunctionSpaceLexicographicMapper,GFS0,PowerGFS> CompositeGFS;
+    typedef Dune::PDELab::CompositeGridFunctionSpace<
+      VBE,
+      Dune::PDELab::LexicographicOrderingTag,
+      GFS0,
+      PowerGFS
+      > CompositeGFS;
 
-    typedef GFS0::ConstraintsContainer<R>::Type C;
-    C cg;
+    GFS0 gfs0(sdgv0,sdfem0);
+    GFS1 gfs1(sdgv1,sdfem1);
+    GFS2 gfs2(mdgv,mdfem);
+    PowerGFS powergfs(
+      std::make_shared<GFS0>(sdgv0,sdfem0),
+      std::make_shared<GFS0>(sdgv0,sdfem0)
+      );
+    CompositeGFS compositegfs(
+      std::make_shared<GFS0>(sdgv0,sdfem0),
+      std::make_shared<PowerGFS>(
+        std::make_shared<GFS0>(sdgv0,sdfem0),
+        std::make_shared<GFS0>(sdgv0,sdfem0)
+        )
+      );
 
-    GFS0 gfs0(sdgv0,fem0);
-    GFS1 gfs1(sdgv1,fem1);
-    GFS2 gfs2(mdgv,fem0);
-    PowerGFS powergfs(gfs0);
-    CompositeGFS compositegfs(gfs0,powergfs);
-
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS0,GFS1,GFS2,PowerGFS,CompositeGFS> MultiGFS;
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<
+      Grid,
+      VBE,
+      Dune::PDELab::LexicographicOrderingTag,
+      GFS0,
+      GFS1,
+      GFS2,
+      PowerGFS,
+      CompositeGFS
+      > MultiGFS;
 
     MultiGFS multigfs(grid,gfs0,gfs1,gfs2,powergfs,compositegfs);
 
@@ -197,77 +221,77 @@ int main(int argc, char** argv) {
     typedef J<MDGV,R> JType;
     JType j(mdgv);
 
-    typedef Dune::PDELab::Poisson<FType,BType,JType,2> LOP;
-    LOP lop(f,b,j);
+    typedef Dune::PDELab::Poisson<FType,BType,JType> LOP;
+    LOP lop(f,b,j,2);
 
     typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> Condition;
 
     Condition c0(0);
     Condition c1(1);
 
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,GFS0> SubProblem0;
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,GFS1> SubProblem1;
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,GFS0,PowerGFS> SubProblem2;
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,PowerGFS> SubProblem3;
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,NOCON,MultiGFS,NOCON,LOP,Condition,CompositeGFS> SubProblem4;
+    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,GFS0> SubProblem0;
+    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,GFS1> SubProblem1;
+    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,GFS0,PowerGFS> SubProblem2;
+    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,PowerGFS> SubProblem3;
+    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,CompositeGFS> SubProblem4;
 
     NOCON nocon;
-    SubProblem0 sp0(nocon,nocon,lop,c0);
-    SubProblem1 sp1(nocon,nocon,lop,c1);
-    SubProblem2 sp2(nocon,nocon,lop,c0);
-    SubProblem3 sp3(nocon,nocon,lop,c0);
-    SubProblem4 sp4(nocon,nocon,lop,c0);
+    SubProblem0 sp0(lop,c0);
+    SubProblem1 sp1(lop,c1);
+    SubProblem2 sp2(lop,c0);
+    SubProblem3 sp3(lop,c0);
+    SubProblem4 sp4(lop,c0);
 
-    SubProblem0::Traits::LocalTrialFunctionSpace
-      splfs0(multilfs,sp0,sp0.trialGridFunctionSpaceConstraints());
-    SubProblem1::Traits::LocalTrialFunctionSpace
-      splfs1(multilfs,sp1,sp1.trialGridFunctionSpaceConstraints());
-    SubProblem2::Traits::LocalTrialFunctionSpace
-      splfs2(multilfs,sp2,sp2.trialGridFunctionSpaceConstraints());
-    SubProblem3::Traits::LocalTrialFunctionSpace
-      splfs3(multilfs,sp3,sp3.trialGridFunctionSpaceConstraints());
-    SubProblem4::Traits::LocalTrialFunctionSpace
-      splfs4(multilfs,sp4,sp4.trialGridFunctionSpaceConstraints());
+    // SubProblem0::Traits::LocalTrialFunctionSpace
+    //   splfs0(multilfs,sp0,sp0.trialGridFunctionSpaceConstraints());
+    // SubProblem1::Traits::LocalTrialFunctionSpace
+    //   splfs1(multilfs,sp1,sp1.trialGridFunctionSpaceConstraints());
+    // SubProblem2::Traits::LocalTrialFunctionSpace
+    //   splfs2(multilfs,sp2,sp2.trialGridFunctionSpaceConstraints());
+    // SubProblem3::Traits::LocalTrialFunctionSpace
+    //   splfs3(multilfs,sp3,sp3.trialGridFunctionSpaceConstraints());
+    // SubProblem4::Traits::LocalTrialFunctionSpace
+    //   splfs4(multilfs,sp4,sp4.trialGridFunctionSpaceConstraints());
 
     for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
       {
         multilfs.bind(*it);
         auto sds = mdgv.indexSet().subDomains(*it);
-        instantiateLocalFunctionSpaces(multilfs,sds,sp0,sp1,sp2,sp3,sp4);
-        if (sp0.appliesTo(sds))
-          {
-            SubProblem0::Traits::LocalTrialFunctionSpace lfs(multilfs,sp0,sp0.trialGridFunctionSpaceConstraints());
-            lfs.finiteElement();
-            lfs.localVectorSize();
-          }
-        if (sp1.appliesTo(sds))
-          {
-            SubProblem1::Traits::LocalTrialFunctionSpace lfs(multilfs,sp1,sp1.trialGridFunctionSpaceConstraints());
-            lfs.finiteElement();
-            lfs.localVectorSize();
-          }
-        if (sp2.appliesTo(sds))
-          {
-            SubProblem2::Traits::LocalTrialFunctionSpace lfs(multilfs,sp2,sp2.trialGridFunctionSpaceConstraints());
-            lfs.child<0>().finiteElement();
-            lfs.child<1>().child(0).finiteElement();
-            lfs.child<0>().localVectorSize();
-            lfs.child<1>().child(1).localVectorSize();
-          }
-        if (sp3.appliesTo(sds))
-          {
-            SubProblem3::Traits::LocalTrialFunctionSpace lfs(multilfs,sp3,sp3.trialGridFunctionSpaceConstraints());
-            lfs.child(1).finiteElement();
-            lfs.child(0).localVectorSize();
-          }
-        if (sp4.appliesTo(sds))
-          {
-            SubProblem4::Traits::LocalTrialFunctionSpace lfs(multilfs,sp4,sp4.trialGridFunctionSpaceConstraints());
-            lfs.child<0>().finiteElement();
-            lfs.child<1>().child(0).finiteElement();
-            lfs.child<0>().localVectorSize();
-            lfs.child<1>().child(1).localVectorSize();
-          }
+        // instantiateLocalFunctionSpaces(multilfs,sds,sp0,sp1,sp2,sp3,sp4);
+        // if (sp0.appliesTo(sds))
+        //   {
+        //     SubProblem0::Traits::LocalTrialFunctionSpace lfs(multilfs,sp0,sp0.trialGridFunctionSpaceConstraints());
+        //     lfs.finiteElement();
+        //     lfs.localVectorSize();
+        //   }
+        // if (sp1.appliesTo(sds))
+        //   {
+        //     SubProblem1::Traits::LocalTrialFunctionSpace lfs(multilfs,sp1,sp1.trialGridFunctionSpaceConstraints());
+        //     lfs.finiteElement();
+        //     lfs.localVectorSize();
+        //   }
+        // if (sp2.appliesTo(sds))
+        //   {
+        //     SubProblem2::Traits::LocalTrialFunctionSpace lfs(multilfs,sp2,sp2.trialGridFunctionSpaceConstraints());
+        //     lfs.child<0>().finiteElement();
+        //     lfs.child<1>().child(0).finiteElement();
+        //     lfs.child<0>().localVectorSize();
+        //     lfs.child<1>().child(1).localVectorSize();
+        //   }
+        // if (sp3.appliesTo(sds))
+        //   {
+        //     SubProblem3::Traits::LocalTrialFunctionSpace lfs(multilfs,sp3,sp3.trialGridFunctionSpaceConstraints());
+        //     lfs.child(1).finiteElement();
+        //     lfs.child(0).localVectorSize();
+        //   }
+        // if (sp4.appliesTo(sds))
+        //   {
+        //     SubProblem4::Traits::LocalTrialFunctionSpace lfs(multilfs,sp4,sp4.trialGridFunctionSpaceConstraints());
+        //     lfs.child<0>().finiteElement();
+        //     lfs.child<1>().child(0).finiteElement();
+        //     lfs.child<0>().localVectorSize();
+        //     lfs.child<1>().child(1).localVectorSize();
+        //   }
       }
   }
   catch (Dune::Exception &e){

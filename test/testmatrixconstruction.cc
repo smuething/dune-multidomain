@@ -2,11 +2,9 @@
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
-#include <dune/pdelab/finiteelementmap/q1fem.hh>
-#include <dune/pdelab/finiteelementmap/q22dfem.hh>
-#include <dune/pdelab/finiteelementmap/q12dfem.hh>
+#include <dune/pdelab/finiteelementmap/qkfem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
-#include <dune/pdelab/backend/istlmatrixbackend.hh>
+#include <dune/pdelab/backend/istl/bcrsmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/gridoperator.hh>
 #include <dune/pdelab/multidomain/subproblem.hh>
@@ -130,9 +128,9 @@ int main(int argc, char** argv) {
   SubDomainGrid& sdg0 = grid.subDomain(0);
   SubDomainGrid& sdg1 = grid.subDomain(1);
   SubDomainGrid& sdg2 = grid.subDomain(2);
-  typedef Grid::ctype ctype;
   typedef Grid::LeafGridView MDGV;
   typedef SubDomainGrid::LeafGridView SDGV;
+  typedef MDGV::Grid::ctype DF;
   MDGV mdgv = grid.leafGridView();
   SDGV sdgv0 = sdg0.leafGridView();
   SDGV sdgv1 = sdg1.leafGridView();
@@ -140,7 +138,7 @@ int main(int argc, char** argv) {
   grid.startSubDomainMarking();
   for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
     {
-      Dune::FieldVector<ctype,dim> center = it->geometry().center();
+      Dune::FieldVector<DF,dim> center = it->geometry().center();
       if (center[0] > 0.4)
         grid.addToSubDomain(0,*it);
       if (center[0] < 0.6)
@@ -152,24 +150,21 @@ int main(int argc, char** argv) {
   grid.updateSubDomains();
   grid.postUpdateSubDomains();
 
-  typedef MDGV::Grid::ctype DF;
 
-  typedef Dune::PDELab::Q22DLocalFiniteElementMap<ctype,double> FEM;
-  typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM0;
-  typedef Dune::PDELab::Q12DLocalFiniteElementMap<ctype,double> FEM1;
-  typedef Dune::PDELab::Q22DLocalFiniteElementMap<ctype,double> FEM2;
+  typedef Dune::PDELab::QkLocalFiniteElementMap<MDGV,DF,double,2> FEM;
+  typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,1> FEM0;
+  typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,1> FEM1;
+  typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,2> FEM2;
 
   typedef FEM0::Traits::FiniteElementType::Traits::
     LocalBasisType::Traits::RangeFieldType R;
 
-  FEM fem;
-  FEM0 fem0;
-  FEM1 fem1;
-  FEM2 fem2;
+  FEM fem(mdgv);
+  FEM0 fem0(sdgv0);
+  FEM1 fem1(sdgv1);
+  FEM2 fem2(sdgv2);
   typedef Dune::PDELab::NoConstraints NOCON;
   typedef Dune::PDELab::ISTLVectorBackend<> VBE;
-
-  NOCON con;
 
   typedef Dune::PDELab::GridFunctionSpace<MDGV,FEM,NOCON,VBE> GFS;
   typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,NOCON,VBE> GFS0;
@@ -184,7 +179,15 @@ int main(int argc, char** argv) {
   GFS1 gfs1(sdgv1,fem1);
   GFS2 gfs2(sdgv2,fem2);
 
-  typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS,GFS0,GFS1,GFS2> MultiGFS;
+  typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<
+    Grid,
+    VBE,
+    Dune::PDELab::LexicographicOrderingTag,
+    GFS,
+    GFS0,
+    GFS1,
+    GFS2
+    > MultiGFS;
 
   MultiGFS multigfs(grid,gfs,gfs0,gfs1,gfs2);
 
@@ -201,8 +204,8 @@ int main(int argc, char** argv) {
   typedef J<MDGV,R> JType;
   JType j(mdgv);
 
-  typedef Dune::PDELab::Poisson<FType,BType,JType,2> LOP;
-  LOP lop(f,b,j);
+  typedef Dune::PDELab::Poisson<FType,BType,JType> LOP;
+  LOP lop(f,b,j,4);
 
   typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> EC;
   typedef Dune::PDELab::MultiDomain::SubDomainSupersetCondition<Grid> SC;
@@ -213,11 +216,11 @@ int main(int argc, char** argv) {
   EC c3(1);
   SC c4(0);
 
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,SC,GFS> SubProblem0;
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,SC,GFS2> SubProblem1;
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,EC,GFS0,GFS1> SubProblem2;
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,EC,GFS1> SubProblem3;
-  typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,SC,GFS0> SubProblem4;
+  typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,LOP,SC,0> SubProblem0;
+  typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,LOP,SC,3> SubProblem1;
+  typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,LOP,EC,1,2> SubProblem2;
+  typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,LOP,EC,2> SubProblem3;
+  typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,LOP,SC,1> SubProblem4;
 
   SubProblem0 sp0(lop,c0);
   SubProblem1 sp1(lop,c1);
@@ -230,7 +233,8 @@ int main(int argc, char** argv) {
   typedef Dune::PDELab::MultiDomain::Coupling<SubProblem0,SubProblem1,ProportionalFlowCoupling> Coupling;
   Coupling coupling(sp0,sp1,proportionalFlowCoupling);
 
-  typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
+  typedef Dune::PDELab::istl::BCRSMatrixBackend<> MBE;
+  MBE mbe(64);
 
   typedef Dune::PDELab::MultiDomain::GridOperator<
     MultiGFS,MultiGFS,
@@ -246,12 +250,15 @@ int main(int argc, char** argv) {
     > GO;
 
   GO go(multigfs,multigfs,
-        cg,cg,
+        cg,cg,mbe,
         sp0,sp1,coupling,sp2,sp4,sp3);
 
   typedef GO::Traits::Jacobian M;
   M m(go);
   m = 0.0;
+
+  std::cout << "******************** Pattern statistics ********************" << std::endl
+            << m.patternStatistics() << std::endl;
 
   }
   catch (Dune::Exception &e){

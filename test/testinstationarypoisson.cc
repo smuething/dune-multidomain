@@ -3,8 +3,7 @@
 #include <dune/grid/sgrid.hh>
 #include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
-#include <dune/pdelab/finiteelementmap/q1fem.hh>
-#include <dune/pdelab/finiteelementmap/q22dfem.hh>
+#include <dune/pdelab/finiteelementmap/qkfem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/backend/istlmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
@@ -172,14 +171,14 @@ int main(int argc, char** argv) {
 
     typedef MDGV::Grid::ctype DF;
 
-    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM0;
-    typedef Dune::PDELab::Q22DLocalFiniteElementMap<ctype,double> FEM1;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,1> FEM0;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,2> FEM1;
 
     typedef FEM0::Traits::FiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
 
-    FEM0 fem0;
-    FEM1 fem1;
+    FEM0 fem0(sdgv0);
+    FEM1 fem1(sdgv1);
     typedef Dune::PDELab::NoConstraints NOCON;
     typedef Dune::PDELab::ConformingDirichletConstraints CON;
     typedef Dune::PDELab::ISTLVectorBackend<> VBE;

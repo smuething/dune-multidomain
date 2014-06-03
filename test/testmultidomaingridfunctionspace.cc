@@ -2,7 +2,7 @@
 
 #include <dune/common/parallel/mpihelper.hh>
 #include <dune/grid/sgrid.hh>
-#include <dune/pdelab/finiteelementmap/q1fem.hh>
+#include <dune/pdelab/finiteelementmap/qkfem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
@@ -40,38 +40,53 @@ int main(int argc, char** argv) {
     grid.preUpdateSubDomains();
     grid.updateSubDomains();
     grid.postUpdateSubDomains();
-    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM;
-    FEM fem;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<MDGV,ctype,double,1> MDFEM;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,ctype,double,1> SDFEM;
+    MDFEM mdfem(mdgv);
+    SDFEM sdfem0(sdgv0);
+    SDFEM sdfem1(sdgv1);
     typedef Dune::PDELab::NoConstraints CON;
     typedef Dune::PDELab::ISTLVectorBackend<> VBE;
-    typedef Dune::PDELab::GridFunctionSpace<MDGV,FEM,CON,VBE> MDGFS;
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM,CON,VBE> SDGFS;
-    MDGFS mdgfs(mdgv,fem);
-    SDGFS sdgfs0(sdgv0,fem);
-    SDGFS sdgfs1(sdgv1,fem);
+    typedef Dune::PDELab::GridFunctionSpace<MDGV,MDFEM,CON,VBE> MDGFS;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,SDFEM,CON,VBE> SDGFS;
+    MDGFS mdgfs(mdgv,mdfem);
+    SDGFS sdgfs0(sdgv0,sdfem0);
+    SDGFS sdgfs1(sdgv1,sdfem1);
 
     typedef BaseGrid::LeafGridView BGV;
     BGV bgv = baseGrid.leafGridView();
-    typedef Dune::PDELab::GridFunctionSpace<BGV,FEM,CON,VBE> BGFS;
-    BGFS bgfs(bgv,fem);
+    typedef Dune::PDELab::QkLocalFiniteElementMap<BGV,ctype,double,1> BFEM;
+    BFEM bfem(bgv);
+    typedef Dune::PDELab::GridFunctionSpace<BGV,BFEM,CON,VBE> BGFS;
+    BGFS bgfs(bgv,bfem);
 
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,MDGFS,SDGFS,SDGFS> MultiGFS;
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<
+      Grid,
+      VBE,
+      Dune::PDELab::LexicographicOrderingTag,
+      MDGFS,
+      SDGFS,
+      SDGFS
+      > MultiGFS;
     MultiGFS multigfs(grid,mdgfs,sdgfs0,sdgfs1);
-    MultiGFS::LocalFunctionSpace lfs(multigfs);
+    Dune::PDELab::LocalFunctionSpace<MultiGFS> lfs(multigfs);
     MDGV::Codim<0>::Iterator it = mdgv.begin<0>();
     lfs.bind(*it);
-    lfs.debug();
-    const MultiGFS::LocalFunctionSpace::Child<0>::Type& c0lfs = lfs.getChild<0>();
-    const MultiGFS::LocalFunctionSpace::Child<1>::Type& c1lfs = lfs.getChild<1>();
+    const Dune::PDELab::LocalFunctionSpace<MultiGFS>::Child<0>::Type& c0lfs = lfs.child<0>();
+    const Dune::PDELab::LocalFunctionSpace<MultiGFS>::Child<1>::Type& c1lfs = lfs.child<1>();
 
-    MDGFS::LocalFunctionSpace mdlfs(mdgfs);
-    mdlfs.bind(*it);
-    mdlfs.debug();
-    typedef Dune::PDELab::CompositeGridFunctionSpace<Dune::PDELab::GridFunctionSpaceLexicographicMapper,MDGFS,MDGFS> CGFS;
-    CGFS cgfs(mdgfs,mdgfs);
-    CGFS::LocalFunctionSpace clfs(cgfs);
+    std::cout << c0lfs.size() << " " << c1lfs.size() << std::endl;
+
+    MDGFS mdgfs1(mdgv,mdfem);
+    MDGFS mdgfs2(mdgv,mdfem);
+    typedef Dune::PDELab::CompositeGridFunctionSpace<
+      VBE,
+      Dune::PDELab::LexicographicOrderingTag,
+      MDGFS,MDGFS
+      > CGFS;
+    CGFS cgfs(mdgfs1,mdgfs2);
+    Dune::PDELab::LocalFunctionSpace<CGFS> clfs(cgfs);
     clfs.bind(*it);
-    clfs.debug();
 
     typedef MDGV::IndexSet::SubDomainSet SDS;
 
@@ -80,20 +95,20 @@ int main(int argc, char** argv) {
     sds2.add(1);sds2.add(2);
     sds3.add(0);sds3.add(1);
 
-    Dune::PDELab::MultiDomain::IncludesSubDomains<SDS> t1(1,2);
-    Dune::PDELab::MultiDomain::EqualsSubDomains<SDS> t2(0);
+    // Dune::PDELab::MultiDomain::IncludesSubDomains<SDS> t1(1,2);
+    // Dune::PDELab::MultiDomain::EqualsSubDomains<SDS> t2(0);
 
-    std::cout << "t1(sds1) == " << (t1(sds1) ? "true" : "false") << std::endl;
-    std::cout << "t1(sds2) == " << (t1(sds2) ? "true" : "false") << std::endl;
-    std::cout << "t1(sds3) == " << (t1(sds3) ? "true" : "false") << std::endl;
+    // std::cout << "t1(sds1) == " << (t1(sds1) ? "true" : "false") << std::endl;
+    // std::cout << "t1(sds2) == " << (t1(sds2) ? "true" : "false") << std::endl;
+    // std::cout << "t1(sds3) == " << (t1(sds3) ? "true" : "false") << std::endl;
 
-    std::cout << "t2(sds1) == " << (t2(sds1) ? "true" : "false") << std::endl;
-    std::cout << "t2(sds2) == " << (t2(sds2) ? "true" : "false") << std::endl;
-    std::cout << "t2(sds3) == " << (t2(sds3) ? "true" : "false") << std::endl;
+    // std::cout << "t2(sds1) == " << (t2(sds1) ? "true" : "false") << std::endl;
+    // std::cout << "t2(sds2) == " << (t2(sds2) ? "true" : "false") << std::endl;
+    // std::cout << "t2(sds3) == " << (t2(sds3) ? "true" : "false") << std::endl;
 
-    Dune::PDELab::MultiDomain::SubProblemGridFunctionSpace<MultiGFS,decltype(t2),0,2> spgfs(multigfs);
+    // Dune::PDELab::MultiDomain::SubProblemGridFunctionSpace<MultiGFS,decltype(t2),0,2> spgfs(multigfs);
 
-    Dune::PDELab::MultiDomain::SubProblemLocalFunctionSpace<MultiGFS::LocalFunctionSpace,decltype(t2),0,1> splfs(lfs,t2);
+    // Dune::PDELab::MultiDomain::SubProblemLocalFunctionSpace<MultiGFS::LocalFunctionSpace,decltype(t2),0,1> splfs(lfs,t2);
 
   }
   catch (Dune::Exception &e){

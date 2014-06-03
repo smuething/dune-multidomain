@@ -1,6 +1,5 @@
 set(TESTS
   instationaryexplicitlycoupledpoisson.cc
-  instationarypoisson.cc
   reactiondiffusion.cc
   stokesdarcy.cc
   stokesdarcy2.cc
@@ -19,7 +18,6 @@ set(TESTS
 )
 
 add_executable(instationaryexplicitlycoupledpoisson instationaryexplicitlycoupledpoisson.cc)
-add_executable(instationarypoisson instationarypoisson.cc)
 add_executable(reactiondiffusion reactiondiffusion.cc)
 add_executable(stokesdarcy stokesdarcy.cc)
 add_dune_superlu_flags(stokesdarcy)

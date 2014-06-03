@@ -8,7 +8,6 @@ AM_LIBS = $(ALL_PKG_LIBS)
 check_PROGRAMS = testmultidomaingridfunctionspace \
 	reactiondiffusion \
 	explicitlycoupledpoisson \
-	instationarypoisson \
 	instationaryexplicitlycoupledpoisson \
 	testmatrixconstruction \
 	testcouplinggfs \
@@ -24,8 +23,6 @@ testmultidomaingridfunctionspace_SOURCES = testmultidomaingridfunctionspace.cc
 reactiondiffusion_SOURCES = reactiondiffusion.cc
 
 explicitlycoupledpoisson_SOURCES = explicitlycoupledpoisson.cc
-
-instationarypoisson_SOURCES = instationarypoisson.cc
 
 instationaryexplicitlycoupledpoisson_SOURCES = instationaryexplicitlycoupledpoisson.cc
 

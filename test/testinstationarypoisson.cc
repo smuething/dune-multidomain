@@ -5,7 +5,7 @@
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/finiteelementmap/qkfem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
-#include <dune/pdelab/backend/istlmatrixbackend.hh>
+#include <dune/pdelab/backend/istl/bcrsmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/gridoperator.hh>
 #include <dune/pdelab/gridoperator/onestep.hh>
@@ -260,7 +260,8 @@ int main(int argc, char** argv) {
     std::cout << "constraints evaluation: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
-    typedef Dune::PDELab::ISTLMatrixBackend MBE;
+    typedef Dune::PDELab::istl::BCRSMatrixBackend<> MBE;
+    MBE mbe(27);
 
     typedef Dune::PDELab::MultiDomain::GridOperator<
       MultiGFS,MultiGFS,
@@ -291,12 +292,14 @@ int main(int argc, char** argv) {
 
     GridOperator_dt0 go_dt_0(multigfs,multigfs,
                              cg,cg,
+                             mbe,
                              left_sp_dt0,
                              right_sp_dt0,
                              coupling);
 
     GridOperator_dt1 go_dt_1(multigfs,multigfs,
                              cg,cg,
+                             mbe,
                              left_sp_dt1,
                              right_sp_dt1);
 

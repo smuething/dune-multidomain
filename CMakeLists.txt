@@ -18,6 +18,16 @@ include(DuneMacros)
 # start a dune project with information from dune.module
 dune_project()
 
+# add documentation files
+set(EXTRA_DIST
+  dune.module
+  README
+  README.md
+  README.GIT.md
+  RELEASE_NOTES.md
+)
+
+
 add_subdirectory(doc)
 add_subdirectory(dune)
 add_subdirectory(m4)

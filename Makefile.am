@@ -1,5 +1,11 @@
 # we need the module file to be able to build via dunecontrol
-EXTRA_DIST = dune.module CMakeLists.txt
+EXTRA_DIST =					\
+	CMakeLists.txt				\
+	dune.module				\
+	README					\
+	README.md				\
+	README.GIT.md				\
+	RELEASE_NOTES.md
 
 SUBDIRS = m4 dune doc test
 

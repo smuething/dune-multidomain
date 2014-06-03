@@ -35,3 +35,4 @@ stamp-vc
 *.pyc
 *.pyo
 .DS_Store
+/compile

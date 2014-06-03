@@ -147,7 +147,6 @@ int main(int argc, char** argv) {
     typedef Grid::SubDomainGrid SubDomainGrid;
     SubDomainGrid& sdg0 = grid.subDomain(0);
     SubDomainGrid& sdg1 = grid.subDomain(1);
-    typedef Grid::ctype ctype;
     typedef Grid::LeafGridView MDGV;
     typedef SubDomainGrid::LeafGridView SDGV;
     MDGV mdgv = grid.leafGridView();
@@ -179,7 +178,6 @@ int main(int argc, char** argv) {
 
     FEM0 fem0(sdgv0);
     FEM1 fem1(sdgv1);
-    typedef Dune::PDELab::NoConstraints NOCON;
     typedef Dune::PDELab::ConformingDirichletConstraints CON;
     typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 

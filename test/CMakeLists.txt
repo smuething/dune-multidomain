@@ -13,6 +13,9 @@ set(TESTS
   testpowermortarpoisson.cc
 )
 
+set(MOSTLYCLEANFILES)
+list(APPEND MOSTLYCLEANFILES *.vtu *.pvtu *.pvd)
+
 add_executable(reactiondiffusion reactiondiffusion.cc)
 add_executable(stokesdarcy stokesdarcy.cc)
 add_dune_superlu_flags(stokesdarcy)

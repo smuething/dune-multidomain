@@ -53,3 +53,5 @@ testpowermortarpoisson_SOURCES = testpowermortarpoisson.cc
 
 check_PROGRAMS += testpoisson
 testpoisson_SOURCES = testpoisson.cc
+
+MOSTLYCLEANFILES = *.vtu *.pvtu *.pvd

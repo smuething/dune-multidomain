@@ -7,11 +7,7 @@
 #include <dune/grid/io/file/gmshreader.hh>
 #include <dune/pdelab/gridfunctionspace/vectorgridfunctionspace.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
-#include <dune/pdelab/finiteelementmap/q1fem.hh>
-#include <dune/pdelab/finiteelementmap/p1fem.hh>
-#include <dune/pdelab/finiteelementmap/q22dfem.hh>
-#include <dune/pdelab/finiteelementmap/q12dfem.hh>
-#include <dune/pdelab/finiteelementmap/pk2dfem.hh>
+#include <dune/pdelab/finiteelementmap/pkfem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/backend/istlmatrixbackend.hh>
 #include <dune/pdelab/backend/istlsolverbackend.hh>
@@ -624,15 +620,15 @@ int main(int argc, char** argv) {
     const int stokes_q = 2*stokes_k;
     const int darcy_k = 3;
 
-    typedef Dune::PDELab::Pk2DLocalFiniteElementMap<SDGV,DF,RF,stokes_k> V_FEM;
-    typedef Dune::PDELab::Pk2DLocalFiniteElementMap<SDGV,DF,RF,stokes_k-1> P_FEM;
+    typedef Dune::PDELab::PkLocalFiniteElementMap<SDGV,DF,RF,stokes_k> V_FEM;
+    typedef Dune::PDELab::PkLocalFiniteElementMap<SDGV,DF,RF,stokes_k-1> P_FEM;
     typedef Dune::PDELab::OPBLocalFiniteElementMap<DF,RF,darcy_k,dim,Dune::GeometryType::simplex,Dune::GMPField<512> > DarcyFEM;
-    typedef Dune::PDELab::P1LocalFiniteElementMap<DF,RF,dim-1> CouplingFEM;
+    typedef Dune::PDELab::PkLocalFiniteElementMap<MDGV,DF,RF,dim-1> CouplingFEM;
 
     V_FEM vfem(stokesGV);
     P_FEM pfem(stokesGV);
     DarcyFEM darcyfem;
-    CouplingFEM couplingfem;
+    CouplingFEM couplingfem(mdgv);
 
     typedef Dune::PDELab::NoConstraints NOCON;
     typedef Dune::PDELab::ConformingDirichletConstraints DCON;

@@ -30,7 +30,8 @@
 #include<typeinfo>
 
 #include <dune/pdelab/finiteelementmap/opbfem.hh>
-#include "../../dune-pm/dune/pm/models/adrwip.hh"
+// #include "../../dune-pm/dune/pm/models/adrwip.hh"
+#include <dune/pdelab/localoperator/convectiondiffusiondg.hh>
 
 #include "stokesdarcycouplingoperator.hh"
 #include "functionmacros.hh"
@@ -251,8 +252,8 @@ class DarcyParameters
 {
 
 public:
-  typedef Dune::PM::ADRTraits<GV,RF> Traits;
-  typedef Dune::PM::ADRBoundaryConditions BC;
+  typedef Dune::PDELab::ConvectionDiffusionParameterTraits<GV,RF> Traits;
+  typedef Dune::PDELab::ConvectionDiffusionBoundaryConditions BC;
 
 
   //! constructor
@@ -284,7 +285,7 @@ public:
 
   //! tensor diffusion coefficient
   typename Traits::PermTensorType
-  K (const typename Traits::ElementType& e, const typename Traits::DomainType& x_) const
+  A (const typename Traits::ElementType& e, const typename Traits::DomainType& x_) const
   {
     return elementIndexToPhysicalGroup[gv.indexSet().index(e)] == 1 ? kabs : kabslow;
   }
@@ -304,7 +305,7 @@ public:
 
   //! reaction term
   typename Traits::RangeFieldType
-  a (const typename Traits::ElementType& e, const typename Traits::DomainType& x_) const
+  c (const typename Traits::ElementType& e, const typename Traits::DomainType& x_) const
   {
     return 0.0;
   }
@@ -318,7 +319,7 @@ public:
 
   //! boundary condition type function
   typename BC::Type
-  bc (const typename Traits::IntersectionType& is, const typename Traits::IntersectionDomainType& x_) const
+  bctype (const typename Traits::IntersectionType& is, const typename Traits::IntersectionDomainType& x_) const
   {
     if (!is.boundary())
       return BC::None;
@@ -326,15 +327,15 @@ public:
       Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
         x = is.geometry().global(x_);
       if (x[0] < 1e-6 || x[0] > 100-1e-6)
-        return BC::Flux;
+        return BC::Neumann;
       else
-        return BC::Flux;//BC::Dirichlet;
+        return BC::Outflow;//BC::Dirichlet;
     }
   }
 
   //! Dirichlet boundary condition value
   typename Traits::RangeFieldType
-  g (const typename Traits::IntersectionType& is, const typename Traits::IntersectionDomainType& x_) const
+  g (const typename Traits::ElementType& is, const typename Traits::DomainType& x_) const
   {
     return bottomPotential;
   }
@@ -355,6 +356,12 @@ public:
       return 2.5;
     else
     return 0.0;*/
+  }
+
+  typename Traits::RangeFieldType
+  o (const typename Traits::IntersectionType& is, const typename Traits::IntersectionDomainType& x_) const
+  {
+    return j(is,x_);
   }
 
   //! set time for subsequent evaluation
@@ -735,8 +742,12 @@ int main(int argc, char** argv) {
     typedef DarcyBoundaryTypeAdapter<DarcyParams> DarcyBoundaryFunction;
     DarcyBoundaryFunction darcyBoundaryFunction(darcyParams);
 
-    typedef Dune::PM::ADRWIP<DarcyParams> DarcyOperator;
-    DarcyOperator darcyOperator(darcyParams,Dune::PM::ADRWIPMethod::OBB,Dune::PM::ADRWIPWeights::weightsOn,0.0);
+    typedef Dune::PDELab::ConvectionDiffusionDG<DarcyParams,DarcyFEM> DarcyOperator;
+    DarcyOperator darcyOperator(
+      darcyParams,
+      Dune::PDELab::ConvectionDiffusionDGMethod::SIPG,
+      Dune::PDELab::ConvectionDiffusionDGWeights::weightsOn
+    );
 
     typedef CouplingParameters<MDGV> CouplingParams;
     CouplingParams couplingParams(parameters.sub("parameters"));

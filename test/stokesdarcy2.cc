@@ -412,171 +412,248 @@ struct DarcyBoundaryTypeAdapter :
   DarcyParameters& parameters;
 };
 
-namespace Dune {
-namespace PDELab {
-
-template<typename T, typename Params, typename X>
-class DiscretePressureGridFunction
-  : public GridFunctionInterface<
-  GridFunctionTraits<
-    typename T::Traits::GridViewType,
-    typename T::Traits::FiniteElementType::Traits::LocalBasisType::Traits::RangeFieldType,
-    T::Traits::FiniteElementType::Traits::LocalBasisType::Traits::dimRange,
-    typename T::Traits::FiniteElementType::Traits::LocalBasisType::Traits::RangeType
-    >,
-  DiscretePressureGridFunction<T,Params,X>
-  >
+class VTKPressureFromPotential
 {
-  typedef T GFS;
-
-  typedef GridFunctionInterface<
-    GridFunctionTraits<
-      typename T::Traits::GridViewType,
-      typename T::Traits::FiniteElementType::Traits::LocalBasisType::Traits::RangeFieldType,
-      T::Traits::FiniteElementType::Traits::LocalBasisType::Traits::dimRange,
-      typename T::Traits::FiniteElementType::Traits::LocalBasisType::Traits::RangeType
-      >,
-    DiscretePressureGridFunction<T,Params,X>
-    > BaseT;
 
 public:
-  typedef typename BaseT::Traits Traits;
 
-  /** \brief Construct a DiscreteGridFunction
-   *
-   * \param gfs The GridFunctionsSpace
-   * \param x_  The coefficients vector
-   */
-  DiscretePressureGridFunction (const GFS& gfs, const Params& params, const X& x_, const typename Traits::RangeFieldType& factor_)
-    : pgfs(Dune::stackobject_to_shared_ptr(gfs)), parameters(params), xg(x_), lfs(gfs), xl(gfs.maxLocalSize()), yb(gfs.maxLocalSize()), factor(factor_)
+  template<typename LFS, typename Data>
+  class Function
+    : public Dune::TypeTree::LeafNode
+    , public Dune::PDELab::GridFunctionInterface<Dune::PDELab::GridFunctionTraits<
+                                                   typename LFS::Traits::GridView,
+                                                   typename Dune::BasisInterfaceSwitch<
+                                                     typename Dune::FiniteElementInterfaceSwitch<
+                                                       typename LFS::Traits::FiniteElement
+                                                       >::Basis
+                                                     >::RangeField,
+                                                   Dune::BasisInterfaceSwitch<
+                                                     typename Dune::FiniteElementInterfaceSwitch<
+                                                       typename LFS::Traits::FiniteElement
+                                                       >::Basis
+                                                     >::dimRange,
+                                                   typename Dune::BasisInterfaceSwitch<
+                                                     typename Dune::FiniteElementInterfaceSwitch<
+                                                       typename LFS::Traits::FiniteElement
+                                                       >::Basis
+                                                     >::Range
+                                                   >,
+                                                 Function<LFS,Data>
+                                                 >
   {
-  }
 
-  // Evaluate
-  inline void evaluate (const typename Traits::ElementType& e,
-                        const typename Traits::DomainType& x,
-                        typename Traits::RangeType& y) const
-  {
-    lfs.bind(e);
-    lfs.vread(xg,xl);
-    lfs.finiteElement().localBasis().evaluateFunction(x,yb);
-    typename Traits::RangeType t = 0;
-    for (unsigned int i=0; i<yb.size(); i++)
-      t.axpy(xl[i],yb[i]);
-    typename Traits::ElementType::Geometry::GlobalCoordinate xg = e.geometry().global(x);
-    t -= xg[Traits::dimDomain-1];
-    y = t;
-  }
+    typedef Dune::BasisInterfaceSwitch<
+      typename Dune::FiniteElementInterfaceSwitch<
+        typename LFS::Traits::FiniteElement
+        >::Basis
+      > BasisSwitch;
 
-  //! get a reference to the GridView
-  inline const typename Traits::GridViewType& getGridView () const
-  {
-    return pgfs->gridView();
-  }
+    typedef Dune::PDELab::GridFunctionInterface<
+      Dune::PDELab::GridFunctionTraits<
+        typename LFS::Traits::GridView,
+        typename BasisSwitch::RangeField,
+        BasisSwitch::dimRange,
+        typename BasisSwitch::Range
+        >,
+      Function<LFS,Data>
+      > BaseT;
 
-private:
-  shared_ptr<GFS const> pgfs;
-  const Params& parameters;
-  const X& xg;
-  mutable Dune::PDELab::LocalFunctionSpace<GFS> lfs;
-  mutable std::vector<typename Traits::RangeFieldType> xl;
-  mutable std::vector<typename Traits::RangeType> yb;
-  const typename Traits::RangeFieldType factor;
-};
+  public:
+    typedef typename BaseT::Traits Traits;
 
-template<typename T, typename Params, typename X>
-class DarcyFlowFromPotential
-  : public GridFunctionInterface<
-  GridFunctionTraits<
-    typename T::Traits::GridViewType,
-    typename T::Traits::FiniteElementType::Traits::LocalBasisType
-    ::Traits::RangeFieldType,
-    T::Traits::FiniteElementType::Traits::LocalBasisType::Traits
-    ::dimDomain,
-    FieldVector<
-      typename T::Traits::FiniteElementType::Traits
-      ::LocalBasisType::Traits::RangeFieldType,
-      T::Traits::FiniteElementType::Traits::LocalBasisType::Traits
-      ::dimDomain> >,
-  DarcyFlowFromPotential<T,Params,X> >
-{
-  typedef T GFS;
-  typedef typename GFS::Traits::FiniteElementType::Traits::
-  LocalBasisType::Traits LBTraits;
+    Function(const LFS& lfs, const std::shared_ptr<Data>& data)
+      : BaseT(lfs.gridFunctionSpace().dataSetType())
+      , _lfs(lfs)
+      , _data(data)
+      , _basis(lfs.maxSize())
+    {}
 
-public:
-  typedef GridFunctionTraits<
-  typename GFS::Traits::GridViewType,
-  typename LBTraits::RangeFieldType,
-  LBTraits::dimDomain,
-  FieldVector<
-    typename LBTraits::RangeFieldType,
-    LBTraits::dimDomain> > Traits;
+    // Evaluate
+    void evaluate(const typename Traits::ElementType& e,
+                  const typename Traits::DomainType& x,
+                  typename Traits::RangeType& y) const
+    {
+      _data->bind(e);
 
-private:
-  typedef GridFunctionInterface<
-  Traits,
-  DarcyFlowFromPotential<T,Params,X> > BaseT;
+      typedef Dune::FiniteElementInterfaceSwitch<
+        typename LFS::Traits::FiniteElement
+        > FESwitch;
 
-public:
-  /** \brief Construct a DiscreteGridFunctionGradient
-   *
-   * \param gfs The GridFunctionsSpace
-   * \param x_  The coefficients vector
-   */
-  DarcyFlowFromPotential (const GFS& gfs, const Params& params, const X& x_)
-    : pgfs(Dune::stackobject_to_shared_ptr(gfs)), parameters(params), xg(x_)
-  { }
+      y = 0;
 
-  // Evaluate
-  inline void evaluate (const typename Traits::ElementType& e,
-                        const typename Traits::DomainType& x,
-                        typename Traits::RangeType& y) const
-  {
-    // get and bind local functions space
-    Dune::PDELab::LocalFunctionSpace<GFS> lfs(*pgfs);
-    lfs.bind(e);
+      FESwitch::basis(_lfs.finiteElement()).evaluateFunction(x,_basis);
+      for (std::size_t i = 0; i < _lfs.size(); ++i)
+        y.axpy(_data->_x_local(_lfs,i),_basis[i]);
 
-    // get local coefficients
-    std::vector<typename Traits::RangeFieldType> xl(lfs.size());
-    lfs.vread(xg,xl);
+      typename Traits::ElementType::Geometry::GlobalCoordinate xg = e.geometry().global(x);
+      y -= xg[Traits::dimDomain-1];
 
-    // get Jacobian of geometry
-    const typename Traits::ElementType::Geometry::Jacobian&
-      JgeoIT = e.geometry().jacobianInverseTransposed(x);
-
-    // get local Jacobians/gradients of the shape functions
-    std::vector<typename LBTraits::JacobianType> J(lfs.size());
-    lfs.finiteElement().localBasis().evaluateJacobian(x,J);
-
-    typename Traits::RangeType gradphi, t;
-    t = 0;
-    for(unsigned i = 0; i < lfs.size(); ++i) {
-      // compute global gradient of shape function i
-      gradphi = 0;
-      JgeoIT.umv(J[i][0], gradphi);
-
-      // sum up global gradients, weighting them with the appropriate coeff
-      t.axpy(xl[i], gradphi);
     }
-    t /= -parameters.porosity(getGridView().grid().multiDomainEntity(e),x);
-    parameters.K(getGridView().grid().multiDomainEntity(e),x).mv(t,y);
-  }
 
-  //! get a reference to the GridView
-  inline const typename Traits::GridViewType& getGridView () const
+    //! get a reference to the GridView
+    const typename Traits::GridViewType& gridView() const
+    {
+      return _lfs.gridFunctionSpace().gridView();
+    }
+
+    const LFS& localFunctionSpace() const
+    {
+      return _lfs;
+    }
+
+  private:
+
+    const LFS& _lfs;
+    const std::shared_ptr<Data> _data;
+    mutable std::vector<typename Traits::RangeType> _basis;
+
+  };
+
+
+  template<typename LFS, typename Data>
+  std::shared_ptr<Function<LFS,Data> > create(const LFS& lfs, std::shared_ptr<Data> data)
   {
-    return pgfs->gridView();
+    return std::make_shared<Function<LFS,Data> >(lfs,data);
   }
 
-private:
-  shared_ptr<GFS const> pgfs;
-  const Params& parameters;
-  const X& xg;
 };
 
-} // namespace PDELab
-} // namespace Dune
+
+template<typename Params>
+class VTKDarcyFlowFromPotential
+{
+
+public:
+
+  template<typename LFS, typename Data>
+  class Function
+    : public Dune::TypeTree::LeafNode
+    , public Dune::PDELab::GridFunctionInterface<Dune::PDELab::GridFunctionTraits<
+                                                   typename LFS::Traits::GridView,
+                                                   typename Dune::BasisInterfaceSwitch<
+                                                     typename Dune::FiniteElementInterfaceSwitch<
+                                                       typename LFS::Traits::FiniteElement
+                                                       >::Basis
+                                                     >::RangeField,
+                                                   Dune::FiniteElementInterfaceSwitch<
+                                                     typename LFS::Traits::FiniteElement
+                                                     >::Basis::Traits::dimDomain,
+                                                   Dune::FieldVector<
+                                                     typename Dune::BasisInterfaceSwitch<
+                                                       typename Dune::FiniteElementInterfaceSwitch<
+                                                         typename LFS::Traits::FiniteElement
+                                                         >::Basis
+                                                       >::RangeField,
+                                                     Dune::FiniteElementInterfaceSwitch<
+                                                       typename LFS::Traits::FiniteElement
+                                                       >::Basis::Traits::dimDomain
+                                                     >
+                                                   >,
+                                                 Function<LFS,Data>
+                                                 >
+  {
+
+    typedef typename Dune::FiniteElementInterfaceSwitch<
+      typename LFS::Traits::FiniteElement
+      >::Basis Basis;
+
+    typedef Dune::BasisInterfaceSwitch<
+      Basis
+      > BasisSwitch;
+
+    typedef Dune::PDELab::GridFunctionInterface<
+      Dune::PDELab::GridFunctionTraits<
+        typename LFS::Traits::GridView,
+        typename BasisSwitch::RangeField,
+        Basis::Traits::dimDomain,
+        Dune::FieldVector<
+          typename BasisSwitch::RangeField,
+          Basis::Traits::dimDomain
+          >
+        >,
+      Function<LFS,Data>
+      > BaseT;
+
+  public:
+    typedef typename BaseT::Traits Traits;
+
+    Function(const LFS& lfs, const std::shared_ptr<Data>& data, const Params& params)
+      : BaseT(lfs.gridFunctionSpace().dataSetType())
+      , _lfs(lfs)
+      , _data(data)
+      , _gradient_basis(lfs.maxSize())
+      , _params(params)
+    {}
+
+    // Evaluate
+    void evaluate(const typename Traits::ElementType& e,
+                  const typename Traits::DomainType& x,
+                  typename Traits::RangeType& y) const
+    {
+      _data->bind(e);
+
+      typedef Dune::FiniteElementInterfaceSwitch<
+        typename LFS::Traits::FiniteElement
+        > FESwitch;
+
+      auto geometry = e.geometry();
+      auto jac = geometry.jacobianInverseTransposed(x);
+
+      y = 0;
+
+      _lfs.finiteElement().localBasis().evaluateJacobian(x,_gradient_basis);
+
+      for (std::size_t i = 0; i < _lfs.size(); ++i)
+        y.axpy(_data->_x_local(_lfs,i),_gradient_basis[i][0]);
+
+      // transform to global coordinates
+      auto global_grad = y;
+      jac.mv(y,global_grad);
+
+      auto& multidomain_entity = gridView().grid().multiDomainEntity(e);
+
+      _params.A(multidomain_entity,x).mv(global_grad,y);
+
+      y /= -_params.porosity(multidomain_entity,x);
+
+    }
+
+    //! get a reference to the GridView
+    const typename Traits::GridViewType& gridView() const
+    {
+      return _lfs.gridFunctionSpace().gridView();
+    }
+
+    const LFS& localFunctionSpace() const
+    {
+      return _lfs;
+    }
+
+  private:
+
+    const LFS& _lfs;
+    const std::shared_ptr<Data> _data;
+    mutable std::vector<typename Basis::Traits::JacobianType> _gradient_basis;
+    const Params& _params;
+
+  };
+
+  template<typename LFS, typename Data>
+  std::shared_ptr<Function<LFS,Data> > create(const LFS& lfs, std::shared_ptr<Data> data)
+  {
+    return std::make_shared<Function<LFS,Data> >(lfs,data,_params);
+  }
+
+  VTKDarcyFlowFromPotential(const Params& params)
+    : _params(params)
+  {}
+
+private:
+
+  const Params& _params;
+
+};
+
 
 int main(int argc, char** argv) {
 
@@ -879,11 +956,20 @@ int main(int argc, char** argv) {
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PhiDGF>(phidgf2,"rphi"));
       vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<PDGF>(pdgf2,"rp"));
       */
+
       Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
         vtkwriter,
         multigfs,
         u,
         Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(darcyGV.grid().domain())
+      ).addVertexFunction(
+        VTKPressureFromPotential(),
+        Dune::TypeTree::TreePath<1>(),
+        "p"
+      ).addVertexFunction(
+        VTKDarcyFlowFromPotential<DarcyParams>(darcyParams),
+        Dune::TypeTree::TreePath<1>(),
+        "v"
       );
       vtkwriter.write("darcy",Dune::VTK::appendedraw);
       //fn1.increment();

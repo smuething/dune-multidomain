@@ -93,6 +93,217 @@ namespace MultiDomain {
   }
 
 } // namespace MultiDomain
+
+
+  namespace detail {
+
+    struct VTKDiscreteFunctionBaseFlagsBase
+    {};
+
+    template<bool enable = false>
+    struct VTKDiscreteFunctionBaseFlags
+      : public std::conditional<enable,
+                                VTKDiscreteFunctionBaseFlagsBase,
+                                VTKDiscreteFunctionBaseFlags<true>
+                                >::type
+    {
+
+      typedef VTKDiscreteFunctionBaseFlags<true> Computations;
+
+      static constexpr bool evaluateBasis()
+      {
+        return enable;
+      }
+
+      static constexpr bool evaluateSolution()
+      {
+        return enable;
+      }
+
+      static constexpr bool evaluateBasisJacobians()
+      {
+        return enable;
+      }
+
+      static constexpr bool evaluateBasisGradients()
+      {
+        return enable;
+      }
+
+      static constexpr bool evaluateGradient()
+      {
+        return enable;
+      }
+
+    };
+
+  }
+
+  template<typename LFS, typename Data, typename Impl>
+  class VTKDiscreteFunctionBase
+    : public Dune::TypeTree::LeafNode
+    , public detail::VTKDiscreteFunctionBaseFlags<>
+    , public Dune::PDELab::GridFunctionInterface<Dune::PDELab::GridFunctionTraits<
+                                                   typename LFS::Traits::GridView,
+                                                   typename Dune::BasisInterfaceSwitch<
+                                                     typename Dune::FiniteElementInterfaceSwitch<
+                                                       typename LFS::Traits::FiniteElement
+                                                       >::Basis
+                                                     >::RangeField,
+                                                   Dune::BasisInterfaceSwitch<
+                                                     typename Dune::FiniteElementInterfaceSwitch<
+                                                       typename LFS::Traits::FiniteElement
+                                                       >::Basis
+                                                     >::dimRange,
+                                                   typename Dune::BasisInterfaceSwitch<
+                                                     typename Dune::FiniteElementInterfaceSwitch<
+                                                       typename LFS::Traits::FiniteElement
+                                                       >::Basis
+                                                     >::Range
+                                                   >,
+                                                 Impl
+                                                 >
+  {
+
+    typedef Dune::BasisInterfaceSwitch<
+      typename Dune::FiniteElementInterfaceSwitch<
+        typename LFS::Traits::FiniteElement
+        >::Basis
+      > BasisSwitch;
+
+    typedef Dune::PDELab::GridFunctionInterface<
+      Dune::PDELab::GridFunctionTraits<
+        typename LFS::Traits::GridView,
+        typename BasisSwitch::RangeField,
+        BasisSwitch::dimRange,
+        typename BasisSwitch::Range
+        >,
+      Impl
+      > Base;
+
+  public:
+
+    struct Traits
+      : public Base::Traits
+    {
+
+      typedef typename Base::Traits::GridViewType GridView;
+
+      typedef typename Dune::FiniteElementInterfaceSwitch<
+        typename LFS::Traits::FiniteElement
+        >::Basis Basis;
+
+      typedef Dune::FieldVector<
+        typename Basis::Traits::RangeFieldType,
+        GridView::dimensionworld
+        > Gradient;
+
+    };
+
+    typedef detail::VTKDiscreteFunctionBaseFlags<>::Computations Computations;
+
+    VTKDiscreteFunctionBase(const LFS& lfs, const std::shared_ptr<Data>& data)
+      : Base(lfs.gridFunctionSpace().dataSetType())
+      , _lfs(lfs)
+      , _data(data)
+      , _basis(lfs.maxSize())
+      , _basis_jacobians(lfs.maxSize())
+      , _basis_gradients(lfs.maxSize())
+    {}
+
+    void bind(const typename Traits::ElementType& e,
+              const typename Traits::DomainType& x) const
+    {
+
+      _data->bind(e);
+
+      typedef Dune::FiniteElementInterfaceSwitch<
+        typename LFS::Traits::FiniteElement
+        > FESwitch;
+
+      if (impl().evaluateBasis() || impl().evaluateSolution())
+        FESwitch::basis(_lfs.finiteElement()).evaluateFunction(x,_basis);
+
+      if (impl().evaluateSolution())
+        {
+          _solution = typename Traits::RangeType(0);
+
+          for (std::size_t i = 0; i < _lfs.size(); ++i)
+            _solution.axpy(_data->_x_local(_lfs,i),_basis[i]);
+        }
+
+      if (impl().evaluateBasisJacobians() ||
+          impl().evaluateBasisGradients() ||
+          impl().evaluateGradient())
+        {
+          FESwitch::basis(_lfs.finiteElement()).evaluateJacobian(x,_basis_jacobians);
+        }
+
+      if (impl().evaluateBasisGradients() ||
+          impl().evaluateGradient())
+        {
+          auto geometry = e.geometry();
+          auto JgeoIT = geometry.jacobianInverseTransposed(x);
+
+          for (std::size_t i = 0; i < _lfs.size(); ++i)
+            JgeoIT.mv(_basis_jacobians[i][0],_basis_gradients[i]);
+
+        }
+
+      if (impl().evaluateGradient())
+        {
+          _gradient = typename Traits::Gradient(0);
+
+          for (std::size_t i = 0; i < _lfs.size(); ++i)
+            _gradient.axpy(_data->_x_local(_lfs,i),_basis_gradients[i]);
+        }
+
+    }
+
+    //! get a reference to the GridView
+    const typename Traits::GridViewType& gridView() const
+    {
+      return _lfs.gridFunctionSpace().gridView();
+    }
+
+    const LFS& localFunctionSpace() const
+    {
+      return _lfs;
+    }
+
+    const std::vector<typename Traits::RangeType>& basis() const
+    {
+      return _basis;
+    }
+
+    const typename Traits::RangeType& solution() const
+    {
+      return _solution;
+    }
+
+    const typename Traits::Gradient& gradient() const
+    {
+      return _gradient;
+    }
+
+  private:
+
+    const Impl& impl() const
+    {
+      return static_cast<const Impl&>(*this);
+    }
+
+    const LFS& _lfs;
+    const std::shared_ptr<Data> _data;
+    mutable std::vector<typename Traits::RangeType> _basis;
+    mutable typename Traits::RangeType _solution;
+    mutable std::vector<typename Traits::Basis::Traits::JacobianType> _basis_jacobians;
+    mutable std::vector<typename Traits::Gradient> _basis_gradients;
+    mutable typename Traits::Gradient _gradient;
+
+  };
+
+
 } // namespace PDELab
 } // namespace Dune
 

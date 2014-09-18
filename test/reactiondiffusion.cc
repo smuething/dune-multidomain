@@ -24,9 +24,9 @@
 #include<typeinfo>
 
 #include "functionmacros.hh"
-#include "../../dune-pdelab-howto/examples/example05_operator.hh"
-#include "../../dune-pdelab-howto/examples/example05_toperator.hh"
-#include "../../dune-pdelab-howto/examples/example05_initial.hh"
+#include "../../dune-pdelab-howto/src/course-examples/example05_operator.hh"
+#include "../../dune-pdelab-howto/src/course-examples/example05_toperator.hh"
+#include "../../dune-pdelab-howto/src/course-examples/example05_initial.hh"
 #include "simpletimeoperator.hh"
 
 template<typename GV, typename RF>
@@ -296,18 +296,18 @@ int main(int argc, char** argv) {
   {
     typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> U0DGF;
     U0DGF u0dgf(sgfs0,uold);
-    Dune::VTKWriter<MDGV> vtkwriter(mdgv,Dune::VTKOptions::conforming);
+    Dune::VTKWriter<MDGV> vtkwriter(mdgv,Dune::VTK::conforming);
     vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U0DGF>(u0dgf,"c0"));
-    vtkwriter.write(fn0.getName(),Dune::VTKOptions::binaryappended);
+    vtkwriter.write(fn0.getName(),Dune::VTK::appendedraw);
     fn0.increment();
   }
   Dune::PDELab::FilenameHelper fn1("reactiondiffusion-c1");
   {
     typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> U1DGF;
     U1DGF u1dgf(sgfs1,uold);
-    Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
+    Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTK::conforming);
     vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U1DGF>(u1dgf,"c1"));
-    vtkwriter.write(fn1.getName(),Dune::VTKOptions::binaryappended);
+    vtkwriter.write(fn1.getName(),Dune::VTK::appendedraw);
     fn1.increment();
   }
 
@@ -326,17 +326,17 @@ int main(int argc, char** argv) {
       {
         typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> U0DGF;
         U0DGF u0dgf(sgfs0,uold);
-        Dune::VTKWriter<MDGV> vtkwriter(mdgv,Dune::VTKOptions::conforming);
+        Dune::VTKWriter<MDGV> vtkwriter(mdgv,Dune::VTK::conforming);
         vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U0DGF>(u0dgf,"c0"));
-        vtkwriter.write(fn0.getName(),Dune::VTKOptions::binaryappended);
+        vtkwriter.write(fn0.getName(),Dune::VTK::appendedraw);
         fn0.increment();
       }
       {
         typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> U1DGF;
         U1DGF u1dgf(sgfs1,uold);
-        Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
+        Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTK::conforming);
         vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<U1DGF>(u1dgf,"c1"));
-        vtkwriter.write(fn1.getName(),Dune::VTKOptions::binaryappended);
+        vtkwriter.write(fn1.getName(),Dune::VTK::appendedraw);
         fn1.increment();
       }
     }

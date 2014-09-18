@@ -52,7 +52,7 @@ class SubProblem
   : public TypeTree::LeafNode
 {
 
-  dune_static_assert(sizeof...(Indices) >= 1,"You need to provide at least one index");
+  static_assert(sizeof...(Indices) >= 1,"You need to provide at least one index");
 
 public:
 

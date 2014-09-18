@@ -147,11 +147,11 @@ class SubProblemLocalFunctionSpace
   , public Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType,typename MDLFS::Traits::GridFunctionSpace::Ordering::Traits::DOFIndex>
 {
 
-  dune_static_assert((sizeof...(ChildIndices) <= MDLFS::CHILDREN),
-                     "SubProblemLocalFunctionSpace cannot have more components than the MultiDomainGridFunctionSpace");
+  static_assert((sizeof...(ChildIndices) <= MDLFS::CHILDREN),
+                "SubProblemLocalFunctionSpace cannot have more components than the MultiDomainGridFunctionSpace");
 
-  dune_static_assert((!arg_pack_contains_duplicate_values<std::size_t,ChildIndices...>::value),
-                     "All child indices have to be distinct");
+  static_assert((!arg_pack_contains_duplicate_values<std::size_t,ChildIndices...>::value),
+                "All child indices have to be distinct");
 
   typedef TypeTree::FilteredCompositeNode<const MDLFS,TypeTree::IndexFilter<ChildIndices...> > NodeT;
   typedef Dune::PDELab::LocalFunctionSpaceBaseNode<typename MDLFS::Traits::GridFunctionSpaceType, typename MDLFS::Traits::GridFunctionSpace::Ordering::Traits::DOFIndex> BaseT;

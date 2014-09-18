@@ -68,8 +68,8 @@ struct VerifyChildren
     typedef typename T::Traits::GridType MultiDomainGrid;
     typedef typename MultiDomainGrid::SubDomainGrid SubDomainGrid;
     typedef typename Child::Traits::GridViewType::Grid ChildGrid;
-    dune_static_assert((is_same<MultiDomainGrid,ChildGrid>::value || is_same<SubDomainGrid,ChildGrid>::value),
-                       "MultiDomainGridFunctionSpace only works with a MultiDomainGrid and its associated SubDomainGrids.");
+    static_assert((is_same<MultiDomainGrid,ChildGrid>::value || is_same<SubDomainGrid,ChildGrid>::value),
+                  "MultiDomainGridFunctionSpace only works with a MultiDomainGrid and its associated SubDomainGrids.");
     doVerify<T>(t.grid(),child.gridView().grid());
   }
 
@@ -198,7 +198,7 @@ public:
   template<std::size_t i>
   struct ChildInfo
   {
-    dune_static_assert(i < BaseT::CHILDREN,"invalid child index");
+    static_assert(i < BaseT::CHILDREN,"invalid child index");
 
     typedef typename std::tuple_element<i,ChildEntries>::type Type;
   };
@@ -216,27 +216,27 @@ public:
   template<typename T>
   struct IndexForChild
   {
-    dune_static_assert(Traits::supportsMapAccess,"This MultiDomainGridFunctionSpace does not support accessing children by type - " \
-                                                 "it probably contains two child grid function spaces with identical type. " \
-                                                 "Select your function spaces by index instead.");
+    static_assert(Traits::supportsMapAccess,"This MultiDomainGridFunctionSpace does not support accessing children by type - " \
+                                            "it probably contains two child grid function spaces with identical type. " \
+                                            "Select your function spaces by index instead.");
     static const std::size_t value = get_map_entry<T,ChildEntryMap>::type::index;
   };
 
   template<typename T>
   const T& childByType() const
   {
-    dune_static_assert(Traits::supportsMapAccess,"This MultiDomainGridFunctionSpace does not support accessing children by type - " \
-                                                 "it probably contains two child grid function spaces with identical type. " \
-                                                 "Select your function spaces by index instead.");
+    static_assert(Traits::supportsMapAccess,"This MultiDomainGridFunctionSpace does not support accessing children by type - " \
+                                            "it probably contains two child grid function spaces with identical type. " \
+                                            "Select your function spaces by index instead.");
     return this->template getChild<get_map_entry<T,ChildEntryMap>::type::index>();
   }
 
   template<typename T>
   T& childByType()
   {
-    dune_static_assert(Traits::supportsMapAccess,"This MultiDomainGridFunctionSpace does not support accessing children by type - " \
-                                                 "it probably contains two child grid function spaces with identical type. " \
-                                                 "Select your function spaces by index instead.");
+    static_assert(Traits::supportsMapAccess,"This MultiDomainGridFunctionSpace does not support accessing children by type - " \
+                                            "it probably contains two child grid function spaces with identical type. " \
+                                            "Select your function spaces by index instead.");
     return this->template getChild<get_map_entry<T,ChildEntryMap>::type::index>();
   }
 
@@ -256,8 +256,8 @@ public:
     , ImplementationBase(backend,ordering_tag)
     , _g(g)
   {
-    dune_static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
-                       "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
+    static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
+                  "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
     TypeTree::applyToTree(*this,VerifyChildren());
   }
 
@@ -266,8 +266,8 @@ public:
     , ImplementationBase(backend,OrderingTag())
     , _g(g)
   {
-    dune_static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
-                       "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
+    static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
+                  "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
     TypeTree::applyToTree(*this,VerifyChildren());
   }
 
@@ -276,8 +276,8 @@ public:
     , ImplementationBase(Backend(),ordering_tag)
     , _g(g)
   {
-    dune_static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
-                       "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
+    static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
+                  "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
     TypeTree::applyToTree(*this,VerifyChildren());
   }
 
@@ -286,8 +286,8 @@ public:
     , ImplementationBase(Backend(),OrderingTag())
     , _g(g)
   {
-    dune_static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
-                       "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
+    static_assert(Dune::mdgrid::GridType<G>::v == Dune::mdgrid::multiDomainGrid,
+                  "MultiDomainGridFunctionSpace only works on a MultiDomainGrid");
     TypeTree::applyToTree(*this,VerifyChildren());
   }
 

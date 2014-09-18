@@ -351,8 +351,8 @@ namespace Dune {
       {
         typedef typename GFS::Ordering Ordering;
 
-        dune_static_assert((is_same<ContainerIndex,typename Ordering::Traits::ContainerIndex>::value),
-                           "dataHandleContainerIndices() called with invalid ContainerIndex type.");
+        static_assert((is_same<ContainerIndex,typename Ordering::Traits::ContainerIndex>::value),
+                      "dataHandleContainerIndices() called with invalid ContainerIndex type.");
 
         // Clear index state
         for (typename std::vector<ContainerIndex>::iterator it = container_indices.begin(),

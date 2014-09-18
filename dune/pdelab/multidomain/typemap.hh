@@ -3,8 +3,6 @@
 
 #include <type_traits>
 
-#include <dune/common/static_assert.hh>
-
 namespace Dune {
 
 namespace PDELab {
@@ -42,7 +40,7 @@ struct get_map_entry
 {
   typedef decltype(map().lookup(map_key<key>())) type;
 
-  dune_static_assert((!std::is_same<type,no_key>::value),"key type not contained in type map");
+  static_assert((!std::is_same<type,no_key>::value),"key type not contained in type map");
 };
 
 /**

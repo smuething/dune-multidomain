@@ -124,9 +124,9 @@ struct gfs_flavor_tag<PowerCouplingGridFunctionSpace<T,k,Ordering> >
 
 template<typename G, typename Backend, typename OrderingTag, typename... Children>
 class MultiDomainGridFunctionSpace
-  : public TypeTree::VariadicCompositeNode<Children...>
+  : public TypeTree::CompositeNode<Children...>
   , public PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,OrderingTag,Children...>,
-                                               typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
+                                               typename TypeTree::CompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
                                                Backend,
                                                OrderingTag,
                                                sizeof...(Children)
@@ -134,18 +134,18 @@ class MultiDomainGridFunctionSpace
   , public DataHandleProvider<MultiDomainGridFunctionSpace<G,Backend,OrderingTag,Children...> >
 {
 
-  typedef TypeTree::VariadicCompositeNode<Children...> BaseT;
+  typedef TypeTree::CompositeNode<Children...> BaseT;
 
   friend class
   PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,OrderingTag,Children...>,
-                                      typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
+                                      typename TypeTree::CompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
                                       Backend,
                                       OrderingTag,
                                       sizeof...(Children)
                                       >;
 
   typedef PowerCompositeGridFunctionSpaceBase<MultiDomainGridFunctionSpace<G,Backend,OrderingTag,Children...>,
-                                              typename TypeTree::VariadicCompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
+                                              typename TypeTree::CompositeNode<Children...>::template Child<0>::Type::Traits::GridViewType,
                                               Backend,
                                               OrderingTag,
                                               sizeof...(Children)

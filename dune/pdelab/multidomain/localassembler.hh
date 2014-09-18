@@ -166,7 +166,7 @@ struct LocalAssemblerTraits
 
 template<typename GO, typename... AssemblyParticipants>
 class LocalAssembler
-  : public TypeTree::VariadicCompositeNode<AssemblyParticipants...>
+  : public TypeTree::CompositeNode<AssemblyParticipants...>
   , public Dune::PDELab::LocalAssemblerBase<typename GO::Traits::MatrixBackend,
                                             typename GO::Traits::TrialGridFunctionSpaceConstraints,
                                             typename GO::Traits::TestGridFunctionSpaceConstraints>
@@ -190,7 +190,7 @@ public:
 
 private:
 
-  typedef TypeTree::VariadicCompositeNode<AssemblyParticipants...> NodeT;
+  typedef TypeTree::CompositeNode<AssemblyParticipants...> NodeT;
   typedef Dune::PDELab::LocalAssemblerBase<
     typename GO::Traits::MatrixBackend,
     typename GO::Traits::TrialGridFunctionSpaceConstraints,

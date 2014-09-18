@@ -311,11 +311,11 @@ buildConstraintsDescriptor(const MDLFS& mdlfs_s, const MDLFS& mdlfs_n,
 
 template<typename CA, typename... ConstraintsDescriptors>
 class ConstraintsAssemblerEngine
-  : public TypeTree::VariadicCompositeNode<ConstraintsDescriptors...>
+  : public TypeTree::CompositeNode<ConstraintsDescriptors...>
   , public Dune::PDELab::LocalAssemblerEngineBase
 {
 
-  typedef TypeTree::VariadicCompositeNode<ConstraintsDescriptors...> NodeT;
+  typedef TypeTree::CompositeNode<ConstraintsDescriptors...> NodeT;
   typedef typename CA::Traits::ConstraintsContainer CG;
   typedef typename CG::LocalTransformation CL;
 

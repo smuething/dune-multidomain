@@ -304,7 +304,7 @@ template<typename GFS,
          typename... Children>
 class MultiDomainLocalFunctionSpaceNode
   : public LocalFunctionSpaceBaseNode<GFS,DOFIndex>
-  , public TypeTree::VariadicCompositeNode<Children...>
+  , public TypeTree::CompositeNode<Children...>
 {
 
   typedef typename GFS::Traits::Backend B;
@@ -324,7 +324,7 @@ public:
                                     const Transformation& t,
                                     shared_ptr<Children>... children)
     : BaseT(gfs)
-    , TypeTree::VariadicCompositeNode<Children...>(children...)
+    , TypeTree::CompositeNode<Children...>(children...)
   {}
 
   template<typename Transformation>
@@ -332,7 +332,7 @@ public:
                                     const Transformation& t,
                                     shared_ptr<Children>... children)
     : BaseT(stackobject_to_shared_ptr(gfs))
-    , TypeTree::VariadicCompositeNode<Children...>(children...)
+    , TypeTree::CompositeNode<Children...>(children...)
   {}
 
   using BaseT::n;
@@ -375,7 +375,7 @@ struct MultiDomainLocalFunctionSpaceTransformationTemplate
 };
 
 template<typename MultiDomainGFS, typename data>
-TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
+TypeTree::TemplatizedGenericCompositeNodeTransformation<
   MultiDomainGFS,
   Dune::PDELab::gfs_to_lfs<data>,
   MultiDomainLocalFunctionSpaceTransformationTemplate<
@@ -397,7 +397,7 @@ struct gfs_to_coupling_lfs {
 
 
 template<typename MultiDomainGFS,typename data>
-TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
+TypeTree::TemplatizedGenericCompositeNodeTransformation<
   MultiDomainGFS,
   gfs_to_coupling_lfs<data>,
   MultiDomainLocalFunctionSpaceTransformationTemplate<
@@ -421,22 +421,16 @@ TypeTree::TemplatizedGenericPowerNodeTransformation<
   >
 registerNodeTransformation(PowerGridFunctionSpace* pgfs, gfs_to_coupling_lfs<data>* t, PowerGridFunctionSpaceTag* tag);
 
-#if HAVE_VARIADIC_TEMPLATES
-
 template<typename CompositeGridFunctionSpace, typename data>
-TypeTree::TemplatizedGenericVariadicCompositeNodeTransformation<
+TypeTree::TemplatizedGenericCompositeNodeTransformation<
   CompositeGridFunctionSpace,
   gfs_to_coupling_lfs<data>,
-  variadic_composite_gfs_to_lfs_template<
+  composite_gfs_to_lfs_template<
     CompositeGridFunctionSpace,
     gfs_to_coupling_lfs<data>
     >::template result
   >
 registerNodeTransformation(CompositeGridFunctionSpace* cgfs, gfs_to_coupling_lfs<data>* t, CompositeGridFunctionSpaceTag* tag);
-
-#else
-#error "require variadic templates"
-#endif
 
 template<typename GridFunctionSpace, typename data>
 TypeTree::GenericLeafNodeTransformation<

@@ -10,7 +10,7 @@ namespace PDELab {
 namespace MultiDomain {
 
 /**
- * TMP for deriving storage types in VariadicCompositeNode
+ * TMP for deriving storage types in CompositeNode
  */
 template<typename... OArgs>
 struct replace;
@@ -43,7 +43,7 @@ struct transform {
 };
 
 /**
- * TMP for deriving storage types in VariadicCompositeNode
+ * TMP for deriving storage types in CompositeNode
  */
 template<std::size_t i, typename... OArgs>
 struct indexed_replace;

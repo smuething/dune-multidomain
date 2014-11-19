@@ -53,5 +53,10 @@ testpowermortarpoisson_SOURCES = testpowermortarpoisson.cc
 
 check_PROGRAMS += testpoisson
 testpoisson_SOURCES = testpoisson.cc
+testpoisson_LDADD = $(AM_LIBS) $(DUNEMPILIBS)
+
+check_PROGRAMS += testpoisson-dirichlet-neumann
+testpoisson_dirichlet_neumann_SOURCES = testpoisson-dirichlet-neumann.cc
+testpoisson_dirichlet_neumann_LDADD = $(AM_LIBS) $(DUNEMPILIBS)
 
 MOSTLYCLEANFILES = *.vtu *.pvtu *.pvd

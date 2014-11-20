@@ -383,7 +383,6 @@ namespace Dune {
 
             // position of quadrature point in local coordinates of elements
             Dune::FieldVector<DF,dim> iplocal_s = ig.geometryInInside().global(it->position());
-            Dune::FieldVector<DF,dim> iplocal_n = ig.geometryInOutside().global(it->position());
 
             // evaluate basis functions
             std::vector<RangeType> phi_s(lfsu_s.size());

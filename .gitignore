@@ -36,3 +36,4 @@ stamp-vc
 *.pyo
 .DS_Store
 /compile
+/test/testpoisson-dirichlet-neumann

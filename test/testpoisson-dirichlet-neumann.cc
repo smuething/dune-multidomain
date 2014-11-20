@@ -211,6 +211,10 @@ public:
     typedef typename ISTLMatrix::block_type MatrixBlock;
     typedef typename ISTLVector::block_type VectorBlock;
 
+    std::cout << "incoming residuals:" << std::endl
+              << "block 0: " << Dune::PDELab::istl::raw(r)[0].two_norm() << std::endl
+              << "block 1: " << Dune::PDELab::istl::raw(r)[1].two_norm() << std::endl;
+
     Dune::MatrixAdapter<
       MatrixBlock,
       VectorBlock,
@@ -241,66 +245,25 @@ private:
 };
 
 
-int main(int argc, char** argv) {
+template<
+  typename Grid,
+  typename MDGV,
+  typename SDGV,
+  typename FEM0, typename LOP0,
+  typename FEM1, typename LOP1,
+  typename B, typename G>
+void solve(
+  Grid& grid, MDGV mdgv,
+  SDGV sdgv0, const FEM0& fem0, LOP0& lop0,
+  SDGV sdgv1, const FEM1& fem1, LOP1& lop1,
+  const Dune::ParameterTree& parameters,
+  const B& b, const G& g
+  )
+{
 
-  try {
-
-    Dune::MPIHelper::instance(argc,argv);
-
-    if (argc != 2) {
-      std::cerr << "Usage: " << argv[0] << " <ini file>" << std::endl;
-      return 1;
-    }
-
-    Dune::ParameterTree parameters;
-    Dune::ParameterTreeParser::readINITree(argv[1],parameters);
-
-    Dune::Timer timer;
-    Dune::Timer totalTimer;
-    timer.start();
-    const int dim = 2;
-    typedef Dune::YaspGrid<dim> BaseGrid;
-    const Dune::FieldVector<double,dim> h(1.0);
-    const Dune::array<int,dim> s = { {1,1} };
-    const std::bitset<dim> p(false);
-    BaseGrid baseGrid(h,s,p,0);
-    baseGrid.globalRefine(parameters.get<int>("mesh.refine"));
-    typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;
-    Grid grid(baseGrid,false);
-    typedef Grid::SubDomainGrid SubDomainGrid;
-    SubDomainGrid& sdg0 = grid.subDomain(0);
-    SubDomainGrid& sdg1 = grid.subDomain(1);
-    typedef Grid::LeafGridView MDGV;
-    typedef SubDomainGrid::LeafGridView SDGV;
-    MDGV mdgv = grid.leafGridView();
-    SDGV sdgv0 = sdg0.leafGridView();
-    SDGV sdgv1 = sdg1.leafGridView();
-    sdg0.hostEntityPointer(*sdgv0.begin<0>());
-    grid.startSubDomainMarking();
-    for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
-      {
-        if (it->geometry().center()[0] > 0.5)
-          grid.addToSubDomain(1,*it);
-        else
-          grid.addToSubDomain(0,*it);
-      }
-    grid.preUpdateSubDomains();
-    grid.updateSubDomains();
-    grid.postUpdateSubDomains();
-
-    std::cout << "grid setup: " << timer.elapsed() << " sec" << std::endl;
-    timer.reset();
-
-    typedef MDGV::Grid::ctype DF;
-
-    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,1> FEM0;
-    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,2> FEM1;
-
-    typedef FEM0::Traits::FiniteElementType::Traits::
+    typedef typename FEM0::Traits::FiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
 
-    FEM0 fem0(sdgv0);
-    FEM1 fem1(sdgv1);
     typedef Dune::PDELab::ConformingDirichletConstraints CON;
     typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
@@ -319,8 +282,11 @@ int main(int argc, char** argv) {
       Dune::PDELab::ISTLParameters::dynamic_blocking
       > MDVBE;
 
+    Dune::Timer timer;
+    timer.start();
+
     typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<
-      Grid,
+      typename MDGV::Grid,
       MDVBE,
       Dune::PDELab::LexicographicOrderingTag,
       GFS0,
@@ -332,48 +298,55 @@ int main(int argc, char** argv) {
     std::cout << "function space setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
-    typedef MultiGFS::ConstraintsContainer<R>::Type C;
+    typedef typename MultiGFS::template ConstraintsContainer<R>::Type C;
     C cg;
 
-    typedef DirichletBoundary BType;
-    BType b;
-
-    typedef F<MDGV,R> FType;
-    FType f(mdgv);
-
-    typedef G<MDGV,R> GType;
-    GType g(mdgv);
-
-    typedef J<MDGV,R> JType;
-    JType j(mdgv);
-
-    typedef Dune::PDELab::Poisson<FType,BType,JType> LOP;
-    LOP lop(f,b,j,6);
-
-    typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> Condition;
+    typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<typename MDGV::Grid> Condition;
 
     Condition c0(0);
     Condition c1(1);
 
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,GFS0> LeftSubProblem;
+    typedef Dune::PDELab::MultiDomain::SubProblem<
+      MultiGFS,
+      MultiGFS,
+      LOP0,
+      Condition,
+      0
+      > LeftSubProblem;
 
-    LeftSubProblem left_sp(lop,c0);
+    LeftSubProblem left_sp(lop0,c0);
 
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,GFS1> RightSubProblem;
+    typedef Dune::PDELab::MultiDomain::SubProblem<
+      MultiGFS,
+      MultiGFS,
+      LOP1,
+      Condition,
+      1
+      > RightSubProblem;
 
-    RightSubProblem right_sp(lop,c1);
+    RightSubProblem right_sp(lop1,c1);
 
     ContinuousValueContinuousFlowCoupling<R> proportionalFlowCoupling(4,parameters.get<double>("monolithic.coupling.scaling"));
 
-    typedef Dune::PDELab::MultiDomain::Coupling<LeftSubProblem,RightSubProblem,ContinuousValueContinuousFlowCoupling<R> > Coupling;
+    typedef Dune::PDELab::MultiDomain::Coupling<
+      LeftSubProblem,
+      RightSubProblem,
+      ContinuousValueContinuousFlowCoupling<R>
+      > Coupling;
     Coupling coupling(left_sp,right_sp,proportionalFlowCoupling);
 
     std::cout << "subproblem / coupling setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
-    auto constraints = Dune::PDELab::MultiDomain::constraints<R>(multigfs,
-                                                                 Dune::PDELab::MultiDomain::constrainSubProblem(left_sp,b),
-                                                                 Dune::PDELab::MultiDomain::constrainSubProblem(right_sp,b));
+    auto constraints = Dune::PDELab::MultiDomain::constraints<R>(
+      multigfs,
+      Dune::PDELab::MultiDomain::constrainSubProblem(
+        left_sp,
+        b),
+      Dune::PDELab::MultiDomain::constrainSubProblem(
+        right_sp,
+        b)
+      );
 
     constraints.assemble(cg);
 
@@ -400,11 +373,20 @@ int main(int argc, char** argv) {
     typedef CouplingParameters<MDGV,R> Params;
     Params params;
 
+    auto parse_coupling_type = [](std::string name) -> Dune::PDELab::CouplingMode
+      {
+        if (name == "Dirichlet")
+          return Dune::PDELab::CouplingMode::Dirichlet;
+        if (name == "Neumann")
+          return Dune::PDELab::CouplingMode::Neumann;
+        DUNE_THROW(Dune::Exception,"Unknown coupling type " << name);
+      };
+
     typedef Dune::PDELab::ConvectionDiffusionDGNeumannDirichletCoupling<
       Params
       > NDCoupling;
     NDCoupling nd_coupling_neumann(
-      Dune::PDELab::CouplingMode::Dirichlet,
+      parse_coupling_type(parameters["dn.coupling.left"]),
       params,
       Dune::PDELab::ConvectionDiffusionDGMethod::SIPG,
       Dune::PDELab::ConvectionDiffusionDGWeights::weightsOn,
@@ -412,32 +394,12 @@ int main(int argc, char** argv) {
       );
 
     NDCoupling nd_coupling_dirichlet(
-      Dune::PDELab::CouplingMode::Neumann,
+      parse_coupling_type(parameters["dn.coupling.right"]),
       params,
       Dune::PDELab::ConvectionDiffusionDGMethod::SIPG,
       Dune::PDELab::ConvectionDiffusionDGWeights::weightsOn,
       parameters.get<double>("dn.coupling.alpha")
       );
-
-    /*
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<
-      MultiGFS,
-      MultiGFS,
-      LOP,
-      Condition,
-      GFS0,
-      > LeftDirichletSubProblem;
-    LeftDirichletSubProblem left_dirichlet_subproblem(lop,c0);
-
-    typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<
-      MultiGFS,
-      MultiGFS,
-      LOP,
-      Condition,
-      GFS1
-      > RightNeumannSubProblem;
-    RightNeumannSubProblem right_neumann_subproblem(lop,c1);
-    */
 
     typedef Dune::PDELab::MultiDomain::Coupling<
       LeftSubProblem,
@@ -508,7 +470,7 @@ int main(int argc, char** argv) {
       );
 
     // make coefficent Vector and initialize it from a function
-    typedef GridOperator::Traits::Domain V;
+    typedef typename GridOperator::Traits::Domain V;
     V u(multigfs,0);
 
     Dune::PDELab::MultiDomain::interpolateOnTrialSpace(multigfs,u,g,left_sp,g,right_sp);
@@ -544,6 +506,8 @@ int main(int argc, char** argv) {
 
     V u2(u);
 
+    auto start = std::chrono::high_resolution_clock::now();
+
     // <<<6>>> Solver for linear problem per stage
     typedef Dune::PDELab::StationaryLinearProblemSolver<GridOperator,LS,V> PDESOLVER;
     PDESOLVER pdesolver(
@@ -554,13 +518,24 @@ int main(int argc, char** argv) {
 
     pdesolver.apply(u2);
 
+    auto end = std::chrono::high_resolution_clock::now();
+
+    auto elapsed = end - start;
+
+    using SubDomainIndex = typename Grid::SubDomainIndex;
+
+    std::cout << std::endl
+              << std::endl
+              << "Monolithic solver: " << std::chrono::duration_cast<std::chrono::duration<double> >(elapsed).count() << std::endl
+              << std::endl;
+
     {
       Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTK::conforming);
       Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
         vtkwriter,
         multigfs,
         u2,
-        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv0.grid().domain())
+        Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv0.grid().domain())
       );
 
       vtkwriter.write("testpoisson-monolithic-left",Dune::VTK::ascii);
@@ -572,7 +547,7 @@ int main(int argc, char** argv) {
         vtkwriter,
         multigfs,
         u2,
-        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv1.grid().domain())
+        Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv1.grid().domain())
       );
 
       vtkwriter.write("testpoisson-monolithic-right",Dune::VTK::ascii);
@@ -636,22 +611,33 @@ int main(int argc, char** argv) {
     bool reassemble_jacobian_left = parameters.get<bool>("dn.left.reassemble");
     bool reassemble_jacobian_right = parameters.get<bool>("dn.right.reassemble");
 
+    double left_max_reduction = parameters.get<double>("dn.left.solver.reduction");
+    double left_min_reduction = parameters.get<double>("dn.left.solver.minreduction");
+    double left_decay = parameters.get<double>("dn.left.solver.reductiondecay");
+    double left_offset =  1.0 / (1.0 - left_max_reduction / left_min_reduction);
+
+    double right_max_reduction = parameters.get<double>("dn.right.solver.reduction");
+    double right_min_reduction = parameters.get<double>("dn.right.solver.minreduction");
+    double right_decay = parameters.get<double>("dn.right.solver.reductiondecay");
+    double right_offset = 1.0 / (1.0 - right_max_reduction / right_min_reduction);
+
+    start = std::chrono::high_resolution_clock::now();
+
     while (r / start_r > rel_reduction && r > max_error && i < max_iterations)
       {
-#if 0
         {
           Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTK::conforming);
           Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
             vtkwriter,
             multigfs,
             u,
-            Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv0.grid().domain())
+            Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv0.grid().domain())
             );
           Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
             vtkwriter,
             multigfs,
             residual,
-            Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv0.grid().domain()),
+            Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv0.grid().domain()),
             Dune::PDELab::vtk::DefaultFunctionNameGenerator("r")
             );
 
@@ -666,13 +652,13 @@ int main(int argc, char** argv) {
             vtkwriter,
             multigfs,
             u,
-            Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv1.grid().domain())
+            Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv1.grid().domain())
             );
           Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
             vtkwriter,
             multigfs,
             residual,
-            Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv1.grid().domain()),
+            Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv1.grid().domain()),
             Dune::PDELab::vtk::DefaultFunctionNameGenerator("r")
             );
 
@@ -680,14 +666,18 @@ int main(int argc, char** argv) {
           fn << "right-" << i;
           vtkwriter.write(fn.str(),Dune::VTK::ascii);
         }
-#endif
+
         u_old = u;
-        left_pde_solver.apply(u,reassemble_jacobian_left && (i>0));
+        left_pde_solver.setReduction(left_min_reduction * (1.0 - 1.0 / (left_offset + left_decay * i)));
+        left_pde_solver.apply(u,!reassemble_jacobian_left && (i>0));
+        // left_pde_solver.setReduction(left_reduction_scaling * left_pde_solver.reduction());
         u *= alpha;
         u.axpy(1.0-alpha,u_old);
 
         u_old = u;
-        right_pde_solver.apply(u,reassemble_jacobian_right && (i>0));
+        right_pde_solver.setReduction(right_min_reduction * (1.0 - 1.0 / (right_offset + right_decay * i)));
+        right_pde_solver.apply(u,!reassemble_jacobian_right && (i>0));
+        // right_pde_solver.setReduction(right_reduction_scaling * right_pde_solver.reduction());
         u *= alpha;
         u.axpy(1.0-alpha,u_old);
 
@@ -697,6 +687,17 @@ int main(int argc, char** argv) {
         ++i;
         std::cout << std::setw(4) << i << " " << r << std::endl;
       }
+
+    end = std::chrono::high_resolution_clock::now();
+
+    elapsed = end - start;
+
+    std::cout << std::endl
+              << std::endl
+              << "Dirichlet-Neumann solver: " << std::chrono::duration_cast<std::chrono::duration<double> >(elapsed).count() << std::endl
+              << std::endl;
+
+
     // <<<8>>> graphics
     {
       Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTK::conforming);
@@ -704,10 +705,10 @@ int main(int argc, char** argv) {
         vtkwriter,
         multigfs,
         u,
-        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv0.grid().domain())
+        Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv0.grid().domain())
       );
 
-      vtkwriter.write("testpoisson-dirichlet--neumann-left",Dune::VTK::ascii);
+      vtkwriter.write("testpoisson-dirichlet-neumann-left",Dune::VTK::ascii);
     }
 
     {
@@ -716,11 +717,98 @@ int main(int argc, char** argv) {
         vtkwriter,
         multigfs,
         u,
-        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv1.grid().domain())
+        Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv1.grid().domain())
       );
 
       vtkwriter.write("testpoisson-dirichlet-neumann-right",Dune::VTK::ascii);
     }
+
+}
+
+
+int main(int argc, char** argv) {
+
+  try {
+
+    Dune::MPIHelper::instance(argc,argv);
+
+    if (argc != 2) {
+      std::cerr << "Usage: " << argv[0] << " <ini file>" << std::endl;
+      return 1;
+    }
+
+    Dune::ParameterTree parameters;
+    Dune::ParameterTreeParser::readINITree(argv[1],parameters);
+
+    Dune::Timer timer;
+    Dune::Timer totalTimer;
+    timer.start();
+    const int dim = 2;
+    typedef Dune::YaspGrid<dim> BaseGrid;
+    const Dune::FieldVector<double,dim> h(1.0);
+    const Dune::array<int,dim> s = { {1,1} };
+    const std::bitset<dim> p(false);
+    BaseGrid baseGrid(h,s,p,0);
+    baseGrid.globalRefine(parameters.get<int>("mesh.refine"));
+    typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;
+    Grid grid(baseGrid,false);
+    typedef Grid::SubDomainGrid SubDomainGrid;
+    SubDomainGrid& sdg0 = grid.subDomain(0);
+    SubDomainGrid& sdg1 = grid.subDomain(1);
+    typedef Grid::LeafGridView MDGV;
+    typedef SubDomainGrid::LeafGridView SDGV;
+    MDGV mdgv = grid.leafGridView();
+    SDGV sdgv0 = sdg0.leafGridView();
+    SDGV sdgv1 = sdg1.leafGridView();
+    sdg0.hostEntityPointer(*sdgv0.begin<0>());
+    grid.startSubDomainMarking();
+    for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
+      {
+        if (it->geometry().center()[0] > 0.5)
+          grid.addToSubDomain(1,*it);
+        else
+          grid.addToSubDomain(0,*it);
+      }
+    grid.preUpdateSubDomains();
+    grid.updateSubDomains();
+    grid.postUpdateSubDomains();
+
+    std::cout << "grid setup: " << timer.elapsed() << " sec" << std::endl;
+    timer.reset();
+
+    typedef MDGV::Grid::ctype DF;
+
+    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,2> FEM0;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,1> FEM1;
+
+    FEM0 fem0(sdgv0);
+    FEM1 fem1(sdgv1);
+
+    typedef FEM0::Traits::FiniteElementType::Traits::
+      LocalBasisType::Traits::RangeFieldType R;
+
+    typedef DirichletBoundary BType;
+    BType b;
+
+    typedef F<MDGV,R> FType;
+    FType f(mdgv);
+
+    typedef G<MDGV,R> GType;
+    GType g(mdgv);
+
+    typedef J<MDGV,R> JType;
+    JType j(mdgv);
+
+    typedef Dune::PDELab::Poisson<FType,BType,JType> LOP;
+    LOP lop(f,b,j,6);
+
+    solve(
+      grid,mdgv,
+      sdgv0,fem0,lop,
+      sdgv1,fem0,lop,
+      parameters,
+      b,g
+      );
 
     return 0;
   }

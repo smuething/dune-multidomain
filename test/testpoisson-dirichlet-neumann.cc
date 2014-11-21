@@ -5,6 +5,7 @@
 #include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/finiteelementmap/qkfem.hh>
+#include <dune/pdelab/finiteelementmap/qkdg.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/backend/istl/bcrsmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
@@ -79,7 +80,7 @@ SIMPLE_ANALYTIC_FUNCTION(F,x,y)
     xm = 0.5;
     xm -= x;
     if (xm.two_norm() < 0.2)
-      y = 60 * std::exp(10*x.two_norm2());
+      y = 60 * std::exp(-10*x.two_norm2());
     else
       y = 0.0;
   }
@@ -165,6 +166,122 @@ END_SIMPLE_ANALYTIC_FUNCTION
 
 
 
+
+template<typename GV, typename RF>
+class ConvectionDiffusionModelProblem
+{
+  typedef Dune::PDELab::ConvectionDiffusionBoundaryConditions::Type BCType;
+
+public:
+  typedef Dune::PDELab::ConvectionDiffusionParameterTraits<GV,RF> Traits;
+
+  //! tensor diffusion coefficient
+  typename Traits::PermTensorType
+  A (const typename Traits::ElementType& e, const typename Traits::DomainType& x) const
+  {
+    typename Traits::PermTensorType I;
+    for (std::size_t i=0; i<Traits::dimDomain; i++)
+      for (std::size_t j=0; j<Traits::dimDomain; j++)
+        I[i][j] = (i==j) ? 1 : 0;
+    return I;
+  }
+
+  //! velocity field
+  typename Traits::RangeType
+  b (const typename Traits::ElementType& e, const typename Traits::DomainType& x) const
+  {
+    typename Traits::RangeType v(0.0);
+    return v;
+  }
+
+  //! sink term
+  typename Traits::RangeFieldType
+  c (const typename Traits::ElementType& e, const typename Traits::DomainType& x) const
+  {
+    return 0.0;
+  }
+
+  //! source term
+  typename Traits::RangeFieldType
+  f (const typename Traits::ElementType& e, const typename Traits::DomainType& xl) const
+  {
+    auto x = e.geometry().global(xl);
+    if (x[0]>0.25 && x[0]<0.375 && x[1]>0.25 && x[1]<0.375)
+      return 50.0;
+    else {
+      auto xm = x;
+      xm = 0.5;
+      xm -= x;
+      if (xm.two_norm() < 0.2)
+        return 60 * std::exp(-10*x.two_norm2());
+    }
+    return 0.0;
+  }
+
+  //! boundary condition type function
+  BCType
+  bctype (const typename Traits::IntersectionType& is, const typename Traits::IntersectionDomainType& x) const
+  {
+    auto xg = is.geometry().global(x);
+
+    if (!is.boundary())
+      {
+        return BCType::None;
+      }
+
+    if (xg[1]<1E-6 || xg[1]>1.0-1E-6)
+      {
+        return BCType::Neumann;
+      }
+
+    if (xg[0]>1.0-1E-6 && xg[1]>0.5+1E-6)
+      {
+        return BCType::Neumann;
+      }
+
+    return BCType::Dirichlet;
+  }
+
+  //! Dirichlet boundary condition value
+  typename Traits::RangeFieldType
+  g (const typename Traits::ElementType& e, const typename Traits::DomainType& x) const
+  {
+    typename Traits::DomainType center(0.5);
+    auto xg = e.geometry().global(x);
+    center -= xg;
+    return std::exp(-center.two_norm2());
+  }
+
+  //! Neumann boundary condition
+  typename Traits::RangeFieldType
+  j (const typename Traits::IntersectionType& is, const typename Traits::IntersectionDomainType& xl) const
+  {
+    auto x = is.geometry().global(xl);
+    if (x[1]<1E-6 || x[1]>1.0-1E-6)
+      {
+        return 0;
+      }
+    if (x[0]>1.0-1E-6 && x[1]>0.5+1E-6)
+      {
+        return -5.0;
+      }
+    return 0;
+  }
+
+  //! outflow boundary condition
+  typename Traits::RangeFieldType
+  o (const typename Traits::IntersectionType& is, const typename Traits::IntersectionDomainType& x) const
+  {
+    return 0.0;
+  }
+};
+
+
+
+
+
+
+
 template<template<class,class,class,int> class Preconditioner,
          template<class> class Solver>
 class ISTL_SEQ_Subblock_Backend
@@ -211,9 +328,11 @@ public:
     typedef typename ISTLMatrix::block_type MatrixBlock;
     typedef typename ISTLVector::block_type VectorBlock;
 
+    /*
     std::cout << "incoming residuals:" << std::endl
               << "block 0: " << Dune::PDELab::istl::raw(r)[0].two_norm() << std::endl
               << "block 1: " << Dune::PDELab::istl::raw(r)[1].two_norm() << std::endl;
+    */
 
     Dune::MatrixAdapter<
       MatrixBlock,
@@ -254,12 +373,14 @@ template<
   typename B, typename G>
 void solve(
   Grid& grid, MDGV mdgv,
-  SDGV sdgv0, const FEM0& fem0, LOP0& lop0,
-  SDGV sdgv1, const FEM1& fem1, LOP1& lop1,
+  SDGV sdgv0, const FEM0& fem0, const LOP0& lop0_,
+  SDGV sdgv1, const FEM1& fem1, const LOP1& lop1_,
   const Dune::ParameterTree& parameters,
   const B& b, const G& g
   )
 {
+  auto lop0 = lop0_;
+  auto lop1 = lop1_;
 
     typedef typename FEM0::Traits::FiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
@@ -496,135 +617,222 @@ void solve(
     std::cout << "operator space setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
-
-    // <<<5>>> Select a linear solver backend
-    typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
-    LS ls(
-      parameters.get<int>("monolithic.linearsolver.iterations"),
-      parameters.get<int>("monolithic.linearsolver.verbosity")
-      );
-
-    V u2(u);
-
-    auto start = std::chrono::high_resolution_clock::now();
-
-    // <<<6>>> Solver for linear problem per stage
-    typedef Dune::PDELab::StationaryLinearProblemSolver<GridOperator,LS,V> PDESOLVER;
-    PDESOLVER pdesolver(
-      gridoperator,
-      ls,
-      parameters.sub("monolithic.solver")
-      );
-
-    pdesolver.apply(u2);
-
-    auto end = std::chrono::high_resolution_clock::now();
-
-    auto elapsed = end - start;
-
     using SubDomainIndex = typename Grid::SubDomainIndex;
 
-    std::cout << std::endl
-              << std::endl
-              << "Monolithic solver: " << std::chrono::duration_cast<std::chrono::duration<double> >(elapsed).count() << std::endl
-              << std::endl;
-
-    {
-      Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTK::conforming);
-      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
-        vtkwriter,
-        multigfs,
-        u2,
-        Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv0.grid().domain())
-      );
-
-      vtkwriter.write("testpoisson-monolithic-left",Dune::VTK::ascii);
-    }
-
-    {
-      Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv1,2);
-      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
-        vtkwriter,
-        multigfs,
-        u2,
-        Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv1.grid().domain())
-      );
-
-      vtkwriter.write("testpoisson-monolithic-right",Dune::VTK::ascii);
-    }
-
-
-    typedef ISTL_SEQ_Subblock_Backend<
-      Dune::SeqSSOR,
-      Dune::BiCGSTABSolver
-      > LinearSolver_DN;
-    LinearSolver_DN linear_solver_dn_0(
-      0,
-      parameters.get<int>("dn.left.linearsolver.iterations"),
-      parameters.get<int>("dn.left.linearsolver.verbosity")
-      );
-    LinearSolver_DN linear_solver_dn_1(
-      1,
-      parameters.get<int>("dn.right.linearsolver.iterations"),
-      parameters.get<int>("dn.right.linearsolver.verbosity")
-      );
-
-    typedef Dune::PDELab::StationaryLinearProblemSolver<
-      LeftOperator,
-      LinearSolver_DN,
-      V
-      > LeftPDESolver;
-    LeftPDESolver left_pde_solver(
-      left_operator,
-      linear_solver_dn_0,
-      parameters.sub("dn.left.solver")
-      );
-
-    typedef Dune::PDELab::StationaryLinearProblemSolver<
-      RightOperator,
-      LinearSolver_DN,
-      V
-      > RightPDESolver;
-    RightPDESolver right_pde_solver(
-      right_operator,
-      linear_solver_dn_1,
-      parameters.sub("dn.right.solver")
-      );
-
-
-    V residual(multigfs);
-    full_operator.residual(u,residual);
-
-    R r, start_r;
-    r = start_r = residual.two_norm();
-    std::cout << "Start residual: " << r << std::endl;
-
-    std::size_t i = 0;
-    std::size_t max_iterations = parameters.get<int>("dn.coupling.iterations");
-
-    auto u_old(u);
-
-    double alpha = parameters.get<double>("dn.coupling.damping");
-    double rel_reduction = parameters.get<double>("dn.coupling.reduction");
-    double max_error = parameters.get<double>("dn.coupling.maxerror");
-
-    bool reassemble_jacobian_left = parameters.get<bool>("dn.left.reassemble");
-    bool reassemble_jacobian_right = parameters.get<bool>("dn.right.reassemble");
-
-    double left_max_reduction = parameters.get<double>("dn.left.solver.reduction");
-    double left_min_reduction = parameters.get<double>("dn.left.solver.minreduction");
-    double left_decay = parameters.get<double>("dn.left.solver.reductiondecay");
-    double left_offset =  1.0 / (1.0 - left_max_reduction / left_min_reduction);
-
-    double right_max_reduction = parameters.get<double>("dn.right.solver.reduction");
-    double right_min_reduction = parameters.get<double>("dn.right.solver.minreduction");
-    double right_decay = parameters.get<double>("dn.right.solver.reductiondecay");
-    double right_offset = 1.0 / (1.0 - right_max_reduction / right_min_reduction);
-
-    start = std::chrono::high_resolution_clock::now();
-
-    while (r / start_r > rel_reduction && r > max_error && i < max_iterations)
+    if (parameters.get<bool>("monolithic.solve"))
       {
+
+        // <<<5>>> Select a linear solver backend
+        typedef Dune::PDELab::ISTLBackend_SEQ_BCGS_SSOR LS;
+        LS ls(
+          parameters.get<int>("monolithic.linearsolver.iterations"),
+          parameters.get<int>("monolithic.linearsolver.verbosity")
+          );
+
+        V u2(u);
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        // <<<6>>> Solver for linear problem per stage
+        typedef Dune::PDELab::StationaryLinearProblemSolver<GridOperator,LS,V> PDESOLVER;
+        PDESOLVER pdesolver(
+          gridoperator,
+          ls,
+          parameters.sub("monolithic.solver")
+          );
+
+        pdesolver.apply(u2);
+
+        auto end = std::chrono::high_resolution_clock::now();
+
+        auto elapsed = end - start;
+
+        std::cout << std::endl
+                  << std::endl
+                  << "Monolithic solver: " << std::chrono::duration_cast<std::chrono::duration<double> >(elapsed).count() << std::endl
+                  << std::endl;
+
+        {
+          Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTK::conforming);
+          Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+            vtkwriter,
+            multigfs,
+            u2,
+            Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv0.grid().domain())
+            );
+
+          vtkwriter.write("testpoisson-monolithic-left",Dune::VTK::ascii);
+        }
+
+        {
+          Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv1,2);
+          Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+            vtkwriter,
+            multigfs,
+            u2,
+            Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv1.grid().domain())
+            );
+
+          vtkwriter.write("testpoisson-monolithic-right",Dune::VTK::ascii);
+        }
+
+
+      }
+
+    if (parameters.get<bool>("dn.solve"))
+      {
+
+        typedef ISTL_SEQ_Subblock_Backend<
+          Dune::SeqSSOR,
+          Dune::BiCGSTABSolver
+          > LinearSolver_DN;
+        LinearSolver_DN linear_solver_dn_0(
+          0,
+          parameters.get<int>("dn.left.linearsolver.iterations"),
+          parameters.get<int>("dn.left.linearsolver.verbosity")
+          );
+        LinearSolver_DN linear_solver_dn_1(
+          1,
+          parameters.get<int>("dn.right.linearsolver.iterations"),
+          parameters.get<int>("dn.right.linearsolver.verbosity")
+          );
+
+        typedef Dune::PDELab::StationaryLinearProblemSolver<
+          LeftOperator,
+          LinearSolver_DN,
+          V
+          > LeftPDESolver;
+        LeftPDESolver left_pde_solver(
+          left_operator,
+          linear_solver_dn_0,
+          parameters.sub("dn.left.solver")
+          );
+
+        typedef Dune::PDELab::StationaryLinearProblemSolver<
+          RightOperator,
+          LinearSolver_DN,
+          V
+          > RightPDESolver;
+        RightPDESolver right_pde_solver(
+          right_operator,
+          linear_solver_dn_1,
+          parameters.sub("dn.right.solver")
+          );
+
+
+        V residual(multigfs);
+        full_operator.residual(u,residual);
+
+        R r, start_r;
+        r = start_r = residual.two_norm();
+        std::cout << "Start residual: " << r << std::endl;
+
+        std::size_t i = 0;
+        std::size_t max_iterations = parameters.get<int>("dn.coupling.iterations");
+
+        auto u_old(u);
+
+        double alpha = parameters.get<double>("dn.coupling.damping");
+        double rel_reduction = parameters.get<double>("dn.coupling.reduction");
+        double max_error = parameters.get<double>("dn.coupling.maxerror");
+
+        bool reassemble_jacobian_left = parameters.get<bool>("dn.left.reassemble");
+        bool reassemble_jacobian_right = parameters.get<bool>("dn.right.reassemble");
+
+        double left_max_reduction = parameters.get<double>("dn.left.solver.reduction");
+        double left_min_reduction = parameters.get<double>("dn.left.solver.minreduction");
+        double left_decay = parameters.get<double>("dn.left.solver.reductiondecay");
+        double left_offset =  1.0 / (1.0 - left_max_reduction / left_min_reduction);
+
+        double right_max_reduction = parameters.get<double>("dn.right.solver.reduction");
+        double right_min_reduction = parameters.get<double>("dn.right.solver.minreduction");
+        double right_decay = parameters.get<double>("dn.right.solver.reductiondecay");
+        double right_offset = 1.0 / (1.0 - right_max_reduction / right_min_reduction);
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        const std::size_t vtk_frequency = parameters.get<int>("dn.coupling.vtk_frequency");
+        const bool vtk_enabled = vtk_frequency > 0;
+
+        while (r / start_r > rel_reduction && r > max_error && i < max_iterations)
+          {
+            if (vtk_enabled && i % vtk_frequency == 0)
+              {
+                {
+                  Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTK::conforming);
+                  Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+                    vtkwriter,
+                    multigfs,
+                    u,
+                    Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv0.grid().domain())
+                    );
+                  Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+                    vtkwriter,
+                    multigfs,
+                    residual,
+                    Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv0.grid().domain()),
+                    Dune::PDELab::vtk::DefaultFunctionNameGenerator("r")
+                    );
+
+                  std::stringstream fn;
+                  fn << "left-" << i;
+                  vtkwriter.write(fn.str(),Dune::VTK::ascii);
+                }
+
+                {
+                  Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv1,2);
+                  Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+                    vtkwriter,
+                    multigfs,
+                    u,
+                    Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv1.grid().domain())
+                    );
+                  Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+                    vtkwriter,
+                    multigfs,
+                    residual,
+                    Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv1.grid().domain()),
+                    Dune::PDELab::vtk::DefaultFunctionNameGenerator("r")
+                    );
+
+                  std::stringstream fn;
+                  fn << "right-" << i;
+                  vtkwriter.write(fn.str(),Dune::VTK::ascii);
+                }
+              }
+
+            u_old = u;
+            left_pde_solver.setReduction(left_min_reduction * (1.0 - 1.0 / (left_offset + left_decay * i)));
+            left_pde_solver.apply(u,!reassemble_jacobian_left && (i>0));
+            // left_pde_solver.setReduction(left_reduction_scaling * left_pde_solver.reduction());
+            u *= alpha;
+            u.axpy(1.0-alpha,u_old);
+
+            u_old = u;
+            right_pde_solver.setReduction(right_min_reduction * (1.0 - 1.0 / (right_offset + right_decay * i)));
+            right_pde_solver.apply(u,!reassemble_jacobian_right && (i>0));
+            // right_pde_solver.setReduction(right_reduction_scaling * right_pde_solver.reduction());
+            u *= alpha;
+            u.axpy(1.0-alpha,u_old);
+
+            residual = 0.0;
+            full_operator.residual(u,residual);
+            r = residual.two_norm();
+            ++i;
+            std::cout << std::setw(4) << i << " " << r << std::endl;
+          }
+
+        auto end = std::chrono::high_resolution_clock::now();
+
+        auto elapsed = end - start;
+
+        std::cout << std::endl
+                  << std::endl
+                  << "Dirichlet-Neumann solver: " << std::chrono::duration_cast<std::chrono::duration<double> >(elapsed).count() << std::endl
+                  << std::endl;
+
+
+        // <<<8>>> graphics
         {
           Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTK::conforming);
           Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
@@ -633,17 +841,8 @@ void solve(
             u,
             Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv0.grid().domain())
             );
-          Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
-            vtkwriter,
-            multigfs,
-            residual,
-            Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv0.grid().domain()),
-            Dune::PDELab::vtk::DefaultFunctionNameGenerator("r")
-            );
 
-          std::stringstream fn;
-          fn << "left-" << i;
-          vtkwriter.write(fn.str(),Dune::VTK::ascii);
+          vtkwriter.write("testpoisson-dirichlet-neumann-left",Dune::VTK::ascii);
         }
 
         {
@@ -654,75 +853,31 @@ void solve(
             u,
             Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv1.grid().domain())
             );
-          Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
-            vtkwriter,
-            multigfs,
-            residual,
-            Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv1.grid().domain()),
-            Dune::PDELab::vtk::DefaultFunctionNameGenerator("r")
-            );
 
-          std::stringstream fn;
-          fn << "right-" << i;
-          vtkwriter.write(fn.str(),Dune::VTK::ascii);
+          vtkwriter.write("testpoisson-dirichlet-neumann-right",Dune::VTK::ascii);
         }
 
-        u_old = u;
-        left_pde_solver.setReduction(left_min_reduction * (1.0 - 1.0 / (left_offset + left_decay * i)));
-        left_pde_solver.apply(u,!reassemble_jacobian_left && (i>0));
-        // left_pde_solver.setReduction(left_reduction_scaling * left_pde_solver.reduction());
-        u *= alpha;
-        u.axpy(1.0-alpha,u_old);
-
-        u_old = u;
-        right_pde_solver.setReduction(right_min_reduction * (1.0 - 1.0 / (right_offset + right_decay * i)));
-        right_pde_solver.apply(u,!reassemble_jacobian_right && (i>0));
-        // right_pde_solver.setReduction(right_reduction_scaling * right_pde_solver.reduction());
-        u *= alpha;
-        u.axpy(1.0-alpha,u_old);
-
-        residual = 0.0;
-        full_operator.residual(u,residual);
-        r = residual.two_norm();
-        ++i;
-        std::cout << std::setw(4) << i << " " << r << std::endl;
       }
 
-    end = std::chrono::high_resolution_clock::now();
-
-    elapsed = end - start;
-
-    std::cout << std::endl
-              << std::endl
-              << "Dirichlet-Neumann solver: " << std::chrono::duration_cast<std::chrono::duration<double> >(elapsed).count() << std::endl
-              << std::endl;
+}
 
 
-    // <<<8>>> graphics
-    {
-      Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTK::conforming);
-      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
-        vtkwriter,
-        multigfs,
-        u,
-        Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv0.grid().domain())
+template<typename FEM, typename Params>
+Dune::PDELab::ConvectionDiffusionDG<
+  Params,
+  FEM
+  >
+dglop(const FEM& fem, Params& params)
+{
+  return Dune::PDELab::ConvectionDiffusionDG<
+    Params,
+    FEM
+    >(
+      params,
+      Dune::PDELab::ConvectionDiffusionDGMethod::SIPG,
+      Dune::PDELab::ConvectionDiffusionDGWeights::weightsOn,
+      2.0
       );
-
-      vtkwriter.write("testpoisson-dirichlet-neumann-left",Dune::VTK::ascii);
-    }
-
-    {
-      Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv1,2);
-      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
-        vtkwriter,
-        multigfs,
-        u,
-        Dune::PDELab::MultiDomain::subdomain_predicate<SubDomainIndex>(sdgv1.grid().domain())
-      );
-
-      vtkwriter.write("testpoisson-dirichlet-neumann-right",Dune::VTK::ascii);
-    }
-
 }
 
 
@@ -778,13 +933,12 @@ int main(int argc, char** argv) {
 
     typedef MDGV::Grid::ctype DF;
 
-    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,2> FEM0;
     typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,1> FEM1;
+    typedef Dune::PDELab::QkDGLocalFiniteElementMap<DF,double,1,dim> DGFEM1;
+    typedef Dune::PDELab::QkDGLocalFiniteElementMap<DF,double,2,dim> DGFEM2;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,DF,double,2> FEM2;
 
-    FEM0 fem0(sdgv0);
-    FEM1 fem1(sdgv1);
-
-    typedef FEM0::Traits::FiniteElementType::Traits::
+    typedef FEM1::Traits::FiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
 
     typedef DirichletBoundary BType;
@@ -799,13 +953,24 @@ int main(int argc, char** argv) {
     typedef J<MDGV,R> JType;
     JType j(mdgv);
 
-    typedef Dune::PDELab::Poisson<FType,BType,JType> LOP;
-    LOP lop(f,b,j,6);
+    typedef Dune::PDELab::Poisson<FType,BType,JType> CGLOP;
+    CGLOP cglop(f,b,j,6);
+
+    using Params = ConvectionDiffusionModelProblem<
+      MDGV,
+      double
+      >;
+    Params params;
 
     solve(
       grid,mdgv,
-      sdgv0,fem0,lop,
-      sdgv1,fem0,lop,
+      //sdgv0,FEM2(sdgv0),cglop,
+      //sdgv0,DGFEM1(),dglop(DGFEM1(),params),
+      sdgv0,DGFEM2(),dglop(DGFEM2(),params),
+      //sdgv1,FEM2(sdgv1),cglop,
+      //sdgv1,DGFEM1(),dglop(DGFEM1(),params),
+      sdgv1,DGFEM2(),dglop(DGFEM2(),params),
+
       parameters,
       b,g
       );

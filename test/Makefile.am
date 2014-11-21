@@ -60,4 +60,8 @@ check_PROGRAMS += testpoisson-dirichlet-neumann
 testpoisson_dirichlet_neumann_SOURCES = testpoisson-dirichlet-neumann.cc
 testpoisson_dirichlet_neumann_LDADD = $(AM_LIBS) $(DUNEMPILIBS)
 
+check_PROGRAMS += testpoisson-assembly
+testpoisson_assembly_SOURCES = testpoisson-assembly.cc
+testpoisson_assembly_LDADD = $(AM_LIBS) $(DUNEMPILIBS)
+
 MOSTLYCLEANFILES = *.vtu *.pvtu *.pvd

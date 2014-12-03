@@ -97,18 +97,18 @@ namespace MultiDomain {
 
   namespace detail {
 
-    struct VTKDiscreteFunctionBaseFlagsBase
+    struct ScalarDiscreteCalculationProviderFlagsBase
     {};
 
     template<bool enable = false>
-    struct VTKDiscreteFunctionBaseFlags
+    struct ScalarDiscreteCalculationProviderFlags
       : public std::conditional<enable,
-                                VTKDiscreteFunctionBaseFlagsBase,
-                                VTKDiscreteFunctionBaseFlags<true>
+                                ScalarDiscreteCalculationProviderFlagsBase,
+                                ScalarDiscreteCalculationProviderFlags<true>
                                 >::type
     {
 
-      typedef VTKDiscreteFunctionBaseFlags<true> Computations;
+      typedef ScalarDiscreteCalculationProviderFlags<true> Computations;
 
       static constexpr bool evaluateBasis()
       {
@@ -139,94 +139,128 @@ namespace MultiDomain {
 
   }
 
-  template<typename LFS, typename Data, typename Impl>
-  class VTKDiscreteFunctionBase
-    : public Dune::TypeTree::LeafNode
-    , public detail::VTKDiscreteFunctionBaseFlags<>
-    , public Dune::PDELab::GridFunctionInterface<Dune::PDELab::GridFunctionTraits<
-                                                   typename LFS::Traits::GridView,
-                                                   typename Dune::BasisInterfaceSwitch<
-                                                     typename Dune::FiniteElementInterfaceSwitch<
-                                                       typename LFS::Traits::FiniteElement
-                                                       >::Basis
-                                                     >::RangeField,
-                                                   Dune::BasisInterfaceSwitch<
-                                                     typename Dune::FiniteElementInterfaceSwitch<
-                                                       typename LFS::Traits::FiniteElement
-                                                       >::Basis
-                                                     >::dimRange,
-                                                   typename Dune::BasisInterfaceSwitch<
-                                                     typename Dune::FiniteElementInterfaceSwitch<
-                                                       typename LFS::Traits::FiniteElement
-                                                       >::Basis
-                                                     >::Range
-                                                   >,
-                                                 Impl
-                                                 >
-  {
 
-    typedef Dune::BasisInterfaceSwitch<
+  template<
+    typename LFS,
+    typename RangeField = typename Dune::BasisInterfaceSwitch<
       typename Dune::FiniteElementInterfaceSwitch<
         typename LFS::Traits::FiniteElement
         >::Basis
-      > BasisSwitch;
+      >::RangeField
+    >
+  struct ScalarFunctionPolicy
+  {
 
-    typedef Dune::PDELab::GridFunctionInterface<
-      Dune::PDELab::GridFunctionTraits<
-        typename LFS::Traits::GridView,
-        typename BasisSwitch::RangeField,
-        BasisSwitch::dimRange,
-        typename BasisSwitch::Range
-        >,
-      Impl
-      > Base;
+    typedef Dune::PDELab::GridFunctionTraits<
+      typename LFS::Traits::GridView,
+      RangeField,
+      Dune::BasisInterfaceSwitch<
+        typename Dune::FiniteElementInterfaceSwitch<
+          typename LFS::Traits::FiniteElement
+          >::Basis
+        >::dimRange,
+      typename Dune::BasisInterfaceSwitch<
+        typename Dune::FiniteElementInterfaceSwitch<
+          typename LFS::Traits::FiniteElement
+          >::Basis
+        >::Range
+      > Traits;
+
+  };
+
+
+  template<
+    typename LFS,
+    typename RangeField = typename Dune::BasisInterfaceSwitch<
+      typename Dune::FiniteElementInterfaceSwitch<
+        typename LFS::Traits::FiniteElement
+        >::Basis
+      >::RangeField
+    >
+  struct CoordinateFunctionPolicy
+  {
+
+    typedef Dune::PDELab::GridFunctionTraits<
+      typename LFS::Traits::GridView,
+      RangeField,
+      Dune::FiniteElementInterfaceSwitch<
+        typename LFS::Traits::FiniteElement
+        >::Basis::Traits::dimDomain,
+      Dune::FieldVector<
+        RangeField,
+        Dune::FiniteElementInterfaceSwitch<
+          typename LFS::Traits::FiniteElement
+          >::Basis::Traits::dimDomain
+        >
+      > Traits;
+
+  };
+
+
+  template<typename LFS, typename Data, typename Impl>
+  class ScalarDiscreteCalculationProvider
+    : public detail::ScalarDiscreteCalculationProviderFlags<>
+  {
 
   public:
 
     struct Traits
-      : public Base::Traits
     {
 
-      typedef typename Base::Traits::GridViewType GridView;
+      typedef typename LFS::Traits::GridView GridView;
 
-      typedef typename Dune::FiniteElementInterfaceSwitch<
-        typename LFS::Traits::FiniteElement
-        >::Basis Basis;
+      typedef typename GridView::template Codim<0>::Entity Cell;
 
-      typedef Dune::FieldVector<
-        typename Basis::Traits::RangeFieldType,
-        GridView::dimensionworld
-        > Gradient;
+      typedef typename LFS::Traits::FiniteElement FiniteElement;
+
+      typedef Dune::FiniteElementInterfaceSwitch<
+        FiniteElement
+        > FESwitch;
+
+      typedef typename FESwitch::Basis Basis;
+
+      typedef Dune::BasisInterfaceSwitch<
+        Basis
+        > BasisSwitch;
+
+      typedef typename Basis::Traits::DomainFieldType DomainField;
+      typedef typename Basis::Traits::DomainType Domain;
+      static const std::size_t dimDomain = Basis::Traits::dimDomain;
+
+      typedef typename Basis::Traits::RangeFieldType RangeField;
+      typedef typename Basis::Traits::RangeType Range;
+      static const std::size_t dimRange = Basis::Traits::dimRange;
+
+      typedef typename Basis::Traits::JacobianType Jacobian;
+
+      typedef Dune::FieldMatrix<
+        RangeField,
+        GridView::dimensionworld,
+        dimDomain
+        > GlobalJacobian;
 
     };
 
-    typedef detail::VTKDiscreteFunctionBaseFlags<>::Computations Computations;
-
-    VTKDiscreteFunctionBase(const LFS& lfs, const std::shared_ptr<Data>& data)
-      : Base(lfs.gridFunctionSpace().dataSetType())
-      , _lfs(lfs)
+    ScalarDiscreteCalculationProvider(const LFS& lfs, const std::shared_ptr<Data>& data)
+      : _lfs(lfs)
       , _data(data)
       , _basis(lfs.maxSize())
       , _basis_jacobians(lfs.maxSize())
-      , _basis_gradients(lfs.maxSize())
+      , _basis_global_jacobians(lfs.maxSize())
     {}
 
-    void bind(const typename Traits::ElementType& e,
-              const typename Traits::DomainType& x) const
+    void bind(const typename Traits::Cell& e,
+              const typename Traits::Domain& x) const
     {
 
       _data->bind(e);
 
-      typedef Dune::FiniteElementInterfaceSwitch<
-        typename LFS::Traits::FiniteElement
-        > FESwitch;
-
       if (impl().evaluateBasis() || impl().evaluateSolution())
-        FESwitch::basis(_lfs.finiteElement()).evaluateFunction(x,_basis);
+        Traits::FESwitch::basis(_lfs.finiteElement()).evaluateFunction(x,_basis);
 
       if (impl().evaluateSolution())
         {
-          _solution = typename Traits::RangeType(0);
+          _solution = typename Traits::Range(0);
 
           for (std::size_t i = 0; i < _lfs.size(); ++i)
             _solution.axpy(_data->_x_local(_lfs,i),_basis[i]);
@@ -236,7 +270,7 @@ namespace MultiDomain {
           impl().evaluateBasisGradients() ||
           impl().evaluateGradient())
         {
-          FESwitch::basis(_lfs.finiteElement()).evaluateJacobian(x,_basis_jacobians);
+          Traits::FESwitch::basis(_lfs.finiteElement()).evaluateJacobian(x,_basis_jacobians);
         }
 
       if (impl().evaluateBasisGradients() ||
@@ -246,22 +280,31 @@ namespace MultiDomain {
           auto JgeoIT = geometry.jacobianInverseTransposed(x);
 
           for (std::size_t i = 0; i < _lfs.size(); ++i)
-            JgeoIT.mv(_basis_jacobians[i][0],_basis_gradients[i]);
+            JgeoIT.mv(_basis_jacobians[i][0],_basis_global_jacobians[i][0]);
 
         }
 
       if (impl().evaluateGradient())
         {
-          _gradient = typename Traits::Gradient(0);
+          _gradient = typename Traits::GlobalJacobian(0);
 
           for (std::size_t i = 0; i < _lfs.size(); ++i)
-            _gradient.axpy(_data->_x_local(_lfs,i),_basis_gradients[i]);
+            _gradient[0].axpy(_data->_x_local(_lfs,i),_basis_global_jacobians[i][0]);
+
+        }
+
+      if (impl().evaluateGradient())
+        {
+          _gradient = typename Traits::GlobalJacobian(0);
+
+          for (std::size_t i = 0; i < _lfs.size(); ++i)
+            _gradient[0].axpy(_data->_x_local(_lfs,i),_basis_global_jacobians[i][0]);
         }
 
     }
 
     //! get a reference to the GridView
-    const typename Traits::GridViewType& gridView() const
+    const typename Traits::GridView& gridView() const
     {
       return _lfs.gridFunctionSpace().gridView();
     }
@@ -271,17 +314,17 @@ namespace MultiDomain {
       return _lfs;
     }
 
-    const std::vector<typename Traits::RangeType>& basis() const
+    const std::vector<typename Traits::Range>& basis() const
     {
       return _basis;
     }
 
-    const typename Traits::RangeType& solution() const
+    const typename Traits::Range& solution() const
     {
       return _solution;
     }
 
-    const typename Traits::Gradient& gradient() const
+    const typename Traits::GlobalJacobian& gradient() const
     {
       return _gradient;
     }
@@ -295,13 +338,105 @@ namespace MultiDomain {
 
     const LFS& _lfs;
     const std::shared_ptr<Data> _data;
-    mutable std::vector<typename Traits::RangeType> _basis;
-    mutable typename Traits::RangeType _solution;
-    mutable std::vector<typename Traits::Basis::Traits::JacobianType> _basis_jacobians;
-    mutable std::vector<typename Traits::Gradient> _basis_gradients;
-    mutable typename Traits::Gradient _gradient;
+    mutable std::vector<typename Traits::Range> _basis;
+    mutable typename Traits::Range _solution;
+    mutable std::vector<typename Traits::Jacobian> _basis_jacobians;
+    mutable std::vector<typename Traits::GlobalJacobian> _basis_global_jacobians;
+    mutable typename Traits::GlobalJacobian _gradient;
 
   };
+
+
+
+
+
+
+  template<typename LFS, typename Data, typename Impl, typename Policy>
+  class VTKDiscreteFunctionBase
+    : public Dune::TypeTree::LeafNode
+    , public ScalarDiscreteCalculationProvider<LFS,
+                                               Data,
+                                               Impl
+                                               >
+    , public Dune::PDELab::GridFunctionInterface<typename Policy::Traits,
+                                                 Impl
+                                                 >
+  {
+
+    typedef ScalarDiscreteCalculationProvider<
+      LFS,
+      Data,
+      Impl
+      > CalculationProviderBase;
+
+    typedef GridFunctionInterface<
+      typename Policy::Traits,
+      Impl
+      > GridFunctionBase;
+
+  public:
+
+    struct Traits
+      : public CalculationProviderBase::Traits
+      , public GridFunctionBase::Traits
+    {
+
+      using CalculationProviderBase::Traits::dimDomain;
+      using GridFunctionBase::Traits::dimRange;
+
+    };
+
+    VTKDiscreteFunctionBase(const LFS& lfs, const std::shared_ptr<Data>& data)
+      : CalculationProviderBase(lfs,data)
+      , GridFunctionBase(lfs.gridFunctionSpace().dataSetType())
+    {}
+
+  };
+
+  /*
+  template<typename LFS, typename Data, typename Impl>
+  class VTKScalarDiscreteFunctionBase:
+    public VTKDiscreteFunctionBase<LFS,
+                                   Data,
+                                   Impl,
+                                   ScalarFunctionPolicy<LFS>
+                                   >
+  {
+
+    typedef VTKDiscreteFunctionBase<
+      LFS,
+      Data,
+      Impl,
+      ScalarFunctionPolicy<
+        LFS
+        >
+      > Base;
+
+  public:
+
+    using Base::Base;
+
+  };
+
+  */
+
+  template<typename LFS, typename Data, typename Impl>
+  using VTKScalarDiscreteFunctionBase = VTKDiscreteFunctionBase<LFS,
+                                                                Data,
+                                                                Impl,
+                                                                ScalarFunctionPolicy<
+                                                                  LFS
+                                                                  >
+                                                                >;
+
+  template<typename LFS, typename Data, typename Impl>
+  using VTKCoordinateDiscreteFunctionBase = VTKDiscreteFunctionBase<LFS,
+                                                                    Data,
+                                                                    Impl,
+                                                                    CoordinateFunctionPolicy<
+                                                                      LFS
+                                                                      >
+                                                                    >;
 
 
 } // namespace PDELab

@@ -723,9 +723,13 @@ int main(int argc, char** argv) {
     Coupling coupling(stokesSubProblem,darcySubProblem,couplingOperator);
 
 
-    auto constraints = Dune::PDELab::MultiDomain::constraints<RF>(multigfs,
-                                                                  Dune::PDELab::MultiDomain::constrainSubProblem(stokesSubProblem,
-                                                                                                                 stokesBoundaryFunction));
+    auto constraints = Dune::PDELab::MultiDomain::constraints<RF>(
+      multigfs,
+      Dune::PDELab::MultiDomain::constrainSubProblem(
+        stokesSubProblem,
+        stokesBoundaryFunction
+      )
+    );
 
     constraints.assemble(cg);
 

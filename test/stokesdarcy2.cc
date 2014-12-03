@@ -144,6 +144,7 @@ struct StokesBoundaryType
       y = Dune::PDELab::StokesBoundaryCondition::StressNeumann;
     else
       y = Dune::PDELab::StokesBoundaryCondition::VelocityDirichlet;
+    y = Dune::PDELab::StokesBoundaryCondition::StressNeumann;
   }
 
 };
@@ -159,7 +160,7 @@ struct PressureDropBoundaryType :
       return false; // no bc
     auto xg = ig.geometry().global(x);
     if (xg[0] < 1e-6 || xg[0] > 100-1e-6)
-      return false; // Neumann
+      return true; // Neumann
     else
       return true; // Dirichlet
   }
@@ -171,7 +172,7 @@ struct PressureDropBoundaryType :
       return false; // no bc
     auto xg = ig.geometry().global(x);
     if (xg[0] < 1e-6 || xg[0] > 100-1e-6)
-      return true; // Neumann
+      return false; // Neumann
     else
       return false; // Dirichlet
   }
@@ -209,12 +210,15 @@ public:
                               typename Traits::RangeType& y) const
   {
     if (x[0] < 1e-6)
-      y = inflow;//*0.04*(100-x[1])*(x[1]-110); // parabolic flow profile
+      y = x[1] > 50 ? inflow : -outflow;//0.04*(100-x[1])*(x[1]-110); // parabolic flow profile
     else if (x[0] > 100-1e-6)
-      y = -outflow;//*0.04*(100-x[1])*(x[1]-110); // parabolic flow profile
+      y = x[1] > 50 ? -outflow : inflow;//*0.04*(100-x[1])*(x[1]-110); // parabolic flow profile
     else
       y = 0;//-10*((x[1]-0.5)*(1.5-x[1])+0.02);
+    y *= 100.0 - x[1];
+    std::cout << x << std::endl;
   }
+
 };
 
 
@@ -264,8 +268,11 @@ public:
     , porosity_(params.get<RF>("parameters.soil.porosity"))
     , elementIndexToPhysicalGroup(physicalGroupMap)
     , gv(gridview)
-    , bottomPotential(params.get<RF>("boundaries.bottompotential"))
-    , bottomflux((params.get<RF>("boundaries.outflow") - params.get<RF>("boundaries.inflow"))*0.1)
+    , rightTopPotential(params.get<RF>("boundaries.rightpotential.top"))
+    , rightBottomPotential(params.get<RF>("boundaries.rightpotential.bottom"))
+    , bottomflux(params.get<RF>("boundaries.bottomflux"))
+    , _gravity(params.get<RF>("parameters.gravity"))
+    , _density(params.get<RF>("parameters.fluid.rho"))
   {
     for (std::size_t i=0; i<Traits::dimDomain; i++)
       for (std::size_t j=0; j<Traits::dimDomain; j++)
@@ -303,6 +310,18 @@ public:
     return porosity_;
   }
 
+  typename Traits::RangeFieldType
+  gravity (const typename Traits::ElementType& e, const typename Traits::DomainType& x) const
+  {
+    return _gravity;
+  }
+
+  typename Traits::RangeFieldType
+  density (const typename Traits::ElementType& e, const typename Traits::DomainType& x) const
+  {
+    return _density;
+  }
+
   //! reaction term
   typename Traits::RangeFieldType
   c (const typename Traits::ElementType& e, const typename Traits::DomainType& x_) const
@@ -326,10 +345,12 @@ public:
     else {
       Dune::FieldVector<typename GV::Grid::ctype,GV::dimension>
         x = is.geometry().global(x_);
-      if (x[0] < 1e-6 || x[0] > 100-1e-6)
-        return BC::Neumann;
+      if (x[1] < 1e-6 && x[0] < 100)
+          return BC::Outflow;
+      else if (x[0] > 100 - 1e-6 && x[1] < 14.5)
+        return x[1] < 13 ? BC::Dirichlet : BC::Neumann;
       else
-        return BC::Outflow;//BC::Dirichlet;
+        return BC::Neumann;
     }
   }
 
@@ -337,7 +358,9 @@ public:
   typename Traits::RangeFieldType
   g (const typename Traits::ElementType& is, const typename Traits::DomainType& x_) const
   {
-    return bottomPotential;
+    auto x = is.geometry().global(x_);
+    auto scale = x[1] / 15.0;
+    return scale * rightTopPotential + (1.0 - scale) * rightBottomPotential;
   }
 
   //! Neumann boundary condition
@@ -346,7 +369,7 @@ public:
   {
     auto x = is.geometry().global(x_);
     if (x[1] < 1e-6)
-      return 0.0; //bottomflux;
+      return bottomflux * x[0] * (100.0 - x[0]);
     else
       return 0.0;
     /*
@@ -375,7 +398,11 @@ private:
   typename Traits::RangeFieldType porosity_;
   const std::vector<int>& elementIndexToPhysicalGroup;
   const GV gv;
-  const typename Traits::RangeFieldType bottomPotential, bottomflux;
+  const typename Traits::RangeFieldType rightTopPotential;
+  const typename Traits::RangeFieldType rightBottomPotential;
+  const typename Traits::RangeFieldType bottomflux;
+  const typename Traits::RangeFieldType _gravity;
+  const typename Traits::RangeFieldType _density;
 };
 
 
@@ -702,7 +729,8 @@ int main(int argc, char** argv) {
     DarcyOperator darcyOperator(
       darcyParams,
       Dune::PDELab::ConvectionDiffusionDGMethod::SIPG,
-      Dune::PDELab::ConvectionDiffusionDGWeights::weightsOn
+      Dune::PDELab::ConvectionDiffusionDGWeights::weightsOn,
+      parameters.get("parameters.darcy.alpha",1.0)
     );
 
     typedef CouplingParameters<MDGV> CouplingParams;

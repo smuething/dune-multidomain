@@ -3,7 +3,7 @@ dunedir = $(includedir)/dune
 include $(top_srcdir)/am/global-rules
 AM_CPPFLAGS += $(ALL_PKG_CPPFLAGS) $(DUNEMPICPPFLAGS) $(BOOST_CPPFLAGS)
 AM_LDFLAGS += $(ALL_PKG_LDFLAGS) $(DUNEMPILDFLAGS)
-AM_LDADD = $(ALL_PKG_LIBS) $(DUNEMPILIBS)
+LDADD = $(ALL_PKG_LIBS) $(DUNEMPILIBS)
 AM_LIBS = $(ALL_PKG_LIBS) $(DUNEMPILIBS)
 
 check_PROGRAMS = testmultidomaingridfunctionspace \

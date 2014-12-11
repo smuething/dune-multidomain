@@ -1,11 +1,11 @@
 MultiDomain
 ===========
 
-This is the 2.0 development branch of [MultiDomain][1], a set of multi-domain
+This is the 2.0.0 release of [MultiDomain][1], a set of multi-domain
 extensions for the PDE solver toolbox [PDELab][2] that is part of the [DUNE][3]
 project. See the file README for further details including license information.
 
-MultiDomain 2.0 is a minor release, mainly focusing on bug fixes and keeping
+MultiDomain 2.0.0 is a minor release, mainly focusing on bug fixes and keeping
 current with changes to the underlying DUNE modules and PDELab.
 
 If you need help, please ask via [GitHub][1]) If you find bugs, you can also
@@ -22,11 +22,14 @@ Changes
 
 * Support for building with CMake.
 
-* Compatibility with DUNE 2.3.x, PDELab 2.0.x and MultiDomainGrid 2.0.x.
+* Compatibility with DUNE 2.3.x, PDELab 2.0.x and MultiDomainGrid 2.3.x.
 
 * Some minor bugfixes.
 
 * Release history
+
+  * `2.0.0` Final release
+    * Minor bugfixes
 
   * `2.0.0-rc1` Initial release candidate
 

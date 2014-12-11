@@ -16,7 +16,7 @@ existing DUNE grid.
 Version
 -------
 
-This is version 2.0-dev of MultiDomainGrid. It is compatible with the 2.0.x release
+This is version 2.0.0 of MultiDomainGrid. It is compatible with the 2.0.x release
 series of PDELab and the 2.3.x release series of the DUNE core modules. The versioning
 scheme of MultiDomain has recently been synchronized to that of PDELab to make it
 easier for users to find a compatible release for their DUNE / PDELab distribution.
@@ -68,11 +68,13 @@ Dependencies
 dune-multidomain depends on the following software packages:
 
 * [DUNE core libraries][3] (dune-common, dune-geometry, dune-grid, dune-istl,
-  dune-localfunctions) version 2.3.x, and their respective dependencies.
+  dune-localfunctions) version 2.3.1+, and their respective dependencies.
 
-* [PDELab][2] version 2.0.x.
+* [PDELab][2] version 2.0.x. PDELab 2.0.0 contains a number of bugs that render it incompatible
+  with dune-multidomain. Until a bugfix 2.0.1 release of PDELab, please check out the release
+  branch releases/2.0 instead.
 
-* [dune-multidomaingrid][4] version 2.0.x.
+* [dune-multidomaingrid][4] version 2.3.x.
 
 * The [Boost][9] C++ libraries, in particular Boost.MPL and Boost.Fusion.
 

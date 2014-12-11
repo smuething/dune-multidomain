@@ -16,7 +16,7 @@ existing DUNE grid.
 Version
 -------
 
-This is version 2.0.0 of MultiDomainGrid. It is compatible with the 2.0.x release
+This is version 2.0.1 of MultiDomainGrid. It is compatible with the 2.0.x release
 series of PDELab and the 2.3.x release series of the DUNE core modules. The versioning
 scheme of MultiDomain has recently been synchronized to that of PDELab to make it
 easier for users to find a compatible release for their DUNE / PDELab distribution.

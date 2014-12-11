@@ -189,7 +189,7 @@ public:
         darcylfsu.finiteElement().localBasis().evaluateJacobian(darcyPos,js);
 
         // transform gradient to real element
-        const Dune::FieldMatrix<DF,dimw,dim> jac = darcyCell.geometry().jacobianInverseTransposed(darcyPos);
+        const auto jac = darcyCell.geometry().jacobianInverseTransposed(darcyPos);
         std::vector<Dune::FieldVector<RF,dim> > gradpsi(dsize);
         for (size_type i=0; i<vsize; i++)
             jac.mv(js[i][0],gradpsi[i]);
@@ -214,7 +214,6 @@ public:
             for (size_type i = 0; i < lfsu_v.size(); ++i)
               u[d] += stokesx(lfsu_v,i) * v[i];
           }
-
 
         for (size_type i = 0; i < darcylfsu.size(); ++i)
           darcyr.accumulate(darcylfsv,i, -gamma * porosity * (u * n) * psi[i] * factor);

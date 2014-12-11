@@ -280,8 +280,12 @@ public:
 
 
 
+struct NoConstLeafOrderingParams
+  : public Dune::PDELab::NoConstOrderingSize<true>
+  , public Dune::PDELab::AllPartitionSelector
+{};
 
-
+using LeafTag = Dune::PDELab::LeafOrderingTag<NoConstLeafOrderingParams>;
 
 
 template<template<class,class,class,int> class Preconditioner,
@@ -403,7 +407,8 @@ void assemble(
         GV,
         FEM,
         CON,
-        VBE
+        VBE,
+        LeafTag
         > GFS;
 
       GFS gfs(gv,fem,con);
@@ -498,9 +503,9 @@ void assemble_wrapped(
 
       CON con;
 
-      typedef Dune::PDELab::GridFunctionSpace<GV,FEM,CON,VBE> GFS;
+      typedef Dune::PDELab::GridFunctionSpace<typename GV::Grid::SubDomainGrid::LeafGridView,FEM,CON,VBE> GFS;
 
-      GFS gfs(gv,fem,con);
+      GFS gfs(gv.grid().subDomain(0).leafGridView(),fem,con);
       gfs.name("u");
 
       typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<
@@ -879,7 +884,7 @@ int main(int argc, char** argv) {
     for (MDGV::Codim<0>::Iterator it = mdgv.begin<0>(); it != mdgv.end<0>(); ++it)
       {
         if (it->geometry().center()[0] > 0.5)
-          grid.addToSubDomain(1,*it);
+          grid.addToSubDomain(0,*it);
         else
           grid.addToSubDomain(0,*it);
       }
@@ -923,14 +928,14 @@ int main(int argc, char** argv) {
 
     solve(
       grid,mdgv,
-      //sdgv0,FEM1(sdgv0),cglop,
+      sdgv0,FEM1(sdgv0),cglop,
       //sdgv0,FEM2(sdgv0),cglop,
       //sdgv0,DGFEM1(),dglop(DGFEM1(),params),
-      sdgv0,DGFEM2(),dglop(DGFEM2(),params),
-      //sdgv1,FEM1(sdgv1),cglop,
+      //sdgv0,DGFEM2(),dglop(DGFEM2(),params),
+      sdgv1,FEM1(sdgv1),cglop,
       //sdgv1,FEM2(sdgv1),cglop,
       //sdgv1,DGFEM1(),dglop(DGFEM1(),params),
-      sdgv1,DGFEM2(),dglop(DGFEM2(),params),
+      //sdgv1,DGFEM2(),dglop(DGFEM2(),params),
 
       parameters,
       b,g

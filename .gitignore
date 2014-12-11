@@ -37,3 +37,4 @@ stamp-vc
 .DS_Store
 /compile
 /test/testpoisson-dirichlet-neumann
+/test/testpoisson-assembly

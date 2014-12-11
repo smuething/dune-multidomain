@@ -561,6 +561,7 @@ private:
 };
 
 
+
 int main(int argc, char** argv) {
 
   try {
@@ -785,7 +786,7 @@ int main(int argc, char** argv) {
     LS ls(true);
 
     typedef Dune::PDELab::StationaryLinearProblemSolver<GridOperator,LS,V> PDESOLVER;
-    PDESOLVER pdesolver(gridoperator,ls,1e-10);
+    PDESOLVER pdesolver(gridoperator,ls,1e-15);
 
     /*typedef Dune::PDELab::Newton<MultiGOS,LS,V> PDESOLVER;
     PDESOLVER pdesolver(multigos,ls);

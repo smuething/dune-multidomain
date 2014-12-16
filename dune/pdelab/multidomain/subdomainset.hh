@@ -1,6 +1,8 @@
 #ifndef DUNE_MULTIDOMAIN_SUBDOMAINSET_HH
 #define DUNE_MULTIDOMAIN_SUBDOMAINSET_HH
 
+#include <initializer_list>
+
 namespace Dune {
 
 namespace PDELab {
@@ -26,12 +28,18 @@ class SubDomainSetHolder
 public:
 
   typedef typename MultiDomainGrid::LeafGridView::IndexSet::SubDomainSet SubDomainSet;
-  typedef typename SubDomainSet::DomainType SubDomainType;
+  typedef typename SubDomainSet::SubDomainIndex SubDomainIndex;
 
   template<typename... T>
   SubDomainSetHolder(T... subDomains)
   {
     initSubDomainSet(_subDomainSet,subDomains...);
+  }
+
+  SubDomainSetHolder(std::initializer_list<SubDomainIndex> subdomains)
+  {
+    for (auto subdomain : subdomains)
+      _subDomainSet.add(subdomain);
   }
 
   const SubDomainSet& subDomainSet() const
@@ -45,7 +53,9 @@ private:
 
 
 template<typename MultiDomainGrid>
-class SubDomainSupersetCondition : public SubDomainSetHolder<MultiDomainGrid>
+class
+DUNE_DEPRECATED_MSG("This class has been renamed to SubDomainSubsetCondition")
+SubDomainSupersetCondition : public SubDomainSetHolder<MultiDomainGrid>
 {
 
   typedef SubDomainSetHolder<MultiDomainGrid> BaseT;
@@ -58,6 +68,34 @@ public:
     BaseT(subDomains...)
   {
   }
+
+
+
+  bool operator()(const SubDomainSet& subDomainSet) const {
+    return subDomainSet.containsAll(this->subDomainSet());
+  }
+
+};
+
+template<typename MultiDomainGrid>
+class SubDomainSubsetCondition : public SubDomainSetHolder<MultiDomainGrid>
+{
+
+  typedef SubDomainSetHolder<MultiDomainGrid> BaseT;
+  typedef typename BaseT::SubDomainSet SubDomainSet;
+  typedef typename SubDomainSet::SubDomainIndex SubDomainIndex;
+
+public:
+
+  template<typename... T>
+  SubDomainSubsetCondition(T... subDomains) :
+    BaseT(subDomains...)
+  {
+  }
+
+  SubDomainSubsetCondition(std::initializer_list<SubDomainIndex> subdomains)
+    : BaseT(subdomains)
+  {}
 
   bool operator()(const SubDomainSet& subDomainSet) const {
     return subDomainSet.containsAll(this->subDomainSet());
@@ -72,6 +110,7 @@ class SubDomainEqualityCondition : public SubDomainSetHolder<MultiDomainGrid>
 
   typedef SubDomainSetHolder<MultiDomainGrid> BaseT;
   typedef typename BaseT::SubDomainSet SubDomainSet;
+  typedef typename SubDomainSet::SubDomainIndex SubDomainIndex;
 
 public:
 
@@ -80,6 +119,10 @@ public:
     BaseT(subDomains...)
   {
   }
+
+  SubDomainEqualityCondition(std::initializer_list<SubDomainIndex> subdomains)
+    : BaseT(subdomains)
+  {}
 
   bool operator()(const SubDomainSet& subDomainSet) const {
     return subDomainSet == this->subDomainSet();

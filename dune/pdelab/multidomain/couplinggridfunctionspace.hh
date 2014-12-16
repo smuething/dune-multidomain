@@ -46,10 +46,22 @@ template<typename GV, typename FEM, typename Predicate_, typename CE=NoConstrain
          typename B=ISTLVectorBackend<>, typename O=DefaultLeafOrderingTag>
 class CouplingGridFunctionSpace
   : public TypeTree::LeafNode
+  , public GridFunctionSpaceBase<
+             GridFunctionSpace<GV,FEM,CE,B,O>,
+             GridFunctionSpaceTraits<GV,FEM,CE,B,O>
+             >
+  , public GridFunctionOutputParameters
+  , public DataHandleProvider<GridFunctionSpace<GV,FEM,CE,B,O> >
+
 {
 
   typedef TypeTree::TransformTree<CouplingGridFunctionSpace,gfs_to_ordering<CouplingGridFunctionSpace> > ordering_transformation;
 
+
+  typedef GridFunctionSpaceBase<
+    GridFunctionSpace<GV,FEM,CE,B,O>,
+    GridFunctionSpaceTraits<GV,FEM,CE,B,O>
+    > BaseT;
 
 public:
   //! export Traits class

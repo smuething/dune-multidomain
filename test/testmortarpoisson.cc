@@ -370,7 +370,14 @@ int main(int argc, char** argv) {
     typedef Dune::PDELab::MultiDomain::CouplingGridFunctionSpace<MDGV,COUPLINGFEM,Pred,NOCON,VBE> CouplingGFS;
     CouplingGFS couplinggfs(mdgv,couplingfem,pred);
 
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,VBE,GFS0,GFS1,CouplingGFS> MultiGFS;
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<
+      Grid,
+      VBE,
+      Dune::PDELab::LexicographicOrderingTag,
+      GFS0,
+      GFS1,
+      CouplingGFS
+      > MultiGFS;
     MultiGFS multigfs(grid,VBE(),gfs0,gfs1,couplinggfs);
 
     std::cout << multigfs.ordering().size() << std::endl;
@@ -387,8 +394,8 @@ int main(int argc, char** argv) {
     typedef J<MDGV,R> JType;
     JType j(mdgv);
 
-    typedef Dune::PDELab::Poisson<FType,BType,JType,4> LOP;
-    LOP lop(f,b,j);
+    typedef Dune::PDELab::Poisson<FType,BType,JType> LOP;
+    LOP lop(f,b,j,4);
 
     typedef MortarPoissonCoupling CouplingLOP;
     CouplingLOP coupling_lop(atof(argv[2]));
@@ -452,25 +459,25 @@ int main(int argc, char** argv) {
     pdesolver.apply(u);
 
     {
-      Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTKOptions::conforming);
-      Dune::PDELab::MultiDomain::add_solution_to_vtk_writer(
+      Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTK::conforming);
+      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
         vtkwriter,
         multigfs,
         u,
         subdomain_predicate<Grid::SubDomainIndexType>(0)
       );
-      vtkwriter.write("testmortarpoisson-left",Dune::VTKOptions::ascii);
+      vtkwriter.write("testmortarpoisson-left",Dune::VTK::ascii);
     }
 
     {
-      Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
-      Dune::PDELab::MultiDomain::add_solution_to_vtk_writer(
+      Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTK::conforming);
+      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
         vtkwriter,
         multigfs,
         u,
         subdomain_predicate<Grid::SubDomainIndexType>(1)
       );
-      vtkwriter.write("testmortarpoisson-right",Dune::VTKOptions::ascii);
+      vtkwriter.write("testmortarpoisson-right",Dune::VTK::ascii);
     }
 
   }

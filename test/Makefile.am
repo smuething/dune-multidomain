@@ -1,9 +1,10 @@
 dunedir = $(includedir)/dune
 
 include $(top_srcdir)/am/global-rules
-AM_CPPFLAGS += $(ALL_PKG_CPPFLAGS) $(BOOST_CPPFLAGS)
-AM_LDFLAGS += $(ALL_PKG_LDFLAGS)
-AM_LIBS = $(ALL_PKG_LIBS)
+AM_CPPFLAGS += $(ALL_PKG_CPPFLAGS) $(DUNEMPICPPFLAGS) $(BOOST_CPPFLAGS)
+AM_LDFLAGS += $(ALL_PKG_LDFLAGS) $(DUNEMPILDFLAGS)
+LDADD = $(ALL_PKG_LIBS) $(DUNEMPILIBS)
+AM_LIBS = $(ALL_PKG_LIBS) $(DUNEMPILIBS)
 
 check_PROGRAMS = testmultidomaingridfunctionspace \
 	reactiondiffusion \
@@ -53,3 +54,14 @@ testpowermortarpoisson_SOURCES = testpowermortarpoisson.cc
 
 check_PROGRAMS += testpoisson
 testpoisson_SOURCES = testpoisson.cc
+testpoisson_LDADD = $(AM_LIBS) $(DUNEMPILIBS)
+
+check_PROGRAMS += testpoisson-dirichlet-neumann
+testpoisson_dirichlet_neumann_SOURCES = testpoisson-dirichlet-neumann.cc
+testpoisson_dirichlet_neumann_LDADD = $(AM_LIBS) $(DUNEMPILIBS)
+
+check_PROGRAMS += testpoisson-assembly
+testpoisson_assembly_SOURCES = testpoisson-assembly.cc
+testpoisson_assembly_LDADD = $(AM_LIBS) $(DUNEMPILIBS)
+
+MOSTLYCLEANFILES = *.vtu *.pvtu *.pvd

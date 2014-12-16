@@ -3,10 +3,9 @@
 #include <dune/grid/sgrid.hh>
 #include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
-#include <dune/pdelab/finiteelementmap/q1fem.hh>
-#include <dune/pdelab/finiteelementmap/q22dfem.hh>
+#include <dune/pdelab/finiteelementmap/qkfem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
-#include <dune/pdelab/backend/istlmatrixbackend.hh>
+#include <dune/pdelab/backend/istl/bcrsmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/gridoperator.hh>
 #include <dune/pdelab/gridoperator/onestep.hh>
@@ -24,11 +23,94 @@
 #include <dune/pdelab/multidomain/coupling.hh>
 #include <dune/pdelab/stationary/linearproblem.hh>
 #include <dune/pdelab/instationary/onestep.hh>
+#include <dune/pdelab/multidomain/vtk.hh>
+#include <dune/pdelab/gridfunctionspace/subspace.hh>
 
 #include<typeinfo>
 
 #include "functionmacros.hh"
 #include "proportionalflowcoupling.hh"
+
+namespace Dune {
+  namespace PDELab{
+
+    struct NonFixedSizeLeafOrderingParams
+      : public NoConstOrderingSize<true>
+      , public AllPartitionSelector
+    {};
+
+    typedef LeafOrderingTag<
+      NonFixedSizeLeafOrderingParams
+      > NonFixedSizeLeafOrderingTag;
+
+  }
+}
+
+
+template<typename GV, typename Predicate>
+class OverlapDomainMaskingConformingDirichletConstraints
+  : public Dune::PDELab::OverlappingConformingDirichletConstraints
+{
+
+public:
+
+  typedef std::size_t size_type;
+
+  static const bool doVolume = true;
+
+  template<typename EG, typename LFS, typename T>
+  void volume(const EG& eg, const LFS& lfs, T& trafo) const
+  {
+    if (!_predicate(eg.subDomains()))
+      return;
+    bool has_neighbors = false;
+    bool has_interior_neighbors = false;
+    for (auto it = _gv.ibegin(eg.entity()),
+           end_it = _gv.iend(eg.entity());
+         it != end_it;
+         ++it)
+      {
+        switch (Dune::PDELab::IntersectionType::get(*it))
+          {
+
+          case Dune::PDELab::IntersectionType::skeleton:
+            {
+              auto neighbor = it->outside();
+              has_neighbors = true;
+              if (neighbor->partitionType() != Dune::InteriorEntity)
+                continue;
+              has_interior_neighbors = true;
+              auto& neighbor_subdomains = _gv.indexSet().subDomains(*neighbor);
+              if (_predicate(neighbor_subdomains))
+                return;
+            }
+
+          default:
+            continue;
+          }
+      }
+    if (has_neighbors && has_interior_neighbors)
+      {
+        // empty map means Dirichlet constraint
+        typename T::RowType empty;
+
+        for (size_type i = 0; i < lfs.size(); ++i)
+          trafo[lfs.dofIndex(i)] = empty;
+      }
+  }
+
+  OverlapDomainMaskingConformingDirichletConstraints(const GV& gv, const Predicate& predicate)
+    : _gv(gv)
+    , _predicate(predicate)
+  {}
+
+private:
+
+  GV _gv;
+  const Predicate& _predicate;
+
+};
+
 
 // source term
 INSTATIONARY_ANALYTIC_FUNCTION(F,x,y)
@@ -127,6 +209,13 @@ int main(int argc, char** argv) {
 
     Dune::MPIHelper& mpihelper = Dune::MPIHelper::instance(argc,argv);
 
+    if (mpihelper.rank() == 0 && argc > 5)
+      {
+        volatile int i = 1;
+        while (i == 1)
+          sleep(1);
+      }
+
     if (argc < 5) {
       std::cerr << "Usage: " << argv[0] << " <refinement level> <coupling intensity> <dt> <end time>" << std::endl;
       return 1;
@@ -173,39 +262,53 @@ int main(int argc, char** argv) {
     std::cout << "grid setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
-    typedef MDGV::Grid::ctype DF;
-
-    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM0;
-    //typedef Dune::PDELab::Q22DLocalFiniteElementMap<ctype,double> FEM1;
-    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM1;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,ctype,double,1> FEM0;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<SDGV,ctype,double,1> FEM1;
 
     typedef FEM0::Traits::FiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
 
-    FEM0 fem0;
-    FEM1 fem1;
-    typedef Dune::PDELab::NoConstraints NOCON;
+    FEM0 fem0(sdgv0);
+    FEM1 fem1(sdgv1);
+    //typedef Dune::PDELab::NoConstraints NOCON;
     //typedef Dune::PDELab::ConformingDirichletConstraints CON;
-    typedef Dune::PDELab::OverlappingConformingDirichletConstraints CON;
+    //typedef Dune::PDELab::OverlappingConformingDirichletConstraints CON;
+
+    typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> Condition;
+
+    Condition c0(0);
+    Condition c1(1);
+
+    typedef OverlapDomainMaskingConformingDirichletConstraints<MDGV,Condition> CON;
     typedef Dune::PDELab::ISTLVectorBackend<> VBE;
+    typedef Dune::PDELab::NonFixedSizeLeafOrderingTag OrderingTag;
 
-    CON con;
+    CON con0(mdgv,c0);
+    CON con1(mdgv,c1);
 
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,CON,VBE> GFS0;
-    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,CON,VBE> GFS1;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,CON,VBE,OrderingTag> GFS0;
+    typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM1,CON,VBE,OrderingTag> GFS1;
 
-    typedef GFS0::ConstraintsContainer<R>::Type C;
-    C cg;
+    GFS0 gfs0(sdgv0,fem0,con0);
+    GFS1 gfs1(sdgv1,fem1,con1);
+    gfs0.name("solution");
+    gfs1.name("solution");
 
-    GFS0 gfs0(sdgv0,fem0,con);
-    GFS1 gfs1(sdgv1,fem1,con);
-
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,GFS0,GFS1> MultiGFS;
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<
+      Grid,
+      VBE,
+      Dune::PDELab::LexicographicOrderingTag,
+      GFS0,
+      GFS1
+      > MultiGFS;
 
     MultiGFS multigfs(grid,gfs0,gfs1);
 
     std::cout << "function space setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
+
+    typedef MultiGFS::ConstraintsContainer<R>::Type C;
+    C cg;
 
     typedef DirichletBoundary BType;
     BType b;
@@ -219,16 +322,11 @@ int main(int argc, char** argv) {
     typedef J<MDGV,R,R> JType;
     JType j(mdgv);
 
-    typedef Dune::PDELab::InstationaryPoisson<R,FType,BType,JType,4> LOP;
-    LOP lop(f,b,j);
+    typedef Dune::PDELab::InstationaryPoisson<R,FType,BType,JType> LOP;
+    LOP lop(f,b,j,4);
 
     typedef Dune::PDELab::L2 TLOP;
     TLOP tlop(4);
-
-    typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> Condition;
-
-    Condition c0(0);
-    Condition c1(1);
 
     typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,LOP,Condition,0> LeftSubProblem_dt0;
     typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,TLOP,Condition,0> LeftSubProblem_dt1;
@@ -257,9 +355,23 @@ int main(int argc, char** argv) {
     constraints.assemble(cg);
 
     std::cout << "constraints evaluation: " << timer.elapsed() << " sec" << std::endl;
+
+    mpihelper.getCollectiveCommunication().barrier();
+    if (mpihelper.rank() == 0)
+      {
+        std::vector<std::size_t> values(cg.size());
+        std::transform(cg.begin(),cg.end(),values.begin(),[](typename C::value_type& x){ return x.first[0]; });
+        std::sort(values.begin(),values.end());
+        for (auto& c : values)
+          std::cout << c << std::endl;
+        std::cout << std::endl;
+      }
+    mpihelper.getCollectiveCommunication().barrier();
+
     timer.reset();
 
-    typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
+    typedef Dune::PDELab::istl::BCRSMatrixBackend<> MBE;
+    MBE mbe(27);
 
     typedef Dune::PDELab::MultiDomain::GridOperator<
       MultiGFS,MultiGFS,
@@ -290,25 +402,31 @@ int main(int argc, char** argv) {
 
     GridOperator_dt0 go_dt_0(multigfs,multigfs,
                              cg,cg,
+                             mbe,
                              left_sp_dt0,
                              right_sp_dt0,
                              coupling);
 
     GridOperator_dt1 go_dt_1(multigfs,multigfs,
                              cg,cg,
+                             mbe,
                              left_sp_dt1,
                              right_sp_dt1);
 
     GridOperator gridoperator(go_dt_0,go_dt_1);
 
-    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,0> SGFS0;
-    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,1> SGFS1;
-    SGFS0 sgfs0(multigfs);
-    SGFS1 sgfs1(multigfs);
-
     std::cout << "operator space setup: " << timer.elapsed() << " sec" << std::endl;
     timer.reset();
 
+    if (mpihelper.rank() == 0)
+      {
+        std::cout << "****************************** sizes ******************************" << std::endl;
+        std::cout << multigfs.size() << std::endl;
+        Dune::PDELab::GridFunctionSubSpace<MultiGFS,Dune::TypeTree::TreePath<0> > sgfs0(multigfs);
+        Dune::PDELab::GridFunctionSubSpace<MultiGFS,Dune::TypeTree::TreePath<1> > sgfs1(multigfs);
+        std::cout << sgfs0.size() << std::endl
+                  << sgfs1.size() << std::endl;
+      }
 
     // <<<5>>> Select a linear solver backend
     typedef Dune::PDELab::ISTLBackend_OVLP_BCGS_SSORk<MultiGFS,C> LS;
@@ -323,6 +441,7 @@ int main(int argc, char** argv) {
 
     // <<<7>>> time-stepper
     Dune::PDELab::Alexander2Parameter<R> method;               // defines coefficients
+    //Dune::PDELab::OneStepThetaParameter<R> method(1.0);               // defines coefficients
     Dune::PDELab::OneStepMethod<R,GridOperator,PDESOLVER,V,V> osm(method,gridoperator,pdesolver);
     osm.setVerbosityLevel(2);                                     // time stepping scheme
 
@@ -331,20 +450,26 @@ int main(int argc, char** argv) {
     Dune::PDELab::FilenameHelper fn_right("testinstationarypoisson_right");
 
     {
-      typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> DGF;
-      DGF dgf(sgfs0,uold);
-      Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTKOptions::conforming);
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
-      vtkwriter.write(fn_left.getName(),Dune::VTKOptions::ascii);
+      Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTK::conforming);
+      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+        vtkwriter,
+        multigfs,
+        uold,
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv0.grid().domain())
+      );
+      vtkwriter.write(fn_left.getName(),Dune::VTK::ascii);
       fn_left.increment();
     }
 
     {
-      typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> DGF;
-      DGF dgf(sgfs1,uold);
-      Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv1,2);
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
-      vtkwriter.write(fn_right.getName(),Dune::VTKOptions::ascii);
+      Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTK::conforming);
+      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+        vtkwriter,
+        multigfs,
+        uold,
+        Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv1.grid().domain())
+      );
+      vtkwriter.write(fn_right.getName(),Dune::VTK::ascii);
       fn_right.increment();
     }
 
@@ -363,24 +488,45 @@ int main(int argc, char** argv) {
 
       auto f_ = Dune::PDELab::MultiDomain::interpolateOnSubProblems(g,left_sp_dt0,g,right_sp_dt0);
 
-      osm.apply(time,dt,uold,f_,unew);                           // do one time step
+      osm.apply(time,dt,uold,unew);                           // do one time step
+
+#if 0
+      for (int i = 0; i < mpihelper.size(); ++i)
+        {
+          if (mpihelper.rank() == i)
+            {
+              std::cout << "******************** rank " << i << " ********************" << std::endl;
+              int r = 0;
+              for (auto& v : unew)
+                std::cout << (r++) << ": " << v << std::endl;
+              std::cout << std::endl;
+            }
+          mpihelper.getCollectiveCommunication().barrier();
+        }
+#endif
 
       // graphics
       {
-        typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> DGF;
-        DGF dgf(sgfs0,unew);
-        Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTKOptions::conforming);
-        vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
-        vtkwriter.write(fn_left.getName(),Dune::VTKOptions::ascii);
+        Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTK::conforming);
+        Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+          vtkwriter,
+          multigfs,
+          unew,
+          Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv0.grid().domain())
+        );
+        vtkwriter.write(fn_left.getName(),Dune::VTK::ascii);
         fn_left.increment();
       }
 
       {
-        typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> DGF;
-        DGF dgf(sgfs1,unew);
-        Dune::SubsamplingVTKWriter<SDGV> vtkwriter(sdgv1,2);
-        vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF>(dgf,"solution"));
-        vtkwriter.write(fn_right.getName(),Dune::VTKOptions::ascii);
+        Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTK::conforming);
+        Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+          vtkwriter,
+          multigfs,
+          unew,
+          Dune::PDELab::MultiDomain::subdomain_predicate<Grid::SubDomainIndex>(sdgv1.grid().domain())
+        );
+        vtkwriter.write(fn_right.getName(),Dune::VTK::ascii);
         fn_right.increment();
       }
 

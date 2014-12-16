@@ -63,8 +63,8 @@ private:
   {
     if (is.conforming())
       return true;
-    const int insideLevel = is.inside().level();
-    const int outsideLevel = is.outside().level();
+    const int insideLevel = is.inside()->level();
+    const int outsideLevel = is.outside()->level();
     assert(insideLevel != outsideLevel);
     return insideLevel > outsideLevel;
   }

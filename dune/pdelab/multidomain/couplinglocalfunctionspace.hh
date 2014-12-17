@@ -137,17 +137,15 @@ class CouplingLocalFunctionSpaceNode
 
   typedef LocalFunctionSpaceBaseNode<GFS,DI> BaseT;
 
-  using BaseT::n;
-
 public:
   typedef LeafCouplingLocalFunctionSpaceTraits<GFS,DI> Traits;
   using BaseT::dofIndex;
 
-private:
-
   typedef FiniteElementInterfaceSwitch<
     typename Traits::FiniteElementType
     > FESwitch;
+
+  using BaseT::n;
 
 public:
 
@@ -325,7 +323,7 @@ public:
       }
   }
 
-private:
+public:
 
   typename FESwitch::Store pfe;
 };

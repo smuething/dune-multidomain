@@ -104,8 +104,9 @@ public:
   };
 
   //! constructor
-  CouplingGridFunctionSpace (const GV& gridview, const FEM& fem, const Predicate& predicate, const CE& ce_, const typename Traits::Backend& backend = typename Traits::Backend())
-    : defaultce(ce_)
+  CouplingGridFunctionSpace (const GV& gridview, const FEM& fem, const Predicate& predicate, const CE& ce_, const typename Traits::Backend& backend = typename Traits::Backend(), const typename Traits::OrderingTag& ordering_tag = typename Traits::OrderingTag())
+    : BaseT(backend,ordering_tag)
+    , defaultce(ce_)
     , gv(gridview)
     , pfem(stackobject_to_shared_ptr(fem))
     , predicate_(predicate)
@@ -115,8 +116,9 @@ public:
   }
 
   //! constructor
-  CouplingGridFunctionSpace (const GV& gridview, const FEM& fem, const Predicate& predicate, const typename Traits::Backend& backend = typename Traits::Backend())
-    : gv(gridview)
+  CouplingGridFunctionSpace (const GV& gridview, const FEM& fem, const Predicate& predicate, const typename Traits::Backend& backend = typename Traits::Backend(), const typename Traits::OrderingTag& ordering_tag = typename Traits::OrderingTag())
+    : BaseT(backend,ordering_tag)
+    , gv(gridview)
     , pfem(stackobject_to_shared_ptr(fem))
     , ce(defaultce)
     , predicate_(predicate)

@@ -1,6 +1,4 @@
 set(TESTS
-  reactiondiffusion
-  stokesdarcy
   stokesdarcy2
   testcouplinggfs
   testinstationarypoisson
@@ -13,9 +11,6 @@ set(TESTS
   testpowermortarpoisson
 )
 
-add_executable(reactiondiffusion EXCLUDE_FROM_ALL reactiondiffusion.cc)
-add_executable(stokesdarcy EXCLUDE_FROM_ALL stokesdarcy.cc)
-add_dune_superlu_flags(stokesdarcy)
 add_executable(stokesdarcy2 EXCLUDE_FROM_ALL stokesdarcy2.cc)
 add_dune_superlu_flags(stokesdarcy2)
 add_executable(testcouplinggfs EXCLUDE_FROM_ALL testcouplinggfs.cc)

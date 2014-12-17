@@ -172,8 +172,8 @@ public:
       typename LFSU_FESwitch::Basis
       > LFSU_BasisSwitch;
 
-    typedef typename LFSU_BasisSwitch::DomainField RF;
-    typedef typename LFSU_BasisSwitch::Range R;
+    typedef typename LFSU_BasisSwitch::DomainField DF;
+    typedef typename LFSU_BasisSwitch::Range Range;
     typedef typename LFSU::Traits::SizeType size_type;
 
     const size_type lfsu_size(lfsu.size());
@@ -194,8 +194,8 @@ public:
                                           lfsu_c.finiteElement().localBasis().order()
                                           );
 
-    const Dune::QuadratureRule<RF,dimIF>& rule = Dune::QuadratureRules<RF,dimIF>::rule(gt,qorder);
-    typedef typename Dune::QuadratureRule<RF,dimIF>::const_iterator RuleIterator;
+    const Dune::QuadratureRule<DF,dimIF>& rule = Dune::QuadratureRules<DF,dimIF>::rule(gt,qorder);
+    typedef typename Dune::QuadratureRule<DF,dimIF>::const_iterator RuleIterator;
 
     const RuleIterator qend = rule.end();
 
@@ -204,20 +204,20 @@ public:
         const GC element_pos = (sign > 0 ? ig.geometryInInside() : ig.geometryInOutside()).global(qit->position());
         GC normal = ig.centerUnitOuterNormal();
 
-        std::vector<R> v(lfsu_size);
+        std::vector<Range> v(lfsu_size);
         LFSU_FESwitch::basis(lfsu.finiteElement()).evaluateFunction(element_pos,v);
 
-        std::vector<R> mu(lfsu_c_size);
+        std::vector<Range> mu(lfsu_c_size);
         LFSU_C_FESwitch::basis(lfsu_c.finiteElement()).evaluateFunction(qit->position(),mu);
 
-        std::vector<Dune::FieldMatrix<RF,1,dimWorld> > gradv(lfsu_size);
+        std::vector<Dune::FieldMatrix<DF,1,dimWorld> > gradv(lfsu_size);
         LFSU_BasisSwitch::gradient(LFSU_FESwitch::basis(lfsu.finiteElement()),
                                    (sign > 0 ? ig.insideElement().geometry() : ig.outsideElement().geometry()),
                                    element_pos,
                                    gradv
                                    );
 
-        R u(0.0);
+        Range u(0.0);
         GC gradu(0.0);
         for (size_type i = 0; i < lfsu_size; ++i)
           {
@@ -225,7 +225,7 @@ public:
             gradu.axpy(x(lfsu,i),gradv[i][0]);
           }
 
-        R lambda(0.0);
+        Range lambda(0.0);
         for (size_type i = 0; i < lfsu_c_size; ++i)
           lambda += x_c(lfsu_c,i) * mu[i];
 

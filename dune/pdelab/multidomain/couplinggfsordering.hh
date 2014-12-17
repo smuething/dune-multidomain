@@ -26,6 +26,7 @@ namespace Dune {
     template<typename FEM, typename GV, typename Predicate, typename DI, typename CI>
     class DirectIntersectionLeafLocalOrdering
       : public TypeTree::LeafNode
+      , public PartitionInfoProvider
     {
 
       template<typename>
@@ -44,7 +45,7 @@ namespace Dune {
       }
 
       template<typename ItIn, typename ItOut>
-      void map_indices(const ItIn begin, const ItIn end, ItOut out) const
+      void map_lfs_indices(const ItIn begin, const ItIn end, ItOut out) const
       {
         // don't do anything - this is handled by the specialized GridViewOrdering
       }

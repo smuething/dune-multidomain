@@ -172,7 +172,6 @@ public:
       typename LFSU_FESwitch::Basis
       > LFSU_BasisSwitch;
 
-    typedef typename LFSU_BasisSwitch::DomainField DF;
     typedef typename LFSU_BasisSwitch::DomainField RF;
     typedef typename LFSU_BasisSwitch::Range R;
     typedef typename LFSU::Traits::SizeType size_type;

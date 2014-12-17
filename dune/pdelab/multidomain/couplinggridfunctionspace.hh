@@ -111,7 +111,6 @@ public:
     , pfem(stackobject_to_shared_ptr(fem))
     , predicate_(predicate)
     , ce(ce_)
-    , _backend(backend)
   {
   }
 
@@ -122,7 +121,6 @@ public:
     , pfem(stackobject_to_shared_ptr(fem))
     , ce(defaultce)
     , predicate_(predicate)
-    , _backend(backend)
   {
   }
 
@@ -237,16 +235,6 @@ public:
     _name = name;
   }
 
-  B& backend()
-  {
-    return _backend;
-  }
-
-  const B& backend() const
-  {
-    return _backend;
-  }
-
 private:
   CE defaultce;
   const GV& gv;
@@ -256,7 +244,6 @@ private:
   const CE& ce;
   const Predicate_& predicate_;
   mutable shared_ptr<Ordering> _ordering;
-  B _backend;
   std::string _name;
 
 };

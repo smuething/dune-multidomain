@@ -1,6 +1,5 @@
 #include "config.h"
 
-#include <dune/grid/sgrid.hh>
 #include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/finiteelementmap/q1fem.hh>
@@ -147,7 +146,6 @@ int main(int argc, char** argv) {
   const double tend = atof(argv[4]);
 
   const int dim = 2;
-  //typedef Dune::SGrid<dim,dim> BaseGrid;
   typedef Dune::YaspGrid<dim> BaseGrid;
   const Dune::FieldVector<double,dim> h(2.0);
   const Dune::array<int,dim> s = { {1,1} };

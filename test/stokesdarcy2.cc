@@ -2,7 +2,6 @@
 
 #include <dune/common/parametertreeparser.hh>
 #include <dune/grid/yaspgrid.hh>
-#include <dune/grid/sgrid.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/io/file/gmshreader.hh>
 #include <dune/pdelab/gridfunctionspace/vectorgridfunctionspace.hh>

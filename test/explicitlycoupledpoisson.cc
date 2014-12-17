@@ -1,6 +1,5 @@
 #include "config.h"
 
-#include <dune/grid/sgrid.hh>
 #include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/finiteelementmap/qkfem.hh>
@@ -110,7 +109,6 @@ int main(int argc, char** argv) {
     Dune::Timer totalTimer;
     timer.start();
     const int dim = 2;
-    //typedef Dune::SGrid<dim,dim> BaseGrid;
     typedef Dune::YaspGrid<dim> BaseGrid;
     const Dune::FieldVector<double,dim> h(1.0);
     const Dune::array<int,dim> s = { {1,1} };

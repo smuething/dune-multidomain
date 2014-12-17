@@ -1,7 +1,7 @@
 #include "config.h"
 
 #include <dune/common/parallel/mpihelper.hh>
-#include <dune/grid/sgrid.hh>
+#include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/finiteelementmap/qkfem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
@@ -14,10 +14,10 @@ int main(int argc, char** argv) {
     Dune::MPIHelper::instance(argc,argv);
 
     const int dim = 2;
-    typedef Dune::SGrid<dim,dim> BaseGrid;
-    const int s[2] = {4,4};
-    const double h[2] = {1.0,1.0};
-    BaseGrid baseGrid(s,h);
+    typedef Dune::YaspGrid<dim> BaseGrid;
+    Dune::FieldVector<double,2> length(1.0);
+    Dune::array<int,2> elements = { {4, 4} };
+    BaseGrid baseGrid(length,elements);
     typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;
     Grid grid(baseGrid,false);
     typedef Grid::SubDomainGrid SubDomainGrid;

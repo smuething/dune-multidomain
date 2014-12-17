@@ -15,7 +15,7 @@
 #include <dune/pdelab/multidomain/utility.hh>
 #include <dune/pdelab/multidomain/couplinggridfunctionspace.hh>
 #include <dune/pdelab/multidomain/datahandleprovider.hh>
-//#include <dune/pdelab/multidomain/powercouplinggridfunctionspace.hh>
+#include <dune/pdelab/multidomain/powercouplinggridfunctionspace.hh>
 #include <utility>
 
 namespace Dune {
@@ -114,13 +114,11 @@ struct gfs_flavor_tag<CouplingGridFunctionSpace<GV,LFEM,Predicate_,CE,B> >
   typedef CouplingGFSTag type;
 };
 
-  /*
-template<typename T, std::size_t k, typename Ordering>
-struct gfs_flavor_tag<PowerCouplingGridFunctionSpace<T,k,Ordering> >
+template<typename T, std::size_t k, typename Backend, typename Ordering>
+struct gfs_flavor_tag<PowerCouplingGridFunctionSpace<T,k,Backend,Ordering> >
 {
   typedef CouplingGFSTag type;
 };
-  */
 
 template<typename G, typename Backend, typename OrderingTag, typename... Children>
 class MultiDomainGridFunctionSpace

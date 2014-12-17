@@ -12,22 +12,24 @@ namespace PDELab {
 namespace MultiDomain {
 
 template<typename T, std::size_t k,
+         typename Backend,
          typename OrderingTag = LexicographicOrderingTag>
 class PowerCouplingGridFunctionSpace
   : public TypeTree::PowerNode<T,k>
-  , public PowerCompositeGridFunctionSpaceBase<PowerCouplingGridFunctionSpace<T, k, OrderingTag>,
-                                               typename T::Traits::GridViewType,
-                                               typename T::Traits::BackendType,
-                                               OrderingTag,
-                                               k
-                                               >
+  , public PowerCompositeGridFunctionSpaceBase<
+      PowerCouplingGridFunctionSpace<T, k, Backend, OrderingTag>,
+      typename T::Traits::GridViewType,
+      Backend,
+      OrderingTag,
+      k>
+  , public DataHandleProvider<PowerCouplingGridFunctionSpace<T, k, Backend, OrderingTag> >
 {
   typedef TypeTree::PowerNode<T,k> BaseT;
 
   typedef PowerCompositeGridFunctionSpaceBase<
     PowerCouplingGridFunctionSpace,
     typename T::Traits::GridViewType,
-    typename T::Traits::BackendType,
+    Backend,
     OrderingTag,
     k
     > ImplementationBase;
@@ -35,152 +37,228 @@ class PowerCouplingGridFunctionSpace
   friend class PowerCompositeGridFunctionSpaceBase<
     PowerCouplingGridFunctionSpace,
     typename T::Traits::GridViewType,
-    typename T::Traits::BackendType,
+    Backend,
     OrderingTag,
     k>;
+
+  template<typename,typename>
+  friend class GridFunctionSpaceBase;
+
+  typedef TypeTree::TransformTree<
+    PowerCouplingGridFunctionSpace,
+    gfs_to_ordering<PowerCouplingGridFunctionSpace>
+    > ordering_transformation;
 
 public:
   typedef PowerCouplingGridFunctionSpaceTag ImplementationTag;
 
-  typedef typename TransformPowerGFSToOrdering<OrderingTag>::
-  template result<
-    typename ImplementationBase::Traits,
-    const typename T::Ordering,
-    k
-    >::type Ordering;
+  typedef typename ordering_transformation::type Ordering;
 
   //! export traits class
   typedef typename ImplementationBase::Traits Traits;
+  typedef typename BaseT::ChildType::Traits::GridView::template Codim<0>::Entity Entity;
   typedef typename BaseT::ChildType::Intersection Intersection;
 
-  PowerCouplingGridFunctionSpace(T& c)
-  : BaseT(c)
-  {
-    initOrdering();
-  }
+  PowerCouplingGridFunctionSpace(T& c,
+                                 const Backend& backend = Backend(),
+                                 const OrderingTag ordering_tag = OrderingTag())
+    : BaseT(c)
+    , ImplementationBase(backend,ordering_tag)
+  {}
 
-  PowerCouplingGridFunctionSpace (T& c0,
-                                  T& c1)
+  PowerCouplingGridFunctionSpace(T& c0,
+                                  T& c1,
+                                  const Backend& backend = Backend(),
+                                  const OrderingTag ordering_tag = OrderingTag())
     : BaseT(c0,c1)
-  {
-    initOrdering();
-  }
+    , ImplementationBase(backend,ordering_tag)
+  {}
 
-  PowerCouplingGridFunctionSpace (T& c0,
-                                  T& c1,
-                                  T& c2)
+  PowerCouplingGridFunctionSpace(T& c0,
+                                 T& c1,
+                                 T& c2,
+                                 const Backend& backend = Backend(),
+                                 const OrderingTag ordering_tag = OrderingTag())
     : BaseT(c0,c1,c2)
-  {
-    initOrdering();
-  }
+    , ImplementationBase(backend,ordering_tag)
+  {}
 
-  PowerCouplingGridFunctionSpace (T& c0,
-                                  T& c1,
-                                  T& c2,
-                                  T& c3)
+  PowerCouplingGridFunctionSpace(T& c0,
+                                 T& c1,
+                                 T& c2,
+                                 T& c3,
+                                 const Backend& backend = Backend(),
+                                 const OrderingTag ordering_tag = OrderingTag())
     : BaseT(c0,c1,c2,c3)
-  {
-    initOrdering();
-  }
+    , ImplementationBase(backend,ordering_tag)
+  {}
 
-  PowerCouplingGridFunctionSpace (T& c0,
-                                  T& c1,
-                                  T& c2,
-                                  T& c3,
-                                  T& c4)
+  PowerCouplingGridFunctionSpace(T& c0,
+                                 T& c1,
+                                 T& c2,
+                                 T& c3,
+                                 T& c4,
+                                 const Backend& backend = Backend(),
+                                 const OrderingTag ordering_tag = OrderingTag())
     : BaseT(c0,c1,c2,c3,c4)
-  {
-    initOrdering();
-  }
+    , ImplementationBase(backend,ordering_tag)
+  {}
 
-  PowerCouplingGridFunctionSpace (T& c0,
-                                  T& c1,
-                                  T& c2,
-                                  T& c3,
-                                  T& c4,
-                                  T& c5)
+  PowerCouplingGridFunctionSpace(T& c0,
+                                 T& c1,
+                                 T& c2,
+                                 T& c3,
+                                 T& c4,
+                                 T& c5,
+                                 const Backend& backend = Backend(),
+                                 const OrderingTag ordering_tag = OrderingTag())
     : BaseT(c0,c1,c2,c3,c4,c5)
-  {
-    initOrdering();
-  }
+    , ImplementationBase(backend,ordering_tag)
+  {}
 
-  PowerCouplingGridFunctionSpace (T& c0,
-                                  T& c1,
-                                  T& c2,
-                                  T& c3,
-                                  T& c4,
-                                  T& c5,
-                                  T& c6)
+  PowerCouplingGridFunctionSpace(T& c0,
+                                 T& c1,
+                                 T& c2,
+                                 T& c3,
+                                 T& c4,
+                                 T& c5,
+                                 T& c6,
+                                 const Backend& backend = Backend(),
+                                 const OrderingTag ordering_tag = OrderingTag())
     : BaseT(c0,c1,c2,c3,c4,c5,c6)
-  {
-    initOrdering();
-  }
+    , ImplementationBase(backend,ordering_tag)
+  {}
 
-  PowerCouplingGridFunctionSpace (T& c0,
-                                  T& c1,
-                                  T& c2,
-                                  T& c3,
-                                  T& c4,
-                                  T& c5,
-                                  T& c6,
-                                  T& c7)
+  PowerCouplingGridFunctionSpace(T& c0,
+                                 T& c1,
+                                 T& c2,
+                                 T& c3,
+                                 T& c4,
+                                 T& c5,
+                                 T& c6,
+                                 T& c7,
+                                 const Backend& backend = Backend(),
+                                 const OrderingTag ordering_tag = OrderingTag())
     : BaseT(c0,c1,c2,c3,c4,c5,c6,c7)
-  {
-    initOrdering();
-  }
+    , ImplementationBase(backend,ordering_tag)
+  {}
 
-  PowerCouplingGridFunctionSpace (T& c0,
-                                  T& c1,
-                                  T& c2,
-                                  T& c3,
-                                  T& c4,
-                                  T& c5,
-                                  T& c6,
-                                  T& c7,
-                                  T& c8)
+  PowerCouplingGridFunctionSpace(T& c0,
+                                 T& c1,
+                                 T& c2,
+                                 T& c3,
+                                 T& c4,
+                                 T& c5,
+                                 T& c6,
+                                 T& c7,
+                                 T& c8,
+                                 const Backend& backend = Backend(),
+                                 const OrderingTag ordering_tag = OrderingTag())
     : BaseT(c0,c1,c2,c3,c4,c5,c6,c7,c8)
-  {
-    initOrdering();
-  }
+    , ImplementationBase(backend,ordering_tag)
+  {}
 
-  PowerCouplingGridFunctionSpace (T& c0,
-                                  T& c1,
-                                  T& c2,
-                                  T& c3,
-                                  T& c4,
-                                  T& c5,
-                                  T& c6,
-                                  T& c7,
-                                  T& c8,
-                                  T& c9)
+  PowerCouplingGridFunctionSpace(T& c0,
+                                 T& c1,
+                                 T& c2,
+                                 T& c3,
+                                 T& c4,
+                                 T& c5,
+                                 T& c6,
+                                 T& c7,
+                                 T& c8,
+                                 T& c9,
+                                 const Backend& backend = Backend(),
+                                 const OrderingTag ordering_tag = OrderingTag())
     : BaseT(c0,c1,c2,c3,c4,c5,c6,c7,c8,c9)
+    , ImplementationBase(backend,ordering_tag)
+  {}
+
+  bool contains(const Entity& e) const
   {
-    initOrdering();
+    return false;
   }
-
-  //! Direct access to the DOF ordering.
-  const Ordering &ordering() const { return *orderingp; }
-
-  //! Direct access to the storage of the DOF ordering.
-  shared_ptr<const Ordering> orderingPtr() const { return orderingp; }
-
 
   bool contains(const Intersection& is) const
   {
     return this->child(0).contains(is);
   }
 
-private:
-  void initOrdering() {
-    typename Ordering::NodeStorage transformedChildren;
-    for(std::size_t childIndex = 0; childIndex < BaseT::CHILDREN;
-        ++childIndex)
-      transformedChildren[childIndex] =
-        this->child(childIndex).orderingPtr();
-    orderingp = make_shared<Ordering>(*this, transformedChildren);
-  }
+      //! Direct access to the DOF ordering.
+      const Ordering &ordering() const
+      {
+        if (!this->isRootSpace())
+          {
+            DUNE_THROW(GridFunctionSpaceHierarchyError,
+                       "Ordering can only be obtained for root space in GridFunctionSpace tree.");
+          }
+        if (!_ordering)
+          {
+            create_ordering();
+            this->update(*_ordering);
+          }
+        return *_ordering;
+      }
 
-  shared_ptr<Ordering> orderingp;
+      //! Direct access to the DOF ordering.
+      Ordering &ordering()
+      {
+        if (!this->isRootSpace())
+          {
+            DUNE_THROW(GridFunctionSpaceHierarchyError,
+                       "Ordering can only be obtained for root space in GridFunctionSpace tree.");
+          }
+        if (!_ordering)
+          {
+            create_ordering();
+            this->update(*_ordering);
+          }
+        return *_ordering;
+      }
+
+      //! Direct access to the storage of the DOF ordering.
+      std::shared_ptr<const Ordering> orderingStorage() const
+      {
+        if (!this->isRootSpace())
+          {
+            DUNE_THROW(GridFunctionSpaceHierarchyError,
+                       "Ordering can only be obtained for root space in GridFunctionSpace tree.");
+          }
+        if (!_ordering)
+          {
+            create_ordering();
+            this->update(*_ordering);
+          }
+        return _ordering;
+      }
+
+      //! Direct access to the storage of the DOF ordering.
+      std::shared_ptr<Ordering> orderingStorage()
+      {
+        if (!this->isRootSpace())
+          {
+            DUNE_THROW(GridFunctionSpaceHierarchyError,
+                       "Ordering can only be obtained for root space in GridFunctionSpace tree.");
+          }
+        if (!_ordering)
+          {
+            create_ordering();
+            this->update(*_ordering);
+          }
+        return _ordering;
+      }
+
+    private:
+
+      // This method here is to avoid a double update of the Ordering when the user calls
+      // GFS::update() before GFS::ordering().
+      void create_ordering() const
+      {
+        _ordering = std::make_shared<Ordering>(ordering_transformation::transform(*this));
+      }
+
+      mutable std::shared_ptr<Ordering> _ordering;
+
 };
 
 } // namespace MultiDomain

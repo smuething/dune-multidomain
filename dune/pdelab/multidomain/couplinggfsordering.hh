@@ -32,9 +32,18 @@ namespace Dune {
       template<typename>
       friend class LeafIntersectionGridViewOrdering;
 
+      template<typename size_type>
+      friend struct ::Dune::PDELab::impl::update_ordering_data;
+
     public:
 
       typedef LocalOrderingTraits<GV,DI,CI> Traits;
+
+    private:
+
+      typedef Dune::PDELab::impl::GridFunctionSpaceOrderingData<typename Traits::SizeType> GFSData;
+
+    public:
 
       void map_local_index(const typename Traits::SizeType geometry_type_index,
                            const typename Traits::SizeType entity_index,
@@ -80,6 +89,7 @@ namespace Dune {
         , _fem(fem)
         , _gv(gv)
         , _container_blocked(false)
+        , _gfs_data(nullptr)
       {}
 
       const typename Traits::GridView& gridView() const
@@ -200,6 +210,11 @@ namespace Dune {
 
       const Predicate& _predicate;
 
+      bool update_gfs_data_size(typename Traits::SizeType& size, typename Traits::SizeType& block_count) const
+      {
+        return false;
+      }
+
     protected:
 
       shared_ptr<const FEM> _fem;
@@ -214,6 +229,8 @@ namespace Dune {
 
       std::vector<typename Traits::SizeType> _gt_entity_offsets;
       std::vector<typename Traits::SizeType> _entity_dof_offsets;
+
+      GFSData* _gfs_data;
     };
 
 
@@ -256,9 +273,9 @@ namespace Dune {
       }
 
 
-      LeafIntersectionGridViewOrdering(const typename NodeT::NodeStorage& localOrdering, bool container_blocked)
+      LeafIntersectionGridViewOrdering(const typename NodeT::NodeStorage& localOrdering, bool container_blocked, typename BaseT::GFSData* gfs_data)
         : NodeT(localOrdering)
-        , BaseT(*this,container_blocked,this)
+        , BaseT(*this,container_blocked,gfs_data,this)
         , _gv(this->template child<0>().gridView())
       {}
 
@@ -416,12 +433,12 @@ namespace Dune {
 
       static transformed_type transform(const GFS& gfs, const Transformation& t)
       {
-        return transformed_type(make_tuple(make_shared<LocalOrdering>(gfs.finiteElementMapStorage(),gfs.gridView(),gfs.predicate())),gfs.backend().blocked());
+        return transformed_type(make_tuple(make_shared<LocalOrdering>(gfs.finiteElementMapStorage(),gfs.gridView(),gfs.predicate())),gfs.backend().blocked(gfs),const_cast<GFS*>(&gfs));
       }
 
       static transformed_storage_type transform_storage(shared_ptr<const GFS> gfs, const Transformation& t)
       {
-        return make_shared<transformed_type>(make_tuple(make_shared<LocalOrdering>(gfs->finiteElementMapStorage(),gfs->gridView(),gfs->predicate())),gfs->backend().blocked());
+        return make_shared<transformed_type>(make_tuple(make_shared<LocalOrdering>(gfs->finiteElementMapStorage(),gfs->gridView(),gfs->predicate())),gfs->backend().blocked(*gfs),const_cast<GFS*>(gfs.get()));
       }
 
     };

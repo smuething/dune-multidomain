@@ -181,13 +181,9 @@ public:
     typedef Dune::FiniteElementInterfaceSwitch<
       typename LFSU_C::Traits::FiniteElementType
       > LFSU_C_FESwitch;
-    typedef Dune::BasisInterfaceSwitch<
-      typename LFSU_C_FESwitch::Basis
-      > LFSU_C_BasisSwitch;
 
     const size_type lfsu_c_size(lfsu_c.size());
 
-    typedef typename IG::Geometry::LocalCoordinate LC;
     typedef typename IG::Geometry::GlobalCoordinate GC;
 
     const Dune::GeometryType gt = ig.geometry().type();
@@ -310,11 +306,6 @@ int main(int argc, char** argv) {
     gmshreader.read(baseGrid,"gmshtest.msh",boundaryIndexToPhysicalGroup,elementIndexToPhysicalGroup,true,false);
 #endif
 
-    typedef BaseGrid::LeafGridView GV;
-
-    GV gv = baseGrid.leafGridView();
-    const GV::IndexSet& is = gv.indexSet();
-
     typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;
     Grid grid(baseGrid,false);
     typedef Grid::SubDomainGrid SubDomainGrid;
@@ -363,7 +354,6 @@ int main(int argc, char** argv) {
 
     typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
-    NOCON nocon;
     CON con;
 
     typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM,CON,VBE> GFS0;

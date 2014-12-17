@@ -4,6 +4,8 @@
 
 #include <dune/pdelab/localoperator/convectiondiffusiondg.hh>
 
+#include <dune/pdelab/multidomain/couplingutilities.hh>
+
 /**
    \todo update quadrature order to work with lfsv != lfsu
    \todo update alpha_* to work with lfsv != lfsu (./)

@@ -3,6 +3,8 @@
 
 #include <initializer_list>
 
+#include <dune/common/deprecated.hh>
+
 namespace Dune {
 
 namespace PDELab {

@@ -287,6 +287,12 @@ int main(int argc, char** argv) {
 
     Dune::MPIHelper::instance(argc,argv);
 
+    if (argc != 3)
+      std::cerr << "Usage: " << argv[0] << " <refinement> <scaling factor for coupling> " << std::endl
+                << "Using default values refinement=5 scaling=1.0" << std::endl;
+    const int refinement = argc == 3 ? atoi(argv[1]) : 5;
+    const double scaling = argc == 3 ? atof(argv[2]) : 1.0;
+
     const int dim = 2;
 
     typedef Dune::YaspGrid<dim> BaseGrid;
@@ -294,7 +300,7 @@ int main(int argc, char** argv) {
     const Dune::array<int,dim> s = { {1,1} };
     const std::bitset<dim> p(false);
     BaseGrid baseGrid(h,s,p,0);
-    baseGrid.globalRefine(atoi(argv[1]));
+    baseGrid.globalRefine(refinement);
 
 #ifdef UGGRID
     typedef Dune::UGGrid<dim> BaseGrid;
@@ -406,7 +412,7 @@ int main(int argc, char** argv) {
     LOP lop(f,b,j,4);
 
     typedef MortarPoissonCoupling CouplingLOP;
-    CouplingLOP coupling_lop(atof(argv[2]));
+    CouplingLOP coupling_lop(scaling);
 
     typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,LOP,EC,0> SubProblem0;
     typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,LOP,EC,1> SubProblem1;

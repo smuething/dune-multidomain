@@ -2,7 +2,7 @@
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
-#include <dune/pdelab/finiteelementmap/q1fem.hh>
+#include <dune/pdelab/finiteelementmap/qkfem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/backend/istlmatrixbackend.hh>
 #include <dune/pdelab/multidomain/istlhelpers.hh>
@@ -276,6 +276,12 @@ private:
 
 };
 
+template<int dim>
+struct PseudoGV
+{
+  static const int dimension = dim;
+};
+
 int main(int argc, char** argv) {
 
   try {
@@ -335,14 +341,17 @@ int main(int argc, char** argv) {
 
     typedef MDGV::Grid::ctype DF;
 
-    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM;
-    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim-1> COUPLINGFEM;
+    // we need something to feed into the QkFEM, only needs to return a correct dimension
+    using CouplingGV = PseudoGV<dim-1>;
+
+    typedef Dune::PDELab::QkLocalFiniteElementMap<MDGV,DF,double,1> FEM;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<CouplingGV,DF,double,1> COUPLINGFEM;
 
     typedef FEM::Traits::FiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
 
-    FEM fem;
-    COUPLINGFEM couplingfem;
+    FEM fem(mdgv);
+    COUPLINGFEM couplingfem({});
 
     typedef Dune::PDELab::NoConstraints NOCON;
     typedef Dune::PDELab::ConformingDirichletConstraints CON;
@@ -361,8 +370,8 @@ int main(int argc, char** argv) {
     gfs1.name("u");
 
     typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> EC;
-    EC c0(0);
-    EC c1(1);
+    EC c0({0});
+    EC c1({1});
 
     typedef Dune::PDELab::MultiDomain::SubProblemSubProblemInterface<MDGV,EC,EC> Pred;
     Pred pred(mdgv,c0,c1);
@@ -464,7 +473,7 @@ int main(int argc, char** argv) {
         vtkwriter,
         multigfs,
         u,
-        subdomain_predicate<Grid::SubDomainIndexType>(0)
+        subdomain_predicate<Grid::SubDomainIndex>(0)
       );
       vtkwriter.write("testmortarpoisson-left",Dune::VTK::ascii);
     }
@@ -475,7 +484,7 @@ int main(int argc, char** argv) {
         vtkwriter,
         multigfs,
         u,
-        subdomain_predicate<Grid::SubDomainIndexType>(1)
+        subdomain_predicate<Grid::SubDomainIndex>(1)
       );
       vtkwriter.write("testmortarpoisson-right",Dune::VTK::ascii);
     }

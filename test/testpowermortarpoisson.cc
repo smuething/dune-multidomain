@@ -2,9 +2,9 @@
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
-#include <dune/pdelab/finiteelementmap/q1fem.hh>
+#include <dune/pdelab/finiteelementmap/qkfem.hh>
 #include <dune/pdelab/backend/istlvectorbackend.hh>
-#include <dune/pdelab/backend/istlmatrixbackend.hh>
+#include <dune/pdelab/backend/istl/bcrsmatrixbackend.hh>
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/couplinggridfunctionspace.hh>
 #include <dune/pdelab/multidomain/couplinglocalfunctionspace.hh>
@@ -17,8 +17,8 @@
 #include <dune/pdelab/localoperator/poisson.hh>
 #include <dune/pdelab/multidomain/coupling.hh>
 #include <dune/pdelab/multidomain/couplingutilities.hh>
-#include<dune/pdelab/common/vtkexport.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
+#include<dune/pdelab/multidomain/vtk.hh>
 #include <dune/pdelab/stationary/linearproblem.hh>
 #include <dune/pdelab/backend/istlsolverbackend.hh>
 
@@ -170,7 +170,6 @@ public:
       typename LFSU_FESwitch::Basis
       > LFSU_BasisSwitch;
 
-    typedef typename LFSU_BasisSwitch::DomainField DF;
     typedef typename LFSU_BasisSwitch::DomainField RF;
     typedef typename LFSU_BasisSwitch::Range Range;
     typedef typename LFSU::Traits::SizeType size_type;
@@ -188,13 +187,9 @@ public:
         typedef Dune::FiniteElementInterfaceSwitch<
           typename LFSU_C::Traits::FiniteElementType
           > LFSU_C_FESwitch;
-        typedef Dune::BasisInterfaceSwitch<
-          typename LFSU_C_FESwitch::Basis
-          > LFSU_C_BasisSwitch;
 
         const size_type lfsu_c_size(lfsu_c.size());
 
-        typedef typename IG::Geometry::LocalCoordinate LC;
         typedef typename IG::Geometry::GlobalCoordinate GC;
 
         const Dune::GeometryType gt = ig.geometry().type();
@@ -263,6 +258,31 @@ public:
 
 };
 
+template<typename SubDomain>
+struct subdomain_predicate
+{
+
+  template<typename LFS>
+  bool operator()(const LFS& lfs) const
+  {
+    return lfs.gridFunctionSpace().gridView().grid().domain() == _subDomain;
+  }
+
+  subdomain_predicate(const SubDomain& subDomain)
+    : _subDomain(subDomain)
+  {}
+
+private:
+  SubDomain _subDomain;
+
+};
+
+
+template<int dim>
+struct PseudoGV
+{
+  static const int dimension = dim;
+};
 
 int main(int argc, char** argv) {
 
@@ -286,11 +306,6 @@ int main(int argc, char** argv) {
     Dune::GmshReader<BaseGrid> gmshreader;
     gmshreader.read(baseGrid,"gmshtest.msh",boundaryIndexToPhysicalGroup,elementIndexToPhysicalGroup,true,false);
 #endif
-
-    typedef BaseGrid::LeafGridView GV;
-
-    GV gv = baseGrid.leafGridView();
-    const GV::IndexSet& is = gv.indexSet();
 
     typedef Dune::MultiDomainGrid<BaseGrid,Dune::mdgrid::FewSubDomainsTraits<BaseGrid::dimension,4> > Grid;
     Grid grid(baseGrid,false);
@@ -323,21 +338,23 @@ int main(int argc, char** argv) {
 
     typedef MDGV::Grid::ctype DF;
 
-    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim> FEM;
-    typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim-1> COUPLINGFEM;
+    // we need something to feed into the QkFEM, only needs to return a correct dimension
+    using CouplingGV = PseudoGV<dim-1>;
+
+    typedef Dune::PDELab::QkLocalFiniteElementMap<MDGV,DF,double,1> FEM;
+    typedef Dune::PDELab::QkLocalFiniteElementMap<CouplingGV,DF,double,1> COUPLINGFEM;
 
     typedef FEM::Traits::FiniteElementType::Traits::
       LocalBasisType::Traits::RangeFieldType R;
 
-    FEM fem;
-    COUPLINGFEM couplingfem;
+    FEM fem(mdgv);
+    COUPLINGFEM couplingfem({});
 
     typedef Dune::PDELab::NoConstraints NOCON;
     typedef Dune::PDELab::ConformingDirichletConstraints CON;
 
     typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
-    NOCON nocon;
     CON con;
 
     typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM,CON,VBE> GFS0;
@@ -345,10 +362,12 @@ int main(int argc, char** argv) {
 
     GFS0 gfs0(sdgv0,fem,con);
     GFS1 gfs1(sdgv1,fem,con);
+    gfs0.name("u");
+    gfs1.name("u");
 
     typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> EC;
-    EC c0(0);
-    EC c1(1);
+    EC c0({0});
+    EC c1({1});
 
     typedef Dune::PDELab::MultiDomain::SubProblemSubProblemInterface<MDGV,EC,EC> Pred;
     Pred pred(mdgv,c0,c1);
@@ -356,11 +375,18 @@ int main(int argc, char** argv) {
     typedef Dune::PDELab::MultiDomain::CouplingGridFunctionSpace<MDGV,COUPLINGFEM,Pred,NOCON,VBE> CouplingGFS;
     CouplingGFS couplinggfs(mdgv,couplingfem,pred);
 
-    typedef Dune::PDELab::MultiDomain::PowerCouplingGridFunctionSpace<CouplingGFS,2> PowerCouplingGFS;
+    typedef Dune::PDELab::MultiDomain::PowerCouplingGridFunctionSpace<CouplingGFS,2,VBE> PowerCouplingGFS;
     PowerCouplingGFS powercouplinggfs(couplinggfs);
 
-    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<Grid,VBE,GFS0,GFS1,PowerCouplingGFS> MultiGFS;
-    MultiGFS multigfs(grid,gfs0,gfs1,powercouplinggfs);
+    typedef Dune::PDELab::MultiDomain::MultiDomainGridFunctionSpace<
+      Grid,
+      VBE,
+      Dune::PDELab::LexicographicOrderingTag,
+      GFS0,
+      GFS1,
+      PowerCouplingGFS
+      > MultiGFS;
+    MultiGFS multigfs(grid,VBE(),gfs0,gfs1,powercouplinggfs);
 
     typedef DirichletBoundary BType;
     BType b;
@@ -374,8 +400,8 @@ int main(int argc, char** argv) {
     typedef J<MDGV,R> JType;
     JType j(mdgv);
 
-    typedef Dune::PDELab::Poisson<FType,BType,JType,4> LOP;
-    LOP lop(f,b,j);
+    typedef Dune::PDELab::Poisson<FType,BType,JType> LOP;
+    LOP lop(f,b,j,4);
 
     typedef MortarPoissonCoupling CouplingLOP;
     CouplingLOP coupling_lop(atof(argv[2]));
@@ -391,7 +417,7 @@ int main(int argc, char** argv) {
     typedef MultiGFS::ConstraintsContainer<R>::Type C;
     C cg;
 
-    typedef Dune::PDELab::ISTLBCRSMatrixBackend<1,1> MBE;
+    typedef Dune::PDELab::istl::BCRSMatrixBackend<> MBE;
 
     typedef Dune::PDELab::MultiDomain::GridOperator<
       MultiGFS,MultiGFS,
@@ -412,6 +438,7 @@ int main(int argc, char** argv) {
 
     GridOperator gridoperator(multigfs,multigfs,
                               cg,cg,
+                              {9},
                               subproblem0,
                               subproblem1,
                               coupling);
@@ -432,25 +459,26 @@ int main(int argc, char** argv) {
 
     pdesolver.apply(u);
 
-    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,0> SGFS0;
-    typedef Dune::PDELab::GridFunctionSubSpace<MultiGFS,1> SGFS1;
-    SGFS0 sgfs0(multigfs);
-    SGFS1 sgfs1(multigfs);
-
     {
-      typedef Dune::PDELab::DiscreteGridFunction<SGFS0,V> DGF0;
-      DGF0 dgf0(sgfs0,u);
-      Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTKOptions::conforming);
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF0>(dgf0,"u"));
-      vtkwriter.write("testmortarpoisson-left",Dune::VTKOptions::ascii);
+      Dune::VTKWriter<SDGV> vtkwriter(sdgv0,Dune::VTK::conforming);
+      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+        vtkwriter,
+        multigfs,
+        u,
+        subdomain_predicate<Grid::SubDomainIndex>(0)
+      );
+      vtkwriter.write("testpowermortarpoisson-left",Dune::VTK::ascii);
     }
 
     {
-      typedef Dune::PDELab::DiscreteGridFunction<SGFS1,V> DGF1;
-      DGF1 dgf1(sgfs1,u);
-      Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTKOptions::conforming);
-      vtkwriter.addVertexData(new Dune::PDELab::VTKGridFunctionAdapter<DGF1>(dgf1,"u"));
-      vtkwriter.write("testmortarpoisson-right",Dune::VTKOptions::ascii);
+      Dune::VTKWriter<SDGV> vtkwriter(sdgv1,Dune::VTK::conforming);
+      Dune::PDELab::MultiDomain::addSolutionToVTKWriter(
+        vtkwriter,
+        multigfs,
+        u,
+        subdomain_predicate<Grid::SubDomainIndex>(1)
+      );
+      vtkwriter.write("testpowermortarpoisson-right",Dune::VTK::ascii);
     }
 
   }

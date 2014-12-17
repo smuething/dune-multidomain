@@ -4,6 +4,7 @@
 #include <dune/typetree/typetree.hh>
 
 #include <dune/pdelab/gridfunctionspace/localfunctionspace.hh>
+#include <dune/pdelab/gridfunctionspace/powergridfunctionspace.hh>
 
 #include <dune/pdelab/multidomain/dofmapper.hh>
 #include <dune/pdelab/multidomain/multidomainlocalfunctionspace.hh>
@@ -45,7 +46,7 @@ struct LeafCouplingLocalFunctionSpaceTraits
 
 
 struct PowerCouplingLocalFunctionSpaceTag {};
-struct PowerCouplingGridFunctionSpaceTag {};
+struct PowerCouplingGridFunctionSpaceTag : public PowerGridFunctionSpaceTag {};
 
 // local function space for a power grid function space
 template<typename GFS, typename DI, typename ChildLFS, std::size_t k>

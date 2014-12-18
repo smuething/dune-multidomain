@@ -3,12 +3,41 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_DATAHANDLEPROVIDER_HH
 #define DUNE_PDELAB_MULTIDOMAIN_DATAHANDLEPROVIDER_HH
 
+#include <dune/pdelab/ordering/decorator.hh>
 #include <dune/pdelab/gridfunctionspace/datahandleprovider.hh>
 #include <dune/pdelab/multidomain/multidomainlocalfunctionspace.hh>
 
 namespace Dune {
   namespace PDELab {
     namespace MultiDomain {
+
+
+      template<typename Ordering>
+      const Ordering& _unroll_decorators(const Ordering& ordering, std::integral_constant<std::size_t,0>)
+      {
+        return ordering;
+      }
+
+      template<typename Ordering, std::size_t level>
+      auto _unroll_decorators(const Ordering& ordering, std::integral_constant<std::size_t,level>)
+      -> decltype(_unroll_decorators(ordering.template child<0>(),std::integral_constant<std::size_t,level-1>()))
+      {
+        return _unroll_decorators(ordering.template child<0>(),std::integral_constant<std::size_t,level-1>());
+      }
+
+      template<typename GFS>
+      auto undecorated_ordering(const GFS& gfs)
+      -> decltype(
+          _unroll_decorators(
+              gfs.ordering(),
+              ordering::impl::decoration_level<typename GFS::OrderingTag>()
+              ))
+      {
+        return _unroll_decorators(
+            gfs.ordering(),
+            ordering::impl::decoration_level<typename GFS::OrderingTag>()
+            );
+      }
 
     namespace {
 
@@ -24,7 +53,7 @@ namespace Dune {
         void beforeChild(const GFS& gfs, const Child& child, TreePath tp, ChildIndex childIndex)
         {
           accumulate_size(child,
-                          gfs.ordering().template child<ChildIndex::value>(),
+                          undecorated_ordering(gfs).template child<ChildIndex::value>(),
                           typename gfs_flavor_tag<Child>::type());
         }
 
@@ -102,7 +131,7 @@ namespace Dune {
         void beforeChild(const GFS& gfs, const Child& child, TreePath tp, ChildIndex childIndex)
         {
           accumulate_size(child,
-                          gfs.ordering().template child<ChildIndex::value>(),
+                          undecorated_ordering(gfs).template child<ChildIndex::value>(),
                           typename gfs_flavor_tag<Child>::type());
         }
 
@@ -188,7 +217,7 @@ namespace Dune {
         void beforeChild(const GFS& gfs, const Child& child, TreePath tp, ChildIndex childIndex)
         {
           collect_indices(child,
-                          gfs.ordering().template child<ChildIndex::value>(),
+                          undecorated_ordering(gfs).template child<ChildIndex::value>(),
                           typename gfs_flavor_tag<Child>::type());
         }
 
@@ -250,7 +279,7 @@ namespace Dune {
         template<typename GFS, typename Child, typename TreePath, typename ChildIndex>
         void afterChild(const GFS& gfs, const Child& child, TreePath tp, ChildIndex childIndex)
         {
-          gfs.ordering().extract_entity_indices(_entity_index,
+          undecorated_ordering(gfs).extract_entity_indices(_entity_index,
                                                 childIndex,
                                                 _ci_it,
                                                 _ci_end);

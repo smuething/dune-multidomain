@@ -3,12 +3,14 @@
 #ifndef DUNE_PDELAB_MULTIDOMAIN_DATAHANDLEPROVIDER_HH
 #define DUNE_PDELAB_MULTIDOMAIN_DATAHANDLEPROVIDER_HH
 
+#include <dune/pdelab/ordering/decorator.hh>
 #include <dune/pdelab/gridfunctionspace/datahandleprovider.hh>
 #include <dune/pdelab/multidomain/multidomainlocalfunctionspace.hh>
 
 namespace Dune {
   namespace PDELab {
     namespace MultiDomain {
+
 
     namespace {
 
@@ -24,7 +26,7 @@ namespace Dune {
         void beforeChild(const GFS& gfs, const Child& child, TreePath tp, ChildIndex childIndex)
         {
           accumulate_size(child,
-                          gfs.ordering().template child<ChildIndex::value>(),
+                          undecorated_ordering(gfs).template child<ChildIndex::value>(),
                           typename gfs_flavor_tag<Child>::type());
         }
 
@@ -102,7 +104,7 @@ namespace Dune {
         void beforeChild(const GFS& gfs, const Child& child, TreePath tp, ChildIndex childIndex)
         {
           accumulate_size(child,
-                          gfs.ordering().template child<ChildIndex::value>(),
+                          undecorated_ordering(gfs).template child<ChildIndex::value>(),
                           typename gfs_flavor_tag<Child>::type());
         }
 
@@ -188,7 +190,7 @@ namespace Dune {
         void beforeChild(const GFS& gfs, const Child& child, TreePath tp, ChildIndex childIndex)
         {
           collect_indices(child,
-                          gfs.ordering().template child<ChildIndex::value>(),
+                          undecorated_ordering(gfs).template child<ChildIndex::value>(),
                           typename gfs_flavor_tag<Child>::type());
         }
 
@@ -250,10 +252,10 @@ namespace Dune {
         template<typename GFS, typename Child, typename TreePath, typename ChildIndex>
         void afterChild(const GFS& gfs, const Child& child, TreePath tp, ChildIndex childIndex)
         {
-          gfs.ordering().extract_entity_indices(_entity_index,
-                                                childIndex,
-                                                _ci_it,
-                                                _ci_end);
+          undecorated_ordering(gfs).extract_entity_indices(_entity_index,
+                                                           childIndex,
+                                                           _ci_it,
+                                                           _ci_end);
 
           if (GFS::Ordering::consume_tree_index)
             for (DIIterator it = _di_it;

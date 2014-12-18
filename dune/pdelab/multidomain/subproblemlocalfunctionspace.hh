@@ -173,7 +173,7 @@ public:
                                              void, // we are not directly based on a node in the original tree
                                              SubProblem> Traits;
 
-  typedef MDLFS MultiDomainLFS;
+  typedef MDLFS MultiDomainLocalFunctionSpace;
 
 public:
 
@@ -232,7 +232,7 @@ public:
     return _subProblem;
   }
 
-  const MDLFS& multiDomainLFS() const
+  const MDLFS& multiDomainLocalFunctionSpace() const
   {
     return _mdlfs;
   }
@@ -482,7 +482,7 @@ class SubProblemLocalFunctionSpace<MDLFS,SubProblem,ChildIndex>
   const MDLFS& _mdlfs;
 
 public:
-  typedef MDLFS MultiDomainLFS;
+  typedef MDLFS MultiDomainLocalFunctionSpace;
 
   SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const SubProblem& subProblem)
     : NodeT(mdlfs.template childStorage<ChildIndex>())
@@ -491,7 +491,7 @@ public:
   {
   }
 
-  const MDLFS& multiDomainLFS() const
+  const MDLFS& multiDomainLocalFunctionSpace() const
   {
     return _mdlfs;
   }

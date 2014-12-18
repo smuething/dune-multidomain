@@ -173,6 +173,8 @@ public:
                                              void, // we are not directly based on a node in the original tree
                                              SubProblem> Traits;
 
+  typedef MDLFS MultiDomainLocalFunctionSpace;
+
 public:
 
   //! \brief initialize with grid function space
@@ -180,6 +182,7 @@ public:
     : NodeT(stackobject_to_shared_ptr(mdlfs))
     , BaseT(mdlfs.gridFunctionSpaceStorage())
     , _subProblem(subProblem)
+    , _mdlfs(mdlfs)
   {
     bind();
   }
@@ -188,6 +191,7 @@ public:
     : NodeT(mdlfs)
     , BaseT(mdlfs.gridFunctionSpaceStorage())
     , _subProblem(subProblem)
+    , _mdlfs(mdlfs)
   {
     bind();
   }
@@ -228,6 +232,11 @@ public:
     return _subProblem;
   }
 
+  const MDLFS& multiDomainLocalFunctionSpace() const
+  {
+    return _mdlfs;
+  }
+
   template<typename EG>
   bool appliesTo(const EG& eg) const {
     return _subProblem.appliesTo(eg);
@@ -247,6 +256,7 @@ private:
   }
 
   const SubProblem& _subProblem;
+  const MDLFS& _mdlfs;
 
 };
 
@@ -469,12 +479,21 @@ class SubProblemLocalFunctionSpace<MDLFS,SubProblem,ChildIndex>
                                            typename MDLFS::template Child<ChildIndex>::Type::ImplementationTag
                                            > BaseT;
 
+  const MDLFS& _mdlfs;
+
 public:
+  typedef MDLFS MultiDomainLocalFunctionSpace;
 
   SubProblemLocalFunctionSpace (const MDLFS& mdlfs, const SubProblem& subProblem)
     : NodeT(mdlfs.template childStorage<ChildIndex>())
     , BaseT(subProblem)
+    , _mdlfs(mdlfs)
   {
+  }
+
+  const MDLFS& multiDomainLocalFunctionSpace() const
+  {
+    return _mdlfs;
   }
 
   using NodeT::proxiedNode;

@@ -17,7 +17,7 @@ void initSubDomainSet(SubDomainSet& subDomainSet)
 }
 
 template<typename SubDomainSet, typename... T>
-void initSubDomainSet(SubDomainSet& subDomainSet, typename SubDomainSet::DomainType subDomain,T... subDomains)
+void initSubDomainSet(SubDomainSet& sufbDomainSet, typename SubDomainSet::SubDomainIndex subDomain,T... subDomains)
 {
   subDomainSet.add(subDomain);
   initSubDomainSet(subDomainSet,subDomains...);

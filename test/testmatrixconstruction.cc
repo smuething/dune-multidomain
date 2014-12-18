@@ -211,10 +211,10 @@ int main(int argc, char** argv) {
   typedef Dune::PDELab::MultiDomain::SubDomainSupersetCondition<Grid> SC;
 
   SC c0;
-  SC c1(2);
-  EC c2(0,1);
-  EC c3(1);
-  SC c4(0);
+  SC c1({2});
+  EC c2({0,1});
+  EC c3({1});
+  SC c4({0});
 
   typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,LOP,SC,0> SubProblem0;
   typedef Dune::PDELab::MultiDomain::SubProblem<MultiGFS,MultiGFS,LOP,SC,3> SubProblem1;

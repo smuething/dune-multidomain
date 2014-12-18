@@ -651,8 +651,8 @@ void assemble_multidomain(
 
       typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<typename MDGV::Grid> Condition;
 
-      Condition c0(0);
-      Condition c1(1);
+      Condition c0({0});
+      Condition c1({1});
 
       typedef Dune::PDELab::MultiDomain::SubProblem<
         MultiGFS,

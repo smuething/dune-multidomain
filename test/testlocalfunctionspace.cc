@@ -226,8 +226,8 @@ int main(int argc, char** argv) {
 
     typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> Condition;
 
-    Condition c0(0);
-    Condition c1(1);
+    Condition c0({0});
+    Condition c1({1});
 
     typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,GFS0> SubProblem0;
     typedef Dune::PDELab::MultiDomain::TypeBasedSubProblem<MultiGFS,MultiGFS,LOP,Condition,GFS1> SubProblem1;

@@ -276,8 +276,8 @@ int main(int argc, char** argv) {
 
     typedef Dune::PDELab::MultiDomain::SubDomainEqualityCondition<Grid> Condition;
 
-    Condition c0(0);
-    Condition c1(1);
+    Condition c0({0});
+    Condition c1({1});
 
     typedef OverlapDomainMaskingConformingDirichletConstraints<MDGV,Condition> CON;
     typedef Dune::PDELab::ISTLVectorBackend<> VBE;

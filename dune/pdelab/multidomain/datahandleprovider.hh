@@ -26,7 +26,7 @@ namespace Dune {
         void beforeChild(const GFS& gfs, const Child& child, TreePath tp, ChildIndex childIndex)
         {
           accumulate_size(child,
-                          undecorated_ordering(gfs).template child<ChildIndex::value>(),
+                          ordering::undecorated_ordering(gfs).template child<ChildIndex::value>(),
                           typename gfs_flavor_tag<Child>::type());
         }
 
@@ -104,7 +104,7 @@ namespace Dune {
         void beforeChild(const GFS& gfs, const Child& child, TreePath tp, ChildIndex childIndex)
         {
           accumulate_size(child,
-                          undecorated_ordering(gfs).template child<ChildIndex::value>(),
+                          ordering::undecorated_ordering(gfs).template child<ChildIndex::value>(),
                           typename gfs_flavor_tag<Child>::type());
         }
 
@@ -190,7 +190,7 @@ namespace Dune {
         void beforeChild(const GFS& gfs, const Child& child, TreePath tp, ChildIndex childIndex)
         {
           collect_indices(child,
-                          undecorated_ordering(gfs).template child<ChildIndex::value>(),
+                          ordering::undecorated_ordering(gfs).template child<ChildIndex::value>(),
                           typename gfs_flavor_tag<Child>::type());
         }
 
@@ -252,10 +252,10 @@ namespace Dune {
         template<typename GFS, typename Child, typename TreePath, typename ChildIndex>
         void afterChild(const GFS& gfs, const Child& child, TreePath tp, ChildIndex childIndex)
         {
-          undecorated_ordering(gfs).extract_entity_indices(_entity_index,
-                                                           childIndex,
-                                                           _ci_it,
-                                                           _ci_end);
+          ordering::undecorated_ordering(gfs).extract_entity_indices(_entity_index,
+                                                                     childIndex,
+                                                                     _ci_it,
+                                                                     _ci_end);
 
           if (GFS::Ordering::consume_tree_index)
             for (DIIterator it = _di_it;

@@ -154,7 +154,7 @@ class MultiDomainGridFunctionSpace
   typedef TypeTree::TransformTree<MultiDomainGridFunctionSpace,gfs_to_ordering<MultiDomainGridFunctionSpace> > ordering_transformation;
 
   template<typename,typename>
-  friend class GridFunctionSpaceBase;
+  friend class Dune::PDELab::GridFunctionSpaceBase;
 
 public:
 

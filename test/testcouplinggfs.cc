@@ -1,25 +1,26 @@
 #include "config.h"
 
+#include<typeinfo>
+
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/io/file/gmshreader.hh>
-#include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
-#include <dune/pdelab/finiteelementmap/q1fem.hh>
-#include <dune/pdelab/finiteelementmap/q22dfem.hh>
-#include <dune/pdelab/finiteelementmap/q12dfem.hh>
-#include <dune/pdelab/finiteelementmap/pk2dfem.hh>
+
 #include <dune/pdelab/backend/istlvectorbackend.hh>
 #include <dune/pdelab/backend/istlmatrixbackend.hh>
+#include <dune/pdelab/constraints/conforming.hh>
+#include <dune/pdelab/finiteelementmap/qkfem.hh>
+#include <dune/pdelab/finiteelementmap/pkfem.hh>
+#include <dune/pdelab/localoperator/poisson.hh>
+
 #include <dune/pdelab/multidomain/subproblemlocalfunctionspace.hh>
 #include <dune/pdelab/multidomain/couplinggridfunctionspace.hh>
 #include <dune/pdelab/multidomain/couplinglocalfunctionspace.hh>
-#include <dune/pdelab/multidomain/multidomaingridoperatorspace.hh>
+#include <dune/pdelab/multidomain/gridoperator.hh>
+#include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/multidomain/subproblem.hh>
-#include <dune/pdelab/constraints/conforming.hh>
-#include <dune/pdelab/localoperator/poisson.hh>
 #include <dune/pdelab/multidomain/coupling.hh>
 
-#include<typeinfo>
 
 #include "functionmacros.hh"
 #include "proportionalflowcoupling.hh"
@@ -125,10 +126,11 @@ public:
 
 };
 
-
-
-
-#define UGGRID
+template<int dim>
+struct PseudoGV
+{
+  static const int dimension = dim;
+};
 
 int main(int argc, char** argv) {
 
@@ -138,21 +140,19 @@ int main(int argc, char** argv) {
 
   const int dim = 2;
 
-#ifdef YASPGRID
-  typedef Dune::YaspGrid<dim> BaseGrid;
-  const Dune::FieldVector<double,dim> h(1.0);
-  const Dune::array<int,dim> s = { {1,1} };
-  const std::bitset<dim> p(false);
-  BaseGrid baseGrid(h,s,p,0);
-  baseGrid.globalRefine(2);
-#endif
-
 #ifdef UGGRID
   typedef Dune::UGGrid<dim> BaseGrid;
   BaseGrid baseGrid(500);
   std::vector<int> boundaryIndexToPhysicalGroup, elementIndexToPhysicalGroup;
   Dune::GmshReader<BaseGrid> gmshreader;
   gmshreader.read(baseGrid,"gmshtest.msh",boundaryIndexToPhysicalGroup,elementIndexToPhysicalGroup,true,false);
+#else
+  typedef Dune::YaspGrid<dim> BaseGrid;
+  const Dune::FieldVector<double,dim> h(1.0);
+  const Dune::array<int,dim> s = { {1,1} };
+  const std::bitset<dim> p(false);
+  BaseGrid baseGrid(h,s,p,0);
+  baseGrid.globalRefine(2);
 #endif
 
   typedef BaseGrid::LeafGridView GV;
@@ -194,12 +194,15 @@ int main(int argc, char** argv) {
 
   typedef MDGV::Grid::ctype DF;
 
-  typedef Dune::PDELab::Q1LocalFiniteElementMap<ctype,double,dim-1> COUPLINGFEM;
+  // we need something to feed into the QkFEM, only needs to return a correct dimension
+  using CouplingGV = PseudoGV<dim-1>;
 
-  typedef COUPLINGFEM::Traits::LocalFiniteElementType::Traits::
-  LocalBasisType::Traits::RangeFieldType R;
+  typedef Dune::PDELab::QkLocalFiniteElementMap<CouplingGV,DF,double,1> COUPLINGFEM;
 
-  COUPLINGFEM couplingfem;
+  typedef COUPLINGFEM::Traits::FiniteElementType::Traits::
+    LocalBasisType::Traits::RangeFieldType R;
+
+  COUPLINGFEM couplingfem({});
   typedef Dune::PDELab::NoConstraints NOCON;
   typedef Dune::PDELab::ISTLVectorBackend<> VBE;
 
@@ -255,9 +258,9 @@ int main(int argc, char** argv) {
     std::cout << *it << " ";
   std::cout << std::endl;
 
-  typedef Dune::PDELab::Pk2DLocalFiniteElementMap<SDGV,DF,RF,2> FEM0;
+  typedef Dune::PDELab::PkLocalFiniteElementMap<SDGV,DF,RF,2> FEM0;
   FEM0 fem0(sdgv0);
-  typedef Dune::PDELab::Pk2DLocalFiniteElementMap<SDGV,DF,RF,1> FEM1;
+  typedef Dune::PDELab::PkLocalFiniteElementMap<SDGV,DF,RF,1> FEM1;
   FEM1 fem1(sdgv1);
 
   typedef Dune::PDELab::GridFunctionSpace<SDGV,FEM0,NOCON,VBE> GFS0;

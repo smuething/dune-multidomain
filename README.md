@@ -76,7 +76,7 @@ dune-multidomain depends on the following software packages:
 
 * [dune-multidomaingrid][4] version 2.4-dev.
 
-* The [Boost][9] C++ libraries, in particular Boost.MPL and Boost.Fusion.
+* The [dune-typetree][2] library, version 2.4-git.
 
 * MultiDomain's compiler requirements differ slightly from the underlying DUNE
   libraries: We require at least GCC 4.7 in C++11 mode. MultiDomainGrid should also work
@@ -98,7 +98,7 @@ Installation
 
 Short installation instructions can be found in the file [README.GIT.md][12].
 For a full explanation of the DUNE installation process please read
-the [installation notes][13] or the [build system HOWTO][14].
+the [installation notes][13] or the [build system HOWTO][9].
 
 
 Links
@@ -112,9 +112,8 @@ Links
 [6]:  http://www.vtk.org
 [7]:  https://github.com/smuething/dune-multidomain/issues
 [8]:  https://github.com/smuething/dune-multidomain/pulls
-[9]:  http://boost.org
+[9]:  http://dune-project.org/doc/buildsystem/buildsystem.pdf
 [10]: http://gcc.gnu.org/onlinedocs/libstdc++/faq.html#faq.license
 [11]: COPYING.md
 [12]: README.GIT.md
 [13]: http://dune-project.org/doc/installation-notes.html
-[14]: http://dune-project.org/doc/buildsystem/buildsystem.pdf

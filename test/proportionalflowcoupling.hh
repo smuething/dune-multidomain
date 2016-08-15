@@ -130,7 +130,7 @@ public:
 
     typedef typename LFSU1::Traits::SizeType size_type;
     typedef typename IG::Element Element;
-    typedef typename Element::Geometry::Jacobian GeometryJacobian;
+    typedef typename Element::Geometry::JacobianInverseTransposed GeometryJacobian;
 
     const double h_F = (ig.geometry().corner(0) - ig.geometry().corner(1)).two_norm();
 

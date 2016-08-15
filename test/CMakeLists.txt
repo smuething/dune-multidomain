@@ -1,16 +1,16 @@
 set(TESTS
-  reactiondiffusion.cc
-  stokesdarcy.cc
-  stokesdarcy2.cc
-  testcouplinggfs.cc
-  testinstationarypoisson.cc
-  testlocalfunctionspace.cc
-  testmatrixconstruction.cc
-  testmortarpoisson.cc
-  testmultidomaingridfunctionspace.cc
-  testoverlappinginstationarypoisson.cc
-  testpoisson.cc
-  testpowermortarpoisson.cc
+  reactiondiffusion
+  stokesdarcy
+  stokesdarcy2
+  testcouplinggfs
+  testinstationarypoisson
+  testlocalfunctionspace
+  testmatrixconstruction
+  testmortarpoisson
+  testmultidomaingridfunctionspace
+  testoverlappinginstationarypoisson
+  testpoisson
+  testpowermortarpoisson
 )
 
 set(MOSTLYCLEANFILES)
@@ -37,7 +37,7 @@ install(FILES checkgeometry.hh
 
 foreach(_test ${TESTS})
   add_test(${_test} ${_test})
-#   target_link_libraries(${_test} "dunecommon")
+  target_link_libraries(${_test} ${DUNE_LIBS})
 endforeach(_test ${TESTS})
 
 # We do not want want to build the tests during make all,

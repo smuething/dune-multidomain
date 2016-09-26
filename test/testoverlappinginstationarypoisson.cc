@@ -1,6 +1,5 @@
 #include "config.h"
 
-#include <dune/grid/sgrid.hh>
 #include <dune/grid/yaspgrid.hh>
 #include <dune/pdelab/multidomain/multidomaingridfunctionspace.hh>
 #include <dune/pdelab/finiteelementmap/qkfem.hh>
@@ -486,7 +485,7 @@ int main(int argc, char** argv) {
         Dune::PDELab::constraints(bctype,gfs,cc);
       */
 
-      auto f_ = Dune::PDELab::MultiDomain::interpolateOnSubProblems(g,left_sp_dt0,g,right_sp_dt0);
+//       auto f_ = Dune::PDELab::MultiDomain::interpolateOnSubProblems(g,left_sp_dt0,g,right_sp_dt0);
 
       osm.apply(time,dt,uold,unew);                           // do one time step
 

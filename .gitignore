@@ -38,3 +38,5 @@ stamp-vc
 /compile
 /test/testpoisson-dirichlet-neumann
 /test/testpoisson-assembly
+# ignore build directories
+/build*/
